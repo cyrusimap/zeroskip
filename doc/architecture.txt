@@ -1,0 +1,21 @@
+A zeroskip transactions looks something like this:
+
+1) An application opens a DB. A DB may consist of multiple files. One
+of which is an active file, to which data is written to. The other
+files are immutable and are 'packed' ever so often. So the number of
+files varies from a minimum of 1 to several files in a DB at any given
+point in time.
+
+2) When an application writes to the Zeroskip DB. The new data is
+written first to the active file and also stored in an in-memory
+B-Tree.
+
+3) When the active file reaches a predefined size limit(2 MB by
+default), it is made immutable and isn't the active file anymore. All
+the new data written goes to a newly opened active file. The in-memory
+B-Tree reflects this
+
+4) Periodically, these immutable files are 'packed' together, which is
+essentially a merge of two or more of these files.
+
+5)

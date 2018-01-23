@@ -11,6 +11,9 @@
 
 #include "macros.h"
 
+#include <stdio.h>
+#include <stdint.h>
+
 CPP_GUARD_START
 
 typedef enum {
@@ -20,19 +23,33 @@ typedef enum {
 
 /* Return codes */
 enum {
-        SDB_OK             =  0,
-        SDB_DONE           =  1,
-        SDB_IOERROR        = -1,
-        SDB_AGAIN          = -2,
-        SDB_EXISTS         = -3,
-        SDB_INTERNAL       = -4,
-        SDB_NOTFOUND       = -5,
-        SDB_NOTIMPLEMENTED = -6,
-        SDB_FULL           = -7,
-        SDB_ERROR          = -8,
-        SDB_INVALID_DB     = -9,
+        ZS_OK             =  0,
+        ZS_DONE           =  1,
+        ZS_IOERROR        = -1,
+        ZS_AGAIN          = -2,
+        ZS_EXISTS         = -3,
+        ZS_INTERNAL       = -4,
+        ZS_NOTFOUND       = -5,
+        ZS_NOTIMPLEMENTED = -6,
+        ZS_FULL           = -7,
+        ZS_ERROR          = -8,
+        ZS_INVALID_DB     = -9,
+        ZS_NOMEM          = -10,
 };
 
-CPP_GUARD_END
+/* structs */
+struct zsdb_ops;
+struct zsdb_iter;
+struct zsdb;
 
+
+extern int zsdb_init(struct zsdb **pdb);
+extern int zsdb_open(struct zsdb *db, const char *dbdir);
+extern int zsdb_close(struct zsdb *db);
+extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
+                    unsigned char *value, unsigned char *vallen);
+extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen);
+extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
+
+CPP_GUARD_END
 #endif  /* _ZEROSKIP_H_ */

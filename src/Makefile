@@ -2,13 +2,15 @@
 -include ../config.mk
 
 # Object files
-ZS_LIBOBJS =  		\
-	btree.o		\
-	cstring.o	\
-	log.o		\
-	mappedfile.o	\
-	strarray.o	\
-	util.o		\
+ZS_LIBOBJS =  			\
+	btree.o			\
+	cstring.o		\
+	log.o			\
+	mappedfile.o		\
+	strarray.o		\
+	util.o			\
+	zeroskip.o		\
+	zeroskip-asserts.o	\
 	$(NULL)
 
 # Headers

@@ -66,10 +66,9 @@ endif
 
 ## Compiler options
 ZS_EXTRA_CFLAGS = -mtune=native -O3 -pedantic
-ZS_CFLAGS=-std=c99 -Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS)
+ZS_CFLAGS=-std=c99 -Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS) -DZS_DEBUG
 ZS_LDFLAGS=$(LDFLAGS) $(DEBUG) -lz -luuid
 ZS_LIBS=
-DEBUG=-g -ggdb
 ARFLAGS=rcs
 
 ZS_CC=$(QCC)$(CC) $(ZS_CFLAGS)
