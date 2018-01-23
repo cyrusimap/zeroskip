@@ -1,0 +1,9 @@
+*.o
+.dep/
+*.swp
+ts-test
+results/
+Makefile.dep
+*_flymake.*
+*.a
+dbzs

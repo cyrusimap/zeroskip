@@ -1,0 +1,117 @@
+# Zero Skip
+
+A key-value database format.
+
+## File format on disk
+
+    [Header]([Key|Value]+[Commit])+[Pointers][Commit]
+
+where:
+
+    [Header] => [
+        "zeroskip"                    | char[] |  64 bits
+        Version number                | uint32 |  32 bits
+        UUID of database              | char[] | 128 bits
+        start index of database range | uint32 |  32 bits
+        end index of database range   | uint32 |  32 bits
+        CRC32 (of rest of header)     | uint32 |  32 bits
+    ] (40 bytes total)
+
+    [Type] => [
+        isKey            | 1 bit
+        isValue          | 1 bit
+        isCommit         | 1 bit
+        is2ndHalfCommit  | 1 bit (set in the second [Type] in a [LongCommit])
+        isFinal          | 1 bit (set in the commit after [Pointers])
+        hasLongValues    | 1 bit (long commit/long keys)
+        isDeleted        | 1 bit
+        (Unused)         | 1 bits
+    ] (1 byte total)
+
+    [Key] => [
+        [Type]                    | Type   | 8 bits
+        length(Key)               | uint16 | 16 bits
+        PointerToValue            | uint40 | 40 bits (null => Deletion)
+        (Extended length(Key))?   | uint64 | 64 bits
+        (Extended PointerToValue)?| uint64 | 64 bits
+        Key                       | byte[] | *
+        Null Padding              | byte[] | make Key 64-bit aligned
+    ] (4n bytes total, 64 + ~32 bits overhead)
+
+    [Value] => [
+        [Type]                    | Type   | 8 bits
+        length(Value)             | uint24 | 24 bits
+        (Extended null pad)?      | byte[] | 32 bits
+        (Extended length(Value))? | uint64 | 64 bits
+        Value                     | byte[] | *
+        Null Padding              | byte[] | make Value 64-bit aligned
+    ] (4n bytes total, 32 + ~32 bits overhead)
+
+    [Commit] => [ShortCommit|LongCommit]
+
+    [ShortCommit] => [
+        [Type]           | Type   | 8 bits
+        Length(Data)     | uint24 | 24 bits
+        CRC32            | uint32 | 32 bits (over Data + rest of commit
+        record)
+    ] (8 bytes total)
+
+    [LongCommit] => [
+        [Type]           | Type   |  8 bits
+        Null padding     | byte[] | 56 bits
+        Length(Data)     | uint64 | 64 bits
+        [Type]           | Type   |  8 bits
+        Null padding     | byte[] | 24 bits
+        CRC32            | uint32 | 32 bits (over Data + rest of commit
+        record)
+    ] (24 bytes total)
+
+    [Pointers] => [
+        NumPointers        | uint64           | 64 bits
+        NumShadowedRecords | uint64           | 64 bits
+        NumShadowedBytes   | uint64           | 64 bits
+        Pointer            | Key*             | 64 bits
+        ... (pointers to all non-shadowed records, sorted by key) ...
+    ] (4n bytes total)
+
+* All numbers are stored in network byte order.
+* All lengths are number of bytes.
+* The PointerToValue is an offset from the beginning of the `[Key]`.
+* Pointers in `[Pointers]` are sorted in key order (keys compared
+byte-by-
+  byte) and are offsets from the beginning of the file.
+* A shadowed record is one where the same key has been written to (or
+  deleted) again later in the same file. `NumShadowedRecords` is the
+  number of shadowed records within the file. `NumShadowedBytes` is the
+  number of bytes that these records contain.
+
+In packed files the keys are written first (in order), then the values
+(in the the same (key) order), and there is only a single commit. So the
+layout will be:
+
+    [Header][Key]+[Value]+[Commit][Pointers][Commit]
+
+Alternative structure with less overhead but less cache coherency when
+searching for a key. Combine key/value into single record type:
+
+    [KeyValue] => [
+        [Type]                    | Type   | 8 bits
+        length(Key)               | uint8  | 8 bits
+        length(Value)             | uint16 | 16 bits (null => Deletion)
+        (Extended null pad)?      | byte[] | 32 bits
+        (Extended length(Key))?   | uint64 | 64 bits
+        (Extended length(Value))? | uint64 | 64 bits
+        Key                       | byte[] | *
+        Value                     | byte[] | *
+        Null Padding              | byte[] | make Value 64-bit aligned
+    ] (4n bytes total, 32 + ~32 bits overhead)
+
+## A database is a directory of files
+
+A database consists of a directory of files. Each file is named either:
+- "zeroskip-$(UUID)-$(index)" (unpacked file) or
+- "zeroskip-$(UUID)-$(startindex)-$(endindex)" (packed file)
+
+The start and end index is also written into the header as well as the
+file name.
+
