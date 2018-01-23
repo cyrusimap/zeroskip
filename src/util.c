@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <fts.h>
 #include <libgen.h>             /* For basename() */
+#include <poll.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/param.h>          /* For PATH_MAX */
@@ -254,6 +255,14 @@ long long time_in_us(void)
 long long time_in_ms(void)
 {
         return time_in_us()/1000;
+}
+
+/* sleep_ms():
+ *  Sleeping in milliseconds
+ */
+void sleep_ms(uint32_t milliseconds)
+{
+        poll(NULL, 0, milliseconds);
 }
 
 /**

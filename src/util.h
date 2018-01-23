@@ -282,6 +282,8 @@ static inline int get_filenames_with_matching_prefix_rel(char *const path[],
 long long time_in_us(void);
 long long time_in_ms(void);
 
+void sleep_ms(uint32_t milliseconds);
+
 /* Round up `n` to the nearest multiple of `m` */
 static inline size_t round_up(size_t n, size_t m)
 {
