@@ -206,7 +206,7 @@ static int zsdb_create(struct zsdb *db)
         struct stat sb = { 0 };
         mode_t mode = 0777;
 
-        zslog(LOGDEBUG, "Creating a new DB!\n");
+        zslog(LOGDEBUG, "Creating a new DB %s!\n", priv->dbdir.buf);
         /* Create the dbdir */
         if (xmkdir(priv->dbdir.buf, mode) != 0) {
                 perror("zs_init:");
@@ -224,15 +224,15 @@ static int zsdb_create(struct zsdb *db)
         }
 
         /* Create the .zsdb file */
-        if (zs_dotzsdb_create(priv) != ZS_OK) {
-                fprintf(stderr, "Failed setting up DB.\n");
+        if (!zs_dotzsdb_create(priv)) {
+                zslog(LOGWARNING, "Failed creating DB metadata.\n");
                 return ZS_ERROR;
         }
 
         return ZS_OK;
 }
 
-int zsdb_open(struct zsdb *db, const char *dbdir, db_mode_t mode)
+int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
 {
         struct zsdb_priv *priv;
         int ret = ZS_OK;
@@ -249,7 +249,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, db_mode_t mode)
 
         priv = db->priv;
 
-        if (priv->nopen && mode == ZS_WRITE) {
+        if (priv->nopen && (flags & OWRITE)) {
                 zslog(LOGWARNING, "db can only be opened in read mode\n");
                 return ZS_INVALID_MODE;
         }
@@ -258,23 +258,33 @@ int zsdb_open(struct zsdb *db, const char *dbdir, db_mode_t mode)
         cstring_addstr(&priv->dbdir, dbdir);
 
         /* stat() the dbdir */
-        statret = stat(priv->dbdir.buf, &sb);
-
-        if (mode == ZS_READ && statret == -1) {
-                zslog(LOGWARNING, "DB %s does not exist. Call zs_open() in ZS_WRITE.\n");
-                ret = ZS_ERROR;
-                goto done;
-        }
-
-        if (mode == ZS_WRITE && statret == -1) {
-                if (zsdb_create(db) != ZS_OK) {
+        if (stat(priv->dbdir.buf, &sb) == -1) {
+                zslog(LOGDEBUG, "DB %s doesn't exist\n",
+                        priv->dbdir.buf);
+                if (flags & OCREAT) {
+                        ret = zsdb_create(db);
+                } else {
+                        ret = ZS_ERROR;
+                        goto done;
+                }
+        } else {
+                if (!S_ISDIR(sb.st_mode) || !zs_dotzsdb_validate(priv)) {
+                        zslog(LOGWARNING, "%s, isn't a valid DB\n", priv->dbdir.buf);
                         ret = ZS_ERROR;
                         goto done;
                 }
         }
 
+        if (flags & OWRITE) {
+                zslog(LOGDEBUG, "Opening DB in WRITE mode.\n");
+        } else if (flags & OREAD) {
+                zslog(LOGDEBUG, "Opening DB in READ mode.\n");
+        }
+
+
 done:
         return ret;
+
 }
 
 int zsdb_close(struct zsdb *db)

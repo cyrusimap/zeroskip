@@ -22,8 +22,9 @@ typedef enum {
 } DBDumpLevel;
 
 typedef enum {
-        ZS_READ     = 0x01,
-        ZS_WRITE    = 0x02,
+        OREAD     = 0x01,
+        OWRITE    = 0x02,
+        OCREAT    = 0x04,
 } db_mode_t;
 
 /* Return codes */
@@ -78,7 +79,7 @@ struct zsdb {
 
 extern int zsdb_init(struct zsdb **pdb);
 extern void zsdb_final(struct zsdb **pdb);
-extern int zsdb_open(struct zsdb *db, const char *dbdir, db_mode_t mode);
+extern int zsdb_open(struct zsdb *db, const char *dbdir, int flags);
 extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
                     unsigned char *value, unsigned char *vallen);

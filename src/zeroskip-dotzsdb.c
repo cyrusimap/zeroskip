@@ -1,13 +1,14 @@
 /*
  * zeroskip-dotzsdb.c : zeroskip .zsdb manipulation functions
  *
- * This file is part of skiplistdb.
+ * This file is part of zeroskip.
  *
- * skiplistdb is free software; you can redistribute it and/or modify
+ * zeroskip is free software; you can redistribute it and/or modify
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
 
+#include "log.h"
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
@@ -28,7 +29,7 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         uuid_t uuid;
         unsigned char *sptr;
         struct mappedfile *mf;
-        int ret = ZS_OK;
+        int ret = 1;
         size_t nbytes = 0;
         cstring dotzsdbfname = CSTRING_INIT;
 
@@ -58,18 +59,17 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         memcpy(sptr, &priv->dotzsdb.uuidstr, UUID_STRLEN);
         sptr += UUID_STRLEN;
 
-
         /* Write to file */
         if (mappedfile_open(dotzsdbfname.buf, MAPPEDFILE_RW_CR, &mf) != 0) {
-                fprintf(stderr, "Could not create %s!", dotzsdbfname.buf);
-                ret = ZS_ERROR;
+                zslog(LOGDEBUG, "Could not create %s!\n", dotzsdbfname.buf);
+                ret = 0;
                 goto fail1;
         }
 
         if (mappedfile_write(&mf, &stackbuf, DOTZSDB_SIZE, &nbytes) != 0) {
-                fprintf(stderr, "Could not write to file %s!",
-                        dotzsdbfname.buf);
-                ret = ZS_ERROR;
+                zslog(LOGDEBUG, "Could not write to file %s!",
+                      dotzsdbfname.buf);
+                ret = 0;
                 goto fail2;
         }
 
@@ -105,7 +105,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
 
         if (mappedfile_open(dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
-                fprintf(stderr, "Could not open %s!\n", dotzsdbfname.buf);
+                zslog(LOGDEBUG, "Could not open %s!\n", dotzsdbfname.buf);
                 ret = 0;
                 goto fail1;
         }
@@ -113,7 +113,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         mappedfile_size(&mf, &mfsize);
 
         if (mfsize < DOTZSDB_SIZE) {
-                fprintf(stderr, "File too small to be zeroskip DB: %zu.\n",
+                zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);
                 ret = 0;
                 goto fail2;
@@ -134,7 +134,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                        sizeof(priv->dotzsdb.uuidstr));
                 uuid_parse(priv->dotzsdb.uuidstr, priv->uuid);
         } else {
-                fprintf(stderr, "Invalid zeroskip DB %s.\n",
+                zslog(LOGDEBUG, "Invalid zeroskip DB %s.\n",
                         dotzsdbfname.buf);
                 ret = 0;
                 goto fail2;
@@ -165,7 +165,7 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
         cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
 
         if (mappedfile_open(dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
-                fprintf(stderr, "Could not open %s!\n", dotzsdbfname.buf);
+                zslog(LOGDEBUG, "Could not open %s!\n", dotzsdbfname.buf);
                 ret = 0;
                 goto fail1;
         }
@@ -173,7 +173,7 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
         mappedfile_size(&mf, &mfsize);
 
         if (mfsize < DOTZSDB_SIZE) {
-                fprintf(stderr, "File too small to be zeroskip DB: %zu.\n",
+                zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);
                 ret = 0;
                 goto fail2;
@@ -185,7 +185,7 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
                 dothdr->curidx = hton32(idx);
                 priv->dotzsdb.curidx = idx;
         } else {
-                fprintf(stderr, "Invalid zeroskip DB %s Failed updating index.\n",
+                zslog(LOGDEBUG, "Invalid zeroskip DB %s Failed updating index.\n",
                         dotzsdbfname.buf);
                 ret = 0;
                 goto fail2;

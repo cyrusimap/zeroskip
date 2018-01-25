@@ -38,7 +38,7 @@
 #define ZS_VERSION            1
 
 /* This is the size of the unparssed uuid string */
-#define UUID_STRLEN  36
+#define UUID_STRLEN  37
 
 /**
  * zeroskip header.
@@ -71,7 +71,7 @@ struct zs_header {
 struct dotzsdb {
         uint64_t signature;
         uint32_t curidx;
-        char uuidstr[36];
+        char uuidstr[37];
 };                              /* A total of 48 bytes */
 #define DOTZSDB_FNAME ".zsdb"
 #define DOTZSDB_SIZE  sizeof(struct dotzsdb)

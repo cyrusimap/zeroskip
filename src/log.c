@@ -7,8 +7,6 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-
-#include "cstring.h"
 #include "log.h"
 #include "macros.h"
 
@@ -18,7 +16,7 @@
 #define LOGBUF_SIZE  1024
 
  /* TODO: These should go into a global structure. */
-int zs_log_verbosity = LOGNOTICE;
+int zs_log_verbosity = LOGDEBUG;
 int zs_log_to_syslog = 0;
 cstring zs_log_file = CSTRING_INIT;
 
@@ -41,10 +39,10 @@ static void _zslog(int level, const char *msg)
         fp = (log_to_stdout) ? stdout : fopen(zs_log_file.buf, "a");
         if (!fp) return;
 
-        fprintf(fp, "[zeroskip] %s\n", msg);
+        fprintf(fp, "[zeroskip] %s", msg);
         fflush(fp);
 
-        if (log_to_stdout)
+        if (!log_to_stdout)
                 fclose(fp);
 
         if (zs_log_to_syslog)

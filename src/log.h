@@ -11,6 +11,8 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
+#include "cstring.h"
+
 #include <stdio.h>
 
 enum {
