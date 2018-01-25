@@ -15,6 +15,7 @@
 #include "cmds.h"
 #include "zeroskip.h"
 #include "cstring.h"
+#include "log.h"
 
 int cmd_new(int argc, char **argv, const char *progname)
 {
@@ -26,11 +27,9 @@ int cmd_new(int argc, char **argv, const char *progname)
         int option;
         int option_index;
         const char *config_file = NULL;
-        #if 0
-        struct skiplistdb *db = NULL;
-        #endif
-        struct txn *tid = NULL;
+        struct zsdb *db = NULL;
         char *fname;
+        int ret;
 
         while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
@@ -52,32 +51,27 @@ int cmd_new(int argc, char **argv, const char *progname)
 
         cmd_parse_config(config_file);
 
-#if 0
-        if (skiplistdb_init(type, &db, &tid) != SDB_OK) {
-                fprintf(stderr, "Failed initialising.\n");
-                exit(EXIT_FAILURE);
+        if (zsdb_init(&db) != ZS_OK) {
+                zslog(LOGWARNING, "Failed initialising DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
-        if (skiplistdb_open(fname, db, SDB_CREATE, &tid) != SDB_OK) {
-                fprintf(stderr, "Could not create skiplist DB.\n");
-                goto fail1;
+        if (zsdb_open(db, fname, ZS_WRITE) != ZS_OK) {
+                zslog(LOGWARNING, "Could not create DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
-        if (skiplistdb_close(db) != SDB_OK) {
-                fprintf(stderr, "Could not close skiplist DB.\n");
-                goto fail1;
+        if (zsdb_close(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not close DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
-        printf("Created %s db %s.\n",
-               (type == ZERO_SKIP) ? "zeroskip" : "twoskip",
-               fname);
+        ret = EXIT_SUCCESS;
+done:
+        zsdb_final(&db);
 
-fail1:
-        if (skiplistdb_final(db) != SDB_OK) {
-                fprintf(stderr, "Failed destroying the database instance.\n");
-                exit(EXIT_FAILURE);
-        }
-#endif
-
-        exit(EXIT_SUCCESS);
+        exit(ret);
 }

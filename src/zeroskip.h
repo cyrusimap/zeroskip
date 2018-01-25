@@ -21,6 +21,11 @@ typedef enum {
         DB_DUMP_ALL,
 } DBDumpLevel;
 
+typedef enum {
+        ZS_READ     = 0x01,
+        ZS_WRITE    = 0x02,
+} db_mode_t;
+
 /* Return codes */
 enum {
         ZS_OK             =  0,
@@ -35,20 +40,51 @@ enum {
         ZS_ERROR          = -8,
         ZS_INVALID_DB     = -9,
         ZS_NOMEM          = -10,
+        ZS_INVALID_MODE   = -11,
 };
 
-/* structs */
-struct zsdb_ops;
-struct zsdb_iter;
-struct zsdb;
+/*
+ * Operations structure for Zeroskip DB
+ */
+struct zsdb_operations {
+        int (*xopen)(void);
+        int (*xclose)(void);
+        int (*xread)(void);
+        int (*xwrite)(void);
+        int (*xlock)(void);
+        int (*xislocked)(void);
+        int (*xcmp)(void *p1, size_t n1, void *p2, size_t n2);
+};
+
+/*
+ * Zeroskip DB Iterator
+ */
+struct zsdb_iter {
+        struct zsdb *db;
+        struct zsdb_iter *next;
+        int flags;
+};
+
+struct zsdb {
+        uint64_t rwlock;            /* Read-Write lock */
+        uint64_t lockdata;          /* current locks  */
+        struct zsdb_iter *iter;     /* All open iterators */
+        struct zsdb_operations *op; /* Operations */
+        unsigned int numtrans;      /* Total number of open transactions */
+        void *priv;                 /* Private */
+};
+
 
 
 extern int zsdb_init(struct zsdb **pdb);
-extern int zsdb_open(struct zsdb *db, const char *dbdir);
+extern void zsdb_final(struct zsdb **pdb);
+extern int zsdb_open(struct zsdb *db, const char *dbdir, db_mode_t mode);
 extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
                     unsigned char *value, unsigned char *vallen);
 extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen);
+extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
+                      unsigned char **value, size_t *vallen);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
 
 CPP_GUARD_END

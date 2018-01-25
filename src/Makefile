@@ -10,7 +10,7 @@ ZS_LIBOBJS =  			\
 	strarray.o		\
 	util.o			\
 	zeroskip.o		\
-	zeroskip-asserts.o	\
+	zeroskip-dotzsdb.o	\
 	$(NULL)
 
 # Headers

@@ -277,6 +277,13 @@ static inline int get_filenames_with_matching_prefix_rel(char *const path[],
 
 }
 
+static inline int is_dotdir(const char *name)
+{
+        return (name[0] == '.' &&
+                (name[1] == '\0' ||
+                 (name[1] == '.' && name[2] == '\0')));
+}
+
 
 /* Time functions */
 long long time_in_us(void);

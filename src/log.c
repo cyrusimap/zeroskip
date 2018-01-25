@@ -41,7 +41,7 @@ static void _zslog(int level, const char *msg)
         fp = (log_to_stdout) ? stdout : fopen(zs_log_file.buf, "a");
         if (!fp) return;
 
-        fprintf(fp, "%s\n", msg);
+        fprintf(fp, "[zeroskip] %s\n", msg);
         fflush(fp);
 
         if (log_to_stdout)

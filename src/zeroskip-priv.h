@@ -156,39 +156,35 @@ struct zs_long_commit {
 #define MAX_SHORT_VAL_LEN 16777215
 
 #ifdef ZS_DEBUG
-int zsdb_break(int err);
+extern int zsdb_break(int err);
+extern void assert_zsdb(struct zsdb *db);
 #else
 #define zsdb_break(x) (x)
 #endif
 
-/*
- * Operations structure for Zeroskip DB
- */
-struct zsdb_ops {
-        int (*xopen)(void);
-        int (*xclose)(void);
-        int (*xread)(void);
-        int (*xwrite)(void);
-        int (*xlock)(void);
-        int (*xislocked)(void);
-        int (*xcmp)(void *p1, size_t n1, void *p2, size_t n2);
+/* Storage Backend */
+typedef enum _zsdb_be_t {
+        ZSDB_BE_MEM,
+        ZSDB_BE_LOG,
+        ZSDB_BE_PACK,
+} zsdb_be_t;
+
+struct zsdb_store {
+        zsdb_be_t type;
 };
 
-/*
- * Zeroskip DB Iterator
- */
-struct zsdb_iter {
-        struct zsdb *db;
-        struct zsdb_iter *next;
-        int flags;
+/* Private data structure */
+struct zsdb_priv {
+        uuid_t uuid;            /* The UUID for the DB */
+        struct dotzsdb dotzsdb; /* .zsdb contents */
+        cstring dbdir;          /* The directory path */
+
+        int nopen;              /* count of opens on this instance */
 };
 
-struct zsdb {
-        uint64_t rwlock;        /* Read-Write lock */
-        uint64_t lockdata;      /* current locks  */
-        struct zsdb_iter *iter; /* All open iterators */
-        unsigned int numtrans;  /* Total number of open transactions */
-};
-
+/* zeroskip-dotzsdb.c */
+extern int zs_dotzsdb_create(struct zsdb_priv *priv);
+extern int zs_dotzsdb_validate(struct zsdb_priv *priv);
+extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
 
 #endif  /* _ZEROSKIP_PRIV_H_ */
