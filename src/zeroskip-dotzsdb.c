@@ -75,6 +75,8 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
 
         mappedfile_flush(&mf);
 
+        zslog(LOGDEBUG, "Created db with UUID %s\n", priv->dotzsdb.uuidstr);
+
 fail2:
         mappedfile_close(&mf);
 
@@ -140,6 +142,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                 goto fail2;
         }
 
+        zslog(LOGDEBUG, "Opening DB with UUID %s\n", priv->dotzsdb.uuidstr);
 fail2:
         mappedfile_close(&mf);
 fail1:

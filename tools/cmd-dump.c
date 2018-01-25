@@ -24,7 +24,7 @@ int cmd_dump(int argc, char **argv, const char *progname)
         int option;
         int option_index;
         const char *config_file = NULL;
-        struct skiplistdb *db = NULL;
+        struct zsdb *db = NULL;
         const char *fname;
         DBDumpLevel level = DB_DUMP_ALL;
 

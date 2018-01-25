@@ -24,10 +24,7 @@ int cmd_set(int argc, char **argv, const char *progname)
         int option;
         int option_index;
         const char *config_file = NULL;
-        #if 0
-        struct skiplistdb *db = NULL;
-        #endif
-        struct txn *tid = NULL;
+        struct zsdb *db = NULL;
         char *fname = NULL;
         char *key = NULL;
         char *value = NULL;

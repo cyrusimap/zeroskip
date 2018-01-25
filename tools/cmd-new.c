@@ -57,7 +57,7 @@ int cmd_new(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_open(db, fname, ZS_WRITE) != ZS_OK) {
+        if (zsdb_open(db, fname, OWRITE | OCREAT) != ZS_OK) {
                 zslog(LOGWARNING, "Could not create DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

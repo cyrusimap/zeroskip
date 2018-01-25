@@ -8,6 +8,7 @@
 
 #include "cstring.h"
 #include "log.h"
+#include "macros.h"
 #include "util.h"
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
@@ -28,16 +29,19 @@
 /**
  * Private functions
  */
-static int process_active_file(const char *path, void *data)
+static int process_active_file(const char *path, void *data _unused_)
 {
+        zslog(LOGDEBUG, "processing active file: %s\n", path);
         return 0;
 }
-static int process_finalised_file(const char *path, void *data)
+static int process_finalised_file(const char *path, void *data _unused_)
 {
+        zslog(LOGDEBUG, "processing finalised file: %s\n", path);
         return 0;
 }
-static int process_packed_file(const char *path, void *data)
+static int process_packed_file(const char *path, void *data _unused_)
 {
+        zslog(LOGDEBUG, "processing packed file: %s\n", path);
         return 0;
 }
 
@@ -52,7 +56,7 @@ static enum db_ftype_t interpret_db_filename(const char *str, size_t len)
         if (!p)
                 goto done;
 
-        idx = p + ZS_FNAME_PREFIX_LEN + UUID_STRLEN;
+        idx = p + ZS_FNAME_PREFIX_LEN + (UUID_STRLEN - 1);
 
         /* We should have atleast 1 index or a max of 2 */
         if (*idx++ == '-') {
@@ -70,6 +74,11 @@ static enum db_ftype_t interpret_db_filename(const char *str, size_t len)
 done:
         return type;
 }
+
+enum {
+        DB_REL_PATH = 0,
+        DB_ABS_PATH = 1,
+};
 
 static int for_each_db_file_in_dbdir(char *const path[],
                                      int full_path,
@@ -237,7 +246,6 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
         struct zsdb_priv *priv;
         int ret = ZS_OK;
         struct stat sb = { 0 };
-        int statret;
 
         assert_zsdb(db);
         assert(dbdir && dbdir[0]);
@@ -274,6 +282,9 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                         goto done;
                 }
         }
+
+        /* scan the directory for files */
+        for_each_db_file_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH, priv);
 
         if (flags & OWRITE) {
                 zslog(LOGDEBUG, "Opening DB in WRITE mode.\n");
