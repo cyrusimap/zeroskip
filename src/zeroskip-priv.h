@@ -162,6 +162,14 @@ extern void assert_zsdb(struct zsdb *db);
 #define zsdb_break(x) (x)
 #endif
 
+/* File Data */
+struct zsdb_file {
+        enum db_ftype_t type;
+        struct zs_header header;
+        cstring fname;
+        struct mappedfile *mf;
+};
+
 /* Storage Backend */
 typedef enum _zsdb_be_t {
         ZSDB_BE_MEM,
@@ -180,6 +188,7 @@ struct zsdb_priv {
         cstring dbdir;          /* The directory path */
 
         int nopen;              /* count of opens on this instance */
+        int flags;              /* The flags passed during call to open */
 };
 
 /* zeroskip-dotzsdb.c */

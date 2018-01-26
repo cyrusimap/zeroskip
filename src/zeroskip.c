@@ -82,7 +82,8 @@ enum {
 
 static int for_each_db_file_in_dbdir(char *const path[],
                                      int full_path,
-                                     void *data)
+                                     void *data,
+                                     int *count)
 {
         FTS *ftsp = NULL;
         FTSENT *fp = NULL;
@@ -90,6 +91,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
         char *const def_path[] = {".", NULL};
         char buf[PATH_MAX];
         int err = 0;
+        int cnt = 0;
 
         if (getcwd(buf, sizeof(buf)) == NULL)
                 return errno;
@@ -126,12 +128,15 @@ static int for_each_db_file_in_dbdir(char *const path[],
                         switch(interpret_db_filename(sbuf, strlen(sbuf))) {
                         case DB_FTYPE_ACTIVE:
                                 process_active_file(sbuf, data);
+                                cnt++;
                                 break;
                         case DB_FTYPE_FINALISED:
                                 process_finalised_file(sbuf, data);
+                                cnt++;
                                 break;
                         case DB_FTYPE_PACKED:
                                 process_packed_file(sbuf, data);
+                                cnt++;
                                 break;
                         default:
                                 break;
@@ -144,6 +149,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
         if (err)
                 errno = err;
 
+        *count = cnt;
         return err;
 }
 
@@ -246,6 +252,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
         struct zsdb_priv *priv;
         int ret = ZS_OK;
         struct stat sb = { 0 };
+        int fcount = 0;
+        int newdb = 0;
 
         assert_zsdb(db);
         assert(dbdir && dbdir[0]);
@@ -271,6 +279,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                         priv->dbdir.buf);
                 if (flags & OCREAT) {
                         ret = zsdb_create(db);
+                        newdb = 1;
                 } else {
                         ret = ZS_ERROR;
                         goto done;
@@ -283,15 +292,34 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 }
         }
 
-        /* scan the directory for files */
-        for_each_db_file_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH, priv);
+        /* We either should have created a new DB directory or should
+         * have successfully opened an existing DB directory.
+         */
+        if (ret != ZS_OK) {
+                zslog(LOGWARNING, "Internal Error!\n");
+                goto done;
+        }
+
+        if (newdb) {
+                /* We create our 'active' mutable db file if it is
+                 * a newly created DB.
+                 */
+        } else {
+                /* If it is an existing DB, scan the directory for
+                 * db files.
+                 */
+                for_each_db_file_in_dbdir(&priv->dbdir.buf,
+                                          DB_ABS_PATH, priv,
+                                          &fcount);
+                zslog(LOGDEBUG, "Found %d files in %s.\n",
+                      fcount, priv->dbdir.buf);
+        }
 
         if (flags & OWRITE) {
                 zslog(LOGDEBUG, "Opening DB in WRITE mode.\n");
         } else if (flags & OREAD) {
                 zslog(LOGDEBUG, "Opening DB in READ mode.\n");
         }
-
 
 done:
         return ret;
@@ -317,23 +345,32 @@ done:
         return ret;
 }
 
-int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
-                    unsigned char *value, unsigned char *vallen)
+int zsdb_add(struct zsdb *db _unused_,
+             unsigned char *key _unused_,
+             size_t keylen _unused_,
+             unsigned char *value _unused_,
+             unsigned char *vallen _unused_)
 {
         return ZS_NOTIMPLEMENTED;
 }
 
-int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen)
+int zsdb_remove(struct zsdb *db _unused_,
+                unsigned char *key _unused_,
+                size_t keylen _unused_)
 {
         return ZS_NOTIMPLEMENTED;
 }
 
-int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
-               unsigned char **value, size_t *vallen)
+int zsdb_fetch(struct zsdb *db _unused_,
+               unsigned char *key _unused_,
+               size_t keylen _unused_,
+               unsigned char **value _unused_,
+               size_t *vallen _unused_)
 {
         return ZS_NOTIMPLEMENTED;
 }
-int zsdb_dump(struct zsdb *db, DBDumpLevel level)
+int zsdb_dump(struct zsdb *db _unused_,
+              DBDumpLevel level _unused_)
 {
         return ZS_NOTIMPLEMENTED;
 }
