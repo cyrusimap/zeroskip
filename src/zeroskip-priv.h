@@ -168,6 +168,7 @@ struct zsdb_file {
         struct zs_header header;
         cstring fname;
         struct mappedfile *mf;
+        int is_open;
 };
 
 /* Storage Backend */
@@ -183,17 +184,26 @@ struct zsdb_store {
 
 /* Private data structure */
 struct zsdb_priv {
-        uuid_t uuid;            /* The UUID for the DB */
-        struct dotzsdb dotzsdb; /* .zsdb contents */
-        cstring dbdir;          /* The directory path */
+        uuid_t uuid;              /* The UUID for the DB */
+        struct dotzsdb dotzsdb;   /* .zsdb contents */
+        cstring dbdir;            /* The directory path */
 
-        int nopen;              /* count of opens on this instance */
-        int flags;              /* The flags passed during call to open */
+        struct zsdb_file factive; /* The active file */
+
+        int nopen;                /* count of opens on this instance */
+        int flags;                /* The flags passed during call to open */
 };
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
 extern int zs_dotzsdb_validate(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
+
+/* zeroskip-filename.c */
+extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);
+
+/* zeroskip-header.c */
+extern int zs_header_write(struct zsdb_file *f);
+extern int zs_header_validate(struct zsdb_file *f);
 
 #endif  /* _ZEROSKIP_PRIV_H_ */

@@ -304,6 +304,9 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 /* We create our 'active' mutable db file if it is
                  * a newly created DB.
                  */
+                zs_filename_generate_active(priv, &priv->factive.fname);
+                zslog(LOGDEBUG, "Creating active file: %s\n",
+                        priv->factive.fname.buf);
         } else {
                 /* If it is an existing DB, scan the directory for
                  * db files.
