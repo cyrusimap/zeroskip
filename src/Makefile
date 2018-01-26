@@ -5,6 +5,7 @@
 ZS_LIBOBJS =  			\
 	btree.o			\
 	cstring.o		\
+	file-lock.o		\
 	log.o			\
 	mappedfile.o		\
 	strarray.o		\
