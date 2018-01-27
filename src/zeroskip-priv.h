@@ -11,6 +11,7 @@
 #ifndef _ZEROSKIP_PRIV_H_
 #define _ZEROSKIP_PRIV_H_
 
+#include "btree.h"
 #include "cstring.h"
 #include "file-lock.h"
 #include "mappedfile.h"
@@ -170,6 +171,7 @@ struct zsdb_file {
         cstring fname;
         struct mappedfile *mf;
         int is_open;
+        int dirty;
 };
 
 /* Storage Backend */
@@ -192,6 +194,8 @@ struct zsdb_priv {
         struct zsdb_file factive; /* The active file */
         struct file_lock lk;
 
+        struct btree *memtree;    /* in-memory B-Tree */
+
         int nopen;                /* count of opens on this instance */
         int flags;                /* The flags passed during call to open */
 };
@@ -200,11 +204,15 @@ struct zsdb_priv {
 extern int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx);
 extern int zs_active_file_close(struct zsdb_priv *priv);
 extern int zs_active_file_finalise(struct zsdb_priv *priv);
+extern int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
+                                              unsigned char *key, size_t keylen,
+                                              unsigned char *val, size_t vallen);
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
 extern int zs_dotzsdb_validate(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
+extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
 
 /* zeroskip-filename.c */
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);

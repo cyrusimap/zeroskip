@@ -5,7 +5,7 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-
+#include "btree.h"
 #include "cstring.h"
 #include "log.h"
 #include "macros.h"
@@ -310,6 +310,9 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 goto done;
         }
 
+        /* In-memory tree */
+        priv->memtree = btree_new(NULL, NULL);
+
         if (newdb) {
                 /* Create the 'active' mutable db file if it is
                  * a newly created DB.
@@ -340,7 +343,6 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
 
 done:
         return ret;
-
 }
 
 int zsdb_close(struct zsdb *db)
@@ -360,19 +362,68 @@ int zsdb_close(struct zsdb *db)
 
         zs_active_file_close(priv);
 
+        btree_free(priv->memtree);
+
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);
 done:
         return ret;
 }
 
-int zsdb_add(struct zsdb *db _unused_,
-             unsigned char *key _unused_,
-             size_t keylen _unused_,
-             unsigned char *value _unused_,
-             unsigned char *vallen _unused_)
+int zsdb_add(struct zsdb *db,
+             unsigned char *key,
+             size_t keylen,
+             unsigned char *value,
+             size_t vallen)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        size_t mfsize;
+        struct record *rec;
+
+        assert_zsdb(db);
+        assert(key);
+        assert(keylen);
+        assert(value);
+        assert(vallen);
+
+        if (!db)
+                return ZS_NOT_OPEN;
+
+        if (!key || !value)
+                return ZS_ERROR;
+
+        priv = db->priv;
+
+        if (!(priv->flags & OWRITE)) {
+                return ZS_INVALID_MODE;
+        }
+
+        if (!priv->nopen || !priv->factive.is_open) {
+                return ZS_NOT_OPEN;
+        }
+
+        /* check file size and finalise if necessary */
+        mappedfile_size(&priv->factive.mf, &mfsize);
+        if (mfsize >= TWOMB) {
+                /* TODO: Finalize file here */
+                zslog(LOGDEBUG, "File %s is > 2MB, finalising.\n",
+                        priv->factive.fname.buf);
+        }
+
+        /* Start computing the crc32. Will end when the transaction is
+           committed */
+        crc32_begin(&priv->factive.mf);
+
+        /* Add the entry to the active file */
+        priv->factive.dirty = 1;
+        zs_active_file_write_keyval_record(priv, key, keylen, value, vallen);
+
+        /* Add the entry to the in-memory tree */
+        rec = record_new(key, keylen, value, vallen);
+        btree_insert(priv->memtree, rec);
+
+        return ZS_OK;
 }
 
 int zsdb_remove(struct zsdb *db _unused_,
@@ -380,6 +431,24 @@ int zsdb_remove(struct zsdb *db _unused_,
                 size_t keylen _unused_)
 {
         return ZS_NOTIMPLEMENTED;
+}
+
+int zsdb_commit(struct zsdb *db)
+{
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+
+        assert(db);
+        assert(db->priv);
+
+        priv = db->priv;
+
+        if (!priv->factive.is_open)
+                return ZS_NOT_OPEN;
+
+        ret = zs_active_file_write_commit_record(priv);
+
+        return ret;
 }
 
 int zsdb_fetch(struct zsdb *db _unused_,

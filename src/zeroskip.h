@@ -42,6 +42,7 @@ enum {
         ZS_INVALID_DB     = -9,
         ZS_NOMEM          = -10,
         ZS_INVALID_MODE   = -11,
+        ZS_NOT_OPEN       = -12,
 };
 
 /*
@@ -75,6 +76,12 @@ struct zsdb {
         void *priv;                 /* Private */
 };
 
+/*
+ * Callbacks
+ */
+typedef int foreach_cb(void *data,
+                       unsigned char *key, size_t keylen,
+                       unsigned char *value, size_t vallen);
 
 
 extern int zsdb_init(struct zsdb **pdb);
@@ -82,8 +89,9 @@ extern void zsdb_final(struct zsdb **pdb);
 extern int zsdb_open(struct zsdb *db, const char *dbdir, int flags);
 extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
-                    unsigned char *value, unsigned char *vallen);
+                    unsigned char *value, size_t vallen);
 extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen);
+extern int zsdb_commit(struct zsdb *db);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
                       unsigned char **value, size_t *vallen);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
