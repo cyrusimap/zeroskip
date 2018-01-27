@@ -273,6 +273,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
         cstring_release(&priv->dbdir);
         cstring_addstr(&priv->dbdir, dbdir);
 
+        priv->flags = flags;
+
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
                 zslog(LOGDEBUG, "DB %s doesn't exist\n",
@@ -300,12 +302,24 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 goto done;
         }
 
+        if ((flags & OWRITE) &&
+            (file_lock_acquire(&priv->lk, priv->dbdir.buf, 0) < 0)) {
+                zslog(LOGDEBUG, "Cannot acquire a write lock on %s\n",
+                        priv->dbdir.buf);
+                ret = ZS_ERROR;
+                goto done;
+        }
+
         if (newdb) {
-                /* We create our 'active' mutable db file if it is
+                /* Create the 'active' mutable db file if it is
                  * a newly created DB.
                  */
-                zs_filename_generate_active(priv, &priv->factive.fname);
-                zslog(LOGDEBUG, "Creating active file: %s\n",
+                if ((ret = zs_active_file_open(priv, 0)) != ZS_OK) {
+                        file_lock_release(&priv->lk);
+                        goto done;
+                }
+
+                zslog(LOGDEBUG, "Created active file: %s\n",
                         priv->factive.fname.buf);
         } else {
                 /* If it is an existing DB, scan the directory for
@@ -332,18 +346,22 @@ done:
 int zsdb_close(struct zsdb *db)
 {
         int ret  = ZS_OK;
+        struct zsdb_priv *priv;
 
         if (!db) {
                 ret = ZS_IOERROR;
                 goto done;
         }
 
+        priv = db->priv;
+
+        if (priv->flags & OWRITE)
+                file_lock_release(&priv->lk);
+
+        zs_active_file_close(priv);
+
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);
-        else {
-                xfree(db);
-        }
-
 done:
         return ret;
 }

@@ -12,6 +12,7 @@
 #define _ZEROSKIP_PRIV_H_
 
 #include "cstring.h"
+#include "file-lock.h"
 #include "mappedfile.h"
 #include "util.h"
 
@@ -189,10 +190,16 @@ struct zsdb_priv {
         cstring dbdir;            /* The directory path */
 
         struct zsdb_file factive; /* The active file */
+        struct file_lock lk;
 
         int nopen;                /* count of opens on this instance */
         int flags;                /* The flags passed during call to open */
 };
+
+/* zeroskip-active.c */
+extern int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx);
+extern int zs_active_file_close(struct zsdb_priv *priv);
+extern int zs_active_file_finalise(struct zsdb_priv *priv);
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);

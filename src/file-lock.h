@@ -20,8 +20,8 @@ struct file_lock {
 
 #define FILE_LOCK_INIT  { CSTRING_INIT, 0 }
 
-int file_lock_hold(struct file_lock *lk, const char *path,
-                   long timeout_ms);
+int file_lock_acquire(struct file_lock *lk, const char *path,
+                      long timeout_ms);
 int file_lock_release(struct file_lock *lk);
 
 #endif  /* _ZS_FILE_LOCK_H_ */

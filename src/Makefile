@@ -11,6 +11,7 @@ ZS_LIBOBJS =  			\
 	strarray.o		\
 	util.o			\
 	zeroskip.o		\
+	zeroskip-active.o	\
 	zeroskip-dotzsdb.o	\
 	zeroskip-filename.o	\
 	zeroskip-header.o	\
