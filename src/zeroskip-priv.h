@@ -192,13 +192,48 @@ struct zsdb_priv {
         cstring dbdir;            /* The directory path */
 
         struct zsdb_file factive; /* The active file */
-        struct file_lock lk;
+
+        /* Locks */
+        struct file_lock wlk;     /* Lock when writing */
+        struct file_lock plk;     /* Lock when packing */
 
         struct btree *memtree;    /* in-memory B-Tree */
 
         int nopen;                /* count of opens on this instance */
         int flags;                /* The flags passed during call to open */
 };
+
+/* locking routines */
+#define WRITE_LOCK_FNAME "zsdbw"
+#define PACK_LOCK_FNAME "zsdbp"
+
+static inline int zs_write_lock_acquire(struct zsdb_priv *priv, long timeout_ms)
+{
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_acquire(&priv->wlk, priv->dbdir.buf,
+                                 WRITE_LOCK_FNAME, timeout_ms);
+}
+
+static inline int zs_write_lock_release(struct zsdb_priv *priv)
+{
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_release(&priv->wlk);
+}
+
+static inline int zs_pack_lock_acquire(struct zsdb_priv *priv, long timeout_ms)
+{
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_acquire(&priv->wlk, priv->dbdir.buf,
+                                 PACK_LOCK_FNAME, timeout_ms);
+}
+
+static inline int zs_pack_lock_release(struct zsdb_priv *priv)
+{
+        if (!priv) return ZS_INTERNAL;
+
+        return file_lock_release(&priv->wlk);
+}
+
 
 /* zeroskip-active.c */
 extern int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int mode);
@@ -207,12 +242,13 @@ extern int zs_active_file_finalise(struct zsdb_priv *priv);
 extern int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
                                               unsigned char *key, size_t keylen,
                                               unsigned char *val, size_t vallen);
+extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
 extern int zs_dotzsdb_validate(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
-extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
+
 
 /* zeroskip-filename.c */
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);

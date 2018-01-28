@@ -50,7 +50,7 @@ static int process_active_file(const char *path, void *data)
         }
 
         if ((ret = zs_active_file_open(priv, 0, 0)) != ZS_OK) {
-                file_lock_release(&priv->lk);
+                zs_write_lock_release(priv);
                 goto done;
         }
 
@@ -354,7 +354,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
         }
 
         if ((flags & OWRITE) &&
-            (file_lock_acquire(&priv->lk, priv->dbdir.buf, 0) < 0)) {
+            (zs_write_lock_acquire(priv, 0 /*timeout*/) < 0)) {
                 zslog(LOGDEBUG, "Cannot acquire a write lock on %s\n",
                         priv->dbdir.buf);
                 ret = ZS_ERROR;
@@ -369,7 +369,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                  * a newly created DB.
                  */
                 if ((ret = zs_active_file_open(priv, 0, 1)) != ZS_OK) {
-                        file_lock_release(&priv->lk);
+                        zs_write_lock_release(priv);
                         goto done;
                 }
 
@@ -414,7 +414,7 @@ int zsdb_close(struct zsdb *db)
         priv = db->priv;
 
         if (priv->flags & OWRITE)
-                file_lock_release(&priv->lk);
+                zs_write_lock_release(priv);
 
         zs_active_file_close(priv);
 
