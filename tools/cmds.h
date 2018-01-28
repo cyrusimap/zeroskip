@@ -18,7 +18,7 @@ int cmd_get(int argc, char **argv, const char *progname);
 #define cmd_get_usage "get "
 
 int cmd_set(int argc, char **argv, const char *progname);
-#define cmd_set_usage "set [--config CONFIGFILE] <key> <value>"
+#define cmd_set_usage "set [--config CONFIGFILE] DB <key> <value>"
 
 int cmd_delete(int argc, char **argv, const char *progname);
 #define cmd_delete_usage "delete "

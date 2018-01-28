@@ -318,7 +318,10 @@ static int zs_read_one_active_record(struct zsdb_file *f, size_t *offset,
 /*
  * Public functions
  */
-int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx)
+/* FIXME: Make `int create`, the 3rd argument to this function
+   (active_file_open an enum or something more meaninful
+*/
+int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
 {
         int ret = ZS_OK;
         size_t mf_size;
@@ -332,6 +335,9 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx)
         priv->factive.header.startidx = idx;
         priv->factive.header.endidx = idx;
         priv->factive.header.crc32 = 0;
+
+        if (create)
+                mappedfile_flags |= MAPPEDFILE_CREATE;
 
         /* Open the active filename for use */
         ret = mappedfile_open(priv->factive.fname.buf,

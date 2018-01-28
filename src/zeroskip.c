@@ -29,16 +29,60 @@
 /**
  * Private functions
  */
-static int process_active_file(const char *path, void *data _unused_)
+static int process_active_file(const char *path, void *data)
 {
-        zslog(LOGDEBUG, "processing active file: %s\n", path);
-        return 0;
+        struct zsdb_priv *priv;
+        int ret = ZS_OK;
+        size_t mfsize;
+
+        if (!data) {
+                zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
+                ret = ZS_INTERNAL;
+                goto done;
+        }
+
+        priv = (struct zsdb_priv *)data;
+
+        if (priv->factive.is_open) {
+                zslog(LOGWARNING, "DB has more than one active file. Invalid!\n");
+                ret = ZS_INTERNAL;
+                goto done;
+        }
+
+        if ((ret = zs_active_file_open(priv, 0, 0)) != ZS_OK) {
+                file_lock_release(&priv->lk);
+                goto done;
+        }
+
+        /* Seek to the end of the file, that's where the
+           records need to appended to.
+        */
+        mappedfile_size(&priv->factive.mf, &mfsize);
+        if (mfsize < ZS_HDR_SIZE) {
+                zslog(LOGWARNING, "DB %s is in an invalid state.\n",
+                        priv->factive.fname.buf);
+                ret = ZS_INVALID_DB;
+                goto done;
+        }
+
+        if (mfsize)
+                mappedfile_seek(&priv->factive.mf, mfsize, NULL);
+
+
+        /* TODO: Load records from active file to in-memory tree */
+
+
+        zslog(LOGDEBUG, "opened active file: %s\n", path);
+done:
+        return ret;
 }
+
 static int process_finalised_file(const char *path, void *data _unused_)
 {
         zslog(LOGDEBUG, "processing finalised file: %s\n", path);
         return 0;
 }
+
 static int process_packed_file(const char *path, void *data _unused_)
 {
         zslog(LOGDEBUG, "processing packed file: %s\n", path);
@@ -92,6 +136,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
         char buf[PATH_MAX];
         int err = 0;
         int cnt = 0;
+        int ret = ZS_OK;
 
         if (getcwd(buf, sizeof(buf)) == NULL)
                 return errno;
@@ -127,27 +172,33 @@ static int for_each_db_file_in_dbdir(char *const path[],
                 if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
                         switch(interpret_db_filename(sbuf, strlen(sbuf))) {
                         case DB_FTYPE_ACTIVE:
-                                process_active_file(sbuf, data);
+                                ret = process_active_file(sbuf, data);
                                 cnt++;
                                 break;
                         case DB_FTYPE_FINALISED:
-                                process_finalised_file(sbuf, data);
+                                ret = process_finalised_file(sbuf, data);
                                 cnt++;
                                 break;
                         case DB_FTYPE_PACKED:
-                                process_packed_file(sbuf, data);
+                                ret = process_packed_file(sbuf, data);
                                 cnt++;
                                 break;
                         default:
                                 break;
                         } /* switch() */
                 }         /* strncmp() */
+                if (ret != ZS_OK) {
+                        zslog(LOGDEBUG, "Failed processing DB %s\n", *path);
+                        break;
+                }
         }                 /* fts_read() */
 
         fts_close(ftsp);
 
         if (err)
                 errno = err;
+
+        err = ret;
 
         *count = cnt;
         return err;
@@ -317,7 +368,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 /* Create the 'active' mutable db file if it is
                  * a newly created DB.
                  */
-                if ((ret = zs_active_file_open(priv, 0)) != ZS_OK) {
+                if ((ret = zs_active_file_open(priv, 0, 1)) != ZS_OK) {
                         file_lock_release(&priv->lk);
                         goto done;
                 }
@@ -328,9 +379,12 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 /* If it is an existing DB, scan the directory for
                  * db files.
                  */
-                for_each_db_file_in_dbdir(&priv->dbdir.buf,
-                                          DB_ABS_PATH, priv,
-                                          &fcount);
+                ret = for_each_db_file_in_dbdir(&priv->dbdir.buf,
+                                                DB_ABS_PATH, priv,
+                                                &fcount);
+                if (ret != ZS_OK)
+                        goto done;
+
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
                       fcount, priv->dbdir.buf);
         }
@@ -340,6 +394,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
         } else if (flags & OREAD) {
                 zslog(LOGDEBUG, "Opening DB in READ mode.\n");
         }
+
+        priv->nopen += 1;
 
 done:
         return ret;
@@ -362,7 +418,8 @@ int zsdb_close(struct zsdb *db)
 
         zs_active_file_close(priv);
 
-        btree_free(priv->memtree);
+        if (priv->memtree)
+                btree_free(priv->memtree);
 
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);
@@ -423,7 +480,8 @@ int zsdb_add(struct zsdb *db,
         rec = record_new(key, keylen, value, vallen);
         btree_insert(priv->memtree, rec);
 
-        return ZS_OK;
+        zslog(LOGDEBUG, "Inserted record into the DB.\n");
+        return ret;
 }
 
 int zsdb_remove(struct zsdb *db _unused_,
