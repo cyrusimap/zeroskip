@@ -11,6 +11,8 @@
 #include <stdlib.h>
 
 #include "cmds.h"
+#include "log.h"
+#include "zeroskip.h"
 
 int cmd_delete(int argc, char **argv, const char *progname)
 {
@@ -22,8 +24,12 @@ int cmd_delete(int argc, char **argv, const char *progname)
         int option;
         int option_index;
         const char *config_file = NULL;
+        struct zsdb *db = NULL;
+        char *dbname = NULL;
+        char *key = NULL;
+        int ret;
 
-        while((option = getopt_long(argc, argv, "c:h", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
                 case 'c':
                         config_file = optarg;
@@ -35,7 +41,47 @@ int cmd_delete(int argc, char **argv, const char *progname)
                 };
         }
 
+        if (argc - optind != 2) {
+                cmd_die_usage(progname, cmd_set_usage);
+        }
+
+        dbname = argv[optind++];
+        key = argv[optind++];
+
         cmd_parse_config(config_file);
 
-        exit(EXIT_SUCCESS);
+        if (zsdb_init(&db) != ZS_OK) {
+                zslog(LOGWARNING, "Failed initialising DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
+                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_remove(db, (unsigned char *)key, strlen(key)) != ZS_OK) {
+                zslog(LOGDEBUG, "Cannot delete record from %s\n", dbname);
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_commit(db) != ZS_OK) {
+                zslog(LOGDEBUG, "Could not commit record.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        ret = EXIT_SUCCESS;
+done:
+        if (zsdb_close(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not close DB.\n");
+                ret = EXIT_FAILURE;
+        }
+
+        zsdb_final(&db);
+
+        exit(ret);
 }

@@ -461,21 +461,61 @@ int zsdb_add(struct zsdb *db,
 
         /* Add the entry to the active file */
         priv->factive.dirty = 1;
-        zs_active_file_write_keyval_record(priv, key, keylen, value, vallen);
+        ret = zs_active_file_write_keyval_record(priv, key, keylen, value, vallen);
+        if (ret != ZS_OK) {
+                crc32_end(&priv->factive.mf);
+                goto done;
+        }
 
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, value, vallen);
         btree_insert(priv->memtree, rec);
 
         zslog(LOGDEBUG, "Inserted record into the DB.\n");
+
+done:
         return ret;
 }
 
-int zsdb_remove(struct zsdb *db _unused_,
-                unsigned char *key _unused_,
-                size_t keylen _unused_)
+int zsdb_remove(struct zsdb *db,
+                unsigned char *key,
+                size_t keylen)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        struct record *rec;
+
+        assert_zsdb(db);
+        assert(key);
+        assert(keylen);
+
+        if (!db || !db->priv) {
+                ret = ZS_NOT_OPEN;
+                goto done;
+        }
+
+        priv = db->priv;
+
+        if (!priv->nopen || !priv->factive.is_open) {
+                return ZS_NOT_OPEN;
+        }
+
+        /* Start computing the crc32. Will end when the transaction is
+           committed */
+        crc32_begin(&priv->factive.mf);
+
+        priv->factive.dirty = 1;
+
+        ret = zs_active_file_write_delete_record(priv, key, keylen);
+        if (ret != ZS_OK)
+                crc32_end(&priv->factive.mf);
+
+        /* Add the entry to the in-memory tree */
+        rec = record_new(key, keylen, NULL, 0);
+        btree_insert(priv->memtree, rec);
+
+done:
+        return ret;
 }
 
 int zsdb_commit(struct zsdb *db)

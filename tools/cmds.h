@@ -21,7 +21,7 @@ int cmd_set(int argc, char **argv, const char *progname);
 #define cmd_set_usage "set [--config CONFIGFILE] DB <key> <value>"
 
 int cmd_delete(int argc, char **argv, const char *progname);
-#define cmd_delete_usage "delete "
+#define cmd_delete_usage "delete [--config CONFIGFILE] DB <key>"
 
 int cmd_dump(int argc, char **argv, const char *progname);
 #define cmd_dump_usage "dump [--config CONFIGFILE] [--dump=active|all] DB"

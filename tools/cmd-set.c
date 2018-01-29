@@ -26,7 +26,7 @@ int cmd_set(int argc, char **argv, const char *progname)
         int option_index;
         const char *config_file = NULL;
         struct zsdb *db = NULL;
-        char *fname = NULL;
+        char *dbname = NULL;
         char *key = NULL;
         char *value = NULL;
         int ret;
@@ -47,7 +47,7 @@ int cmd_set(int argc, char **argv, const char *progname)
                 cmd_die_usage(progname, cmd_set_usage);
         }
 
-        fname = argv[optind++];
+        dbname = argv[optind++];
         key = argv[optind++];
         value = argv[optind++];
 
@@ -59,15 +59,15 @@ int cmd_set(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_open(db, fname, MODE_RDWR) != ZS_OK) {
-                zslog(LOGWARNING, "Could not open DB %s.\n", fname);
+        if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
+                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_add(db, (unsigned char *)key, strlen(key),
                      (unsigned char *)value, strlen(value)) != ZS_OK) {
-                zslog(LOGDEBUG, "Cannot add record to %s\n", fname);
+                zslog(LOGDEBUG, "Cannot add record to %s\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }

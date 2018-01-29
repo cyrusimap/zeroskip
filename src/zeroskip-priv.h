@@ -255,6 +255,9 @@ extern int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
                                               unsigned char *key, size_t keylen,
                                               unsigned char *val, size_t vallen);
 extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
+int zs_active_file_write_delete_record(struct zsdb_priv *priv,
+                                       unsigned char *key,
+                                       size_t keylen);
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
