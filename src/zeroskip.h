@@ -21,11 +21,8 @@ typedef enum {
         DB_DUMP_ALL,
 } DBDumpLevel;
 
-typedef enum {
-        OREAD     = 0x01,
-        OWRITE    = 0x02,
-        OCREAT    = 0x04,
-} db_mode_t;
+#define MODE_RDWR   0           /* Open for reading/writing */
+#define MODE_CREATE 1           /* Mode for creating */
 
 /* Return codes */
 enum {
@@ -86,7 +83,7 @@ typedef int foreach_cb(void *data,
 
 extern int zsdb_init(struct zsdb **pdb);
 extern void zsdb_final(struct zsdb **pdb);
-extern int zsdb_open(struct zsdb *db, const char *dbdir, int flags);
+extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
 extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
                     unsigned char *value, size_t vallen);

@@ -298,7 +298,7 @@ static int zsdb_create(struct zsdb *db)
         return ZS_OK;
 }
 
-int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
+int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 {
         struct zsdb_priv *priv;
         int ret = ZS_OK;
@@ -316,21 +316,14 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
 
         priv = db->priv;
 
-        if (priv->nopen && (flags & OWRITE)) {
-                zslog(LOGWARNING, "db can only be opened in read mode\n");
-                return ZS_INVALID_MODE;
-        }
-
         cstring_release(&priv->dbdir);
         cstring_addstr(&priv->dbdir, dbdir);
-
-        priv->flags = flags;
 
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
                 zslog(LOGDEBUG, "DB %s doesn't exist\n",
                         priv->dbdir.buf);
-                if (flags & OCREAT) {
+                if (mode == MODE_CREATE) {
                         ret = zsdb_create(db);
                         newdb = 1;
                 } else {
@@ -353,28 +346,28 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                 goto done;
         }
 
-        if ((flags & OWRITE) &&
-            (zs_write_lock_acquire(priv, 0 /*timeout*/) < 0)) {
-                zslog(LOGDEBUG, "Cannot acquire a write lock on %s\n",
-                        priv->dbdir.buf);
-                ret = ZS_ERROR;
-                goto done;
-        }
-
         /* In-memory tree */
         priv->memtree = btree_new(NULL, NULL);
 
         if (newdb) {
-                /* Create the 'active' mutable db file if it is
-                 * a newly created DB.
-                 */
-                if ((ret = zs_active_file_open(priv, 0, 1)) != ZS_OK) {
-                        zs_write_lock_release(priv);
+                if (zs_write_lock_acquire(priv, 0 /*timeout*/) < 0) {
+                        zslog(LOGDEBUG, "Cannot acquire a write lock on %s\n",
+                              priv->dbdir.buf);
+                        ret = ZS_ERROR;
                         goto done;
                 }
 
+                /* Create the 'active' mutable db file if it is
+                 * a newly created DB.
+                 */
+                ret = zs_active_file_open(priv, 0, 1);
+
+                zs_write_lock_release(priv);
+                if (ret != ZS_OK)
+                        goto done;
+
                 zslog(LOGDEBUG, "Created active file: %s\n",
-                        priv->factive.fname.buf);
+                      priv->factive.fname.buf);
         } else {
                 /* If it is an existing DB, scan the directory for
                  * db files.
@@ -389,11 +382,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int flags)
                       fcount, priv->dbdir.buf);
         }
 
-        if (flags & OWRITE) {
-                zslog(LOGDEBUG, "Opening DB in WRITE mode.\n");
-        } else if (flags & OREAD) {
-                zslog(LOGDEBUG, "Opening DB in READ mode.\n");
-        }
+        zslog(LOGDEBUG, "DB `%s` opened.\n", priv->dbdir.buf);
 
         priv->nopen += 1;
 
@@ -413,7 +402,9 @@ int zsdb_close(struct zsdb *db)
 
         priv = db->priv;
 
-        if (priv->flags & OWRITE)
+        zslog(LOGDEBUG, "Closing DB `%s`.\n", priv->dbdir.buf);
+
+        if (priv->factive.is_open)
                 zs_write_lock_release(priv);
 
         zs_active_file_close(priv);
@@ -451,10 +442,6 @@ int zsdb_add(struct zsdb *db,
                 return ZS_ERROR;
 
         priv = db->priv;
-
-        if (!(priv->flags & OWRITE)) {
-                return ZS_INVALID_MODE;
-        }
 
         if (!priv->nopen || !priv->factive.is_open) {
                 return ZS_NOT_OPEN;
@@ -505,6 +492,8 @@ int zsdb_commit(struct zsdb *db)
                 return ZS_NOT_OPEN;
 
         ret = zs_active_file_write_commit_record(priv);
+        if (ret == ZS_OK)
+                priv->factive.dirty = 0;
 
         return ret;
 }

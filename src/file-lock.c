@@ -26,7 +26,7 @@
 /* Internal functions */
 static int create_lock_file(const char *path)
 {
-        if (!*path) {
+        if (!path) {
                 fprintf(stderr, "Invalid path!\n");
                 return -1;
         }
@@ -38,7 +38,7 @@ static int remove_lock_file(const char *path)
 {
         zslog(LOGDEBUG, "Removing lock file %s\n",
               path);
-        if (!*path) {
+        if (!path) {
                 fprintf(stderr, "Invalid path!\n");
                 return -1;
         }
@@ -64,6 +64,8 @@ static int flock_lock(struct file_lock *lk, const char *path,
               lk->fname.buf);
 
         lk->fd = create_lock_file(lk->fname.buf);
+        if (lk->fd != -1)
+                lk->locked = 1;
 
         return lk->fd;
 }
@@ -129,14 +131,14 @@ int file_lock_release(struct file_lock *lk)
         if (!lk)
                 return -1;
 
-        if (lk->fd < 0)
+        if (lk->fd < 0 || !lk->locked)
                 return 0;
 
         ret = close(lk->fd);
 
         remove_lock_file(lk->fname.buf);
-
         cstring_release(&lk->fname);
+        lk->locked = 0;
 
         return ret ? -1 : 0;
 }

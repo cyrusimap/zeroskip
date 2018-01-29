@@ -220,10 +220,16 @@ static inline int zs_write_lock_release(struct zsdb_priv *priv)
         return file_lock_release(&priv->wlk);
 }
 
+static inline int zs_write_lock_is_locked(struct zsdb_priv *priv)
+{
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_is_locked(&priv->wlk);
+}
+
 static inline int zs_pack_lock_acquire(struct zsdb_priv *priv, long timeout_ms)
 {
         if (!priv) return ZS_INTERNAL;
-        return file_lock_acquire(&priv->wlk, priv->dbdir.buf,
+        return file_lock_acquire(&priv->plk, priv->dbdir.buf,
                                  PACK_LOCK_FNAME, timeout_ms);
 }
 
@@ -231,7 +237,13 @@ static inline int zs_pack_lock_release(struct zsdb_priv *priv)
 {
         if (!priv) return ZS_INTERNAL;
 
-        return file_lock_release(&priv->wlk);
+        return file_lock_release(&priv->plk);
+}
+
+static inline int zs_pack_lock_is_locked(struct zsdb_priv *priv)
+{
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_is_locked(&priv->plk);
 }
 
 

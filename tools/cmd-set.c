@@ -59,7 +59,7 @@ int cmd_set(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_open(db, fname, OWRITE) != ZS_OK) {
+        if (zsdb_open(db, fname, MODE_RDWR) != ZS_OK) {
                 zslog(LOGWARNING, "Could not open DB %s.\n", fname);
                 ret = EXIT_FAILURE;
                 goto done;

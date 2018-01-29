@@ -381,13 +381,17 @@ int zs_active_file_close(struct zsdb_priv *priv)
                 return ZS_ERROR;
 
         if (priv->factive.dirty) {
-                zs_active_file_write_commit_record(priv);
+                ret = zs_active_file_write_commit_record(priv);
+                if (ret == ZS_OK)
+                        priv->factive.dirty = 0;
         }
 
         mappedfile_flush(&priv->factive.mf);
         mappedfile_close(&priv->factive.mf);
 
         cstring_release(&priv->factive.fname);
+
+        priv->factive.is_open = 0;
 
         return ret;
 }

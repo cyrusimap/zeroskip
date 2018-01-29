@@ -15,6 +15,7 @@
 
 struct file_lock {
         cstring fname;
+        int locked;
         int fd;
 };
 
@@ -23,5 +24,11 @@ struct file_lock {
 int file_lock_acquire(struct file_lock *lk, const char *path,
                       const char *fname, long timeout_ms);
 int file_lock_release(struct file_lock *lk);
+
+static inline int file_lock_is_locked(struct file_lock *lk)
+{
+        return (lk->locked == 1);
+}
+
 
 #endif  /* _ZS_FILE_LOCK_H_ */
