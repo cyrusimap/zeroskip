@@ -201,51 +201,9 @@ struct zsdb_priv {
 
         int nopen;                /* count of opens on this instance */
         int flags;                /* The flags passed during call to open */
+        int dbdirty;              /* Marked dirty when there are changes
+                                   * (add/remove/pack) to the db */
 };
-
-/* locking routines */
-#define WRITE_LOCK_FNAME "zsdbw"
-#define PACK_LOCK_FNAME "zsdbp"
-
-static inline int zs_write_lock_acquire(struct zsdb_priv *priv, long timeout_ms)
-{
-        if (!priv) return ZS_INTERNAL;
-        return file_lock_acquire(&priv->wlk, priv->dbdir.buf,
-                                 WRITE_LOCK_FNAME, timeout_ms);
-}
-
-static inline int zs_write_lock_release(struct zsdb_priv *priv)
-{
-        if (!priv) return ZS_INTERNAL;
-        return file_lock_release(&priv->wlk);
-}
-
-static inline int zs_write_lock_is_locked(struct zsdb_priv *priv)
-{
-        if (!priv) return ZS_INTERNAL;
-        return file_lock_is_locked(&priv->wlk);
-}
-
-static inline int zs_pack_lock_acquire(struct zsdb_priv *priv, long timeout_ms)
-{
-        if (!priv) return ZS_INTERNAL;
-        return file_lock_acquire(&priv->plk, priv->dbdir.buf,
-                                 PACK_LOCK_FNAME, timeout_ms);
-}
-
-static inline int zs_pack_lock_release(struct zsdb_priv *priv)
-{
-        if (!priv) return ZS_INTERNAL;
-
-        return file_lock_release(&priv->plk);
-}
-
-static inline int zs_pack_lock_is_locked(struct zsdb_priv *priv)
-{
-        if (!priv) return ZS_INTERNAL;
-        return file_lock_is_locked(&priv->plk);
-}
-
 
 /* zeroskip-active.c */
 extern int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int mode);

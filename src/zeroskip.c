@@ -50,7 +50,7 @@ static int process_active_file(const char *path, void *data)
         }
 
         if ((ret = zs_active_file_open(priv, 0, 0)) != ZS_OK) {
-                zs_write_lock_release(priv);
+                file_lock_release(&priv->wlk);
                 goto done;
         }
 
@@ -350,7 +350,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         priv->memtree = btree_new(NULL, NULL);
 
         if (newdb) {
-                if (zs_write_lock_acquire(priv, 0 /*timeout*/) < 0) {
+                if (zsdb_write_lock_acquire(db, 0 /*timeout*/) < 0) {
                         zslog(LOGDEBUG, "Cannot acquire a write lock on %s\n",
                               priv->dbdir.buf);
                         ret = ZS_ERROR;
@@ -362,7 +362,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                  */
                 ret = zs_active_file_open(priv, 0, 1);
 
-                zs_write_lock_release(priv);
+                zsdb_write_lock_release(db);
                 if (ret != ZS_OK)
                         goto done;
 
@@ -405,7 +405,7 @@ int zsdb_close(struct zsdb *db)
         zslog(LOGDEBUG, "Closing DB `%s`.\n", priv->dbdir.buf);
 
         if (priv->factive.is_open)
-                zs_write_lock_release(priv);
+                zsdb_write_lock_release(db);
 
         zs_active_file_close(priv);
 
@@ -447,6 +447,12 @@ int zsdb_add(struct zsdb *db,
                 return ZS_NOT_OPEN;
         }
 
+        if (!zsdb_write_lock_is_locked(db)) {
+                zslog(LOGDEBUG, "Need a write lock to add records.\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
+
         /* check file size and finalise if necessary */
         mappedfile_size(&priv->factive.mf, &mfsize);
         if (mfsize >= TWOMB) {
@@ -460,12 +466,12 @@ int zsdb_add(struct zsdb *db,
         crc32_begin(&priv->factive.mf);
 
         /* Add the entry to the active file */
-        priv->factive.dirty = 1;
         ret = zs_active_file_write_keyval_record(priv, key, keylen, value, vallen);
         if (ret != ZS_OK) {
                 crc32_end(&priv->factive.mf);
                 goto done;
         }
+        priv->factive.dirty = 1;
 
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, value, vallen);
@@ -500,16 +506,26 @@ int zsdb_remove(struct zsdb *db,
                 return ZS_NOT_OPEN;
         }
 
+        if (!zsdb_write_lock_is_locked(db)) {
+                zslog(LOGDEBUG, "Need a write lock to remove records.\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
+
         /* Start computing the crc32. Will end when the transaction is
            committed */
         crc32_begin(&priv->factive.mf);
 
+        ret = zs_active_file_write_delete_record(priv, key, keylen);
+        if (ret != ZS_OK) {
+                crc32_end(&priv->factive.mf);
+                zslog(LOGDEBUG, "Failed removing key from DB `%s`\n",
+                      priv->dbdir.buf);
+                goto done;
+        }
         priv->factive.dirty = 1;
 
-        ret = zs_active_file_write_delete_record(priv, key, keylen);
-        if (ret != ZS_OK)
-                crc32_end(&priv->factive.mf);
-
+        zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, NULL, 0);
         btree_insert(priv->memtree, rec);
@@ -550,4 +566,76 @@ int zsdb_dump(struct zsdb *db _unused_,
               DBDumpLevel level _unused_)
 {
         return ZS_NOTIMPLEMENTED;
+}
+
+#define WRITE_LOCK_FNAME "zsdbw"
+#define PACK_LOCK_FNAME "zsdbp"
+
+int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms)
+{
+        struct zsdb_priv *priv;
+
+        assert(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_acquire(&priv->wlk, priv->dbdir.buf,
+                                 WRITE_LOCK_FNAME, timeout_ms);
+}
+
+int zsdb_write_lock_release(struct zsdb *db)
+{
+        struct zsdb_priv *priv;
+
+        assert(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_release(&priv->wlk);
+}
+
+int zsdb_write_lock_is_locked(struct zsdb *db)
+{
+        struct zsdb_priv *priv;
+
+        assert(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_is_locked(&priv->wlk);
+}
+
+int zsdb_pack_lock_acquire(struct zsdb *db, long timeout_ms)
+{
+        struct zsdb_priv *priv;
+
+        assert(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_acquire(&priv->plk, priv->dbdir.buf,
+                                 PACK_LOCK_FNAME, timeout_ms);
+}
+
+int zsdb_pack_lock_release(struct zsdb *db)
+{
+        struct zsdb_priv *priv;
+
+        assert(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        return file_lock_release(&priv->plk);
+}
+
+int zsdb_pack_lock_is_locked(struct zsdb *db)
+{
+        struct zsdb_priv *priv;
+
+        assert(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+        return file_lock_is_locked(&priv->plk);
 }

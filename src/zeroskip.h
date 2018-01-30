@@ -80,7 +80,9 @@ typedef int foreach_cb(void *data,
                        unsigned char *key, size_t keylen,
                        unsigned char *value, size_t vallen);
 
-
+/*
+ * Zeroskip API
+ */
 extern int zsdb_init(struct zsdb **pdb);
 extern void zsdb_final(struct zsdb **pdb);
 extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
@@ -92,6 +94,14 @@ extern int zsdb_commit(struct zsdb *db);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
                       unsigned char **value, size_t *vallen);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
+
+/* locking routines */
+extern int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms);
+extern int zsdb_write_lock_release(struct zsdb *db);
+extern int zsdb_write_lock_is_locked(struct zsdb *db);
+extern int zsdb_pack_lock_acquire(struct zsdb *db, long timeout_ms);
+extern int zsdb_pack_lock_release(struct zsdb *db);
+extern int zsdb_pack_lock_is_locked(struct zsdb *db);
 
 CPP_GUARD_END
 #endif  /* _ZEROSKIP_H_ */

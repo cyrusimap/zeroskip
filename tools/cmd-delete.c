@@ -42,7 +42,7 @@ int cmd_delete(int argc, char **argv, const char *progname)
         }
 
         if (argc - optind != 2) {
-                cmd_die_usage(progname, cmd_set_usage);
+                cmd_die_usage(progname, cmd_delete_usage);
         }
 
         dbname = argv[optind++];
@@ -62,6 +62,12 @@ int cmd_delete(int argc, char **argv, const char *progname)
                 goto done;
         }
 
+        if (zsdb_write_lock_acquire(db, 0) != ZS_OK) {
+                zslog(LOGWARNING, "Could not acquire write lock for deletion.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
         if (zsdb_remove(db, (unsigned char *)key, strlen(key)) != ZS_OK) {
                 zslog(LOGDEBUG, "Cannot delete record from %s\n", dbname);
                 ret = EXIT_FAILURE;
@@ -70,6 +76,12 @@ int cmd_delete(int argc, char **argv, const char *progname)
 
         if (zsdb_commit(db) != ZS_OK) {
                 zslog(LOGDEBUG, "Could not commit record.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_write_lock_release(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not release write lock after deletion.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
