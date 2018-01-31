@@ -612,3 +612,27 @@ done:
         xfree(dbuf);
         return ret;
 }
+
+
+int zs_active_file_record_foreach(struct zsdb_priv *priv,
+                                  foreach_cb *cb, void *cbdata)
+{
+        int ret = ZS_OK;
+        size_t dbsize = 0, offset = ZS_HDR_SIZE;
+
+        mappedfile_size(&priv->factive.mf, &dbsize);
+        if (dbsize == 0 || dbsize < ZS_HDR_SIZE) {
+                zslog(LOGDEBUG, "Not a valid DB.\n");
+                return ZS_INVALID_DB;
+        } else if (dbsize == ZS_HDR_SIZE) {
+                zslog(LOGDEBUG, "No records in zeroskip DB\n");
+                return ret;
+        }
+
+        while (offset < dbsize) {
+                ret = zs_read_one_active_record(&priv->factive, &offset,
+                                                cb, cbdata);
+        }
+
+        return ret;
+}

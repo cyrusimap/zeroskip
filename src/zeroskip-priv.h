@@ -199,7 +199,7 @@ struct zsdb_priv {
 
         struct btree *memtree;    /* in-memory B-Tree */
 
-        int nopen;                /* count of opens on this instance */
+        int open;                 /* is the db open */
         int flags;                /* The flags passed during call to open */
         int dbdirty;              /* Marked dirty when there are changes
                                    * (add/remove/pack) to the db */
@@ -216,6 +216,8 @@ extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
 int zs_active_file_write_delete_record(struct zsdb_priv *priv,
                                        unsigned char *key,
                                        size_t keylen);
+extern int zs_active_file_record_foreach(struct zsdb_priv *priv,
+                                         foreach_cb *cb, void *cbdata);
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);

@@ -384,7 +384,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 
         zslog(LOGDEBUG, "DB `%s` opened.\n", priv->dbdir.buf);
 
-        priv->nopen += 1;
+        priv->open = 1;
 
 done:
         return ret;
@@ -443,7 +443,7 @@ int zsdb_add(struct zsdb *db,
 
         priv = db->priv;
 
-        if (!priv->nopen || !priv->factive.is_open) {
+        if (!priv->open || !priv->factive.is_open) {
                 return ZS_NOT_OPEN;
         }
 
@@ -502,7 +502,7 @@ int zsdb_remove(struct zsdb *db,
 
         priv = db->priv;
 
-        if (!priv->nopen || !priv->factive.is_open) {
+        if (!priv->open || !priv->factive.is_open) {
                 return ZS_NOT_OPEN;
         }
 
@@ -562,10 +562,54 @@ int zsdb_fetch(struct zsdb *db _unused_,
 {
         return ZS_NOTIMPLEMENTED;
 }
-int zsdb_dump(struct zsdb *db _unused_,
-              DBDumpLevel level _unused_)
+
+static int print_rec(void *data _unused_,
+                     unsigned char *key, size_t keylen,
+                     unsigned char *val, size_t vallen)
 {
-        return ZS_NOTIMPLEMENTED;
+        size_t i;
+
+        for (i = 0; i < keylen; i++) {
+                printf("%c", key[i]);
+        }
+        printf("\n");
+
+        for (i = 0; i < vallen; i++) {
+                printf("%c", val[i]);
+        }
+        printf("\n");
+
+        printf("---\n");
+
+        return 0;
+}
+
+int zsdb_dump(struct zsdb *db,
+              DBDumpLevel level)
+{
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+
+        assert_zsdb(db);
+
+        if (db)
+                priv = db->priv;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open.\n!", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        if (level == DB_DUMP_ACTIVE) {
+                ret = zs_active_file_record_foreach(priv, print_rec,
+                                                    NULL);
+        } else if (level == DB_DUMP_ALL) {
+        } else {
+                zslog(LOGDEBUG, "Invalid DB dump option\n");
+                return ZS_ERROR;
+        }
+
+        return ret;
 }
 
 #define WRITE_LOCK_FNAME "zsdbw"
@@ -574,13 +618,16 @@ int zsdb_dump(struct zsdb *db _unused_,
 int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms)
 {
         struct zsdb_priv *priv;
+        int ret;
 
         assert(db);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
-        return file_lock_acquire(&priv->wlk, priv->dbdir.buf,
-                                 WRITE_LOCK_FNAME, timeout_ms);
+        ret = file_lock_acquire(&priv->wlk, priv->dbdir.buf,
+                                WRITE_LOCK_FNAME, timeout_ms);
+
+        return ret ? ZS_OK : ZS_ERROR;
 }
 
 int zsdb_write_lock_release(struct zsdb *db)
@@ -591,7 +638,7 @@ int zsdb_write_lock_release(struct zsdb *db)
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
-        return file_lock_release(&priv->wlk);
+        return (file_lock_release(&priv->wlk)  == 0) ? ZS_OK : ZS_ERROR;
 }
 
 int zsdb_write_lock_is_locked(struct zsdb *db)

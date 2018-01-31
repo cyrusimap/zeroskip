@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include "cmds.h"
+#include "log.h"
 #include "zeroskip.h"
 
 int cmd_dump(int argc, char **argv, const char *progname)
@@ -25,8 +26,9 @@ int cmd_dump(int argc, char **argv, const char *progname)
         int option_index;
         const char *config_file = NULL;
         struct zsdb *db = NULL;
-        const char *fname;
-        DBDumpLevel level = DB_DUMP_ALL;
+        const char *dbname;
+        int ret;
+        DBDumpLevel level = DB_DUMP_ACTIVE;
 
         while((option = getopt_long(argc, argv, "d", long_options, &option_index)) != -1) {
                 switch (option) {
@@ -47,39 +49,37 @@ int cmd_dump(int argc, char **argv, const char *progname)
                 cmd_die_usage(progname, cmd_dump_usage);
         }
 
-        fname = argv[optind];
-
-        fprintf(stderr, "Opening db: %s\n", fname);
+        dbname = argv[optind];
 
         cmd_parse_config(config_file);
 
-#if 0
-        if (skiplistdb_init(type, &db, &tid) != SDB_OK) {
-               fprintf(stderr, "Failed initialising.\n");
-               exit(EXIT_FAILURE);
+        if (zsdb_init(&db) != ZS_OK) {
+                zslog(LOGWARNING, "Failed initialising DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
-        if (skiplistdb_open(fname, db, SDB_CREATE, &tid) != SDB_OK) {
-                fprintf(stderr, "Could not open skiplist DB.\n");
-                goto fail1;
+        if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
+                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
-        if (skiplistdb_dump(db, level) != SDB_OK) {
-                fprintf(stderr, "Cannot dump db %s\n", fname);
-                goto fail1;
+        if (zsdb_dump(db, level) != ZS_OK) {
+                zslog(LOGWARNING, "Failed dumping records in %s.\n",
+                      dbname);
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
-        if (skiplistdb_close(db) != SDB_OK) {
-                fprintf(stderr, "Could not close skiplist DB.\n");
-                goto fail1;
+        ret = EXIT_SUCCESS;
+done:
+        if (zsdb_close(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not close DB.\n");
+                ret = EXIT_FAILURE;
         }
 
-fail1:
-        if (skiplistdb_final(db) != SDB_OK) {
-                fprintf(stderr, "Failed destroying the database instance.\n");
-                exit(EXIT_FAILURE);
-        }
-#endif
+        zsdb_final(&db);
 
-        exit(EXIT_SUCCESS);
+        exit(ret);
 }

@@ -118,12 +118,21 @@ static int flock_with_timeout(struct file_lock *lk,
 }
 
 /* Public functions */
+
+/* file_lock_acquire():
+ * Acquire a file lock.
+ * returns -1 on failure and > 0 on success.
+ */
 int file_lock_acquire(struct file_lock *lk, const char *path,
                       const char *fname, long timeout_ms)
 {
         return flock_with_timeout(lk, path, fname, timeout_ms);
 }
 
+/* file_lock_release():
+ * Releases acquired lock, returns -1 on failure and 0 on
+ * success.
+ */
 int file_lock_release(struct file_lock *lk)
 {
         int ret;
