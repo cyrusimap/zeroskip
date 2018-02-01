@@ -572,12 +572,12 @@ static int print_rec(void *data _unused_,
         for (i = 0; i < keylen; i++) {
                 printf("%c", key[i]);
         }
-        printf("\n");
+        if (keylen) printf("\n");
 
         for (i = 0; i < vallen; i++) {
                 printf("%c", val[i]);
         }
-        printf("\n");
+        if (vallen) printf("\n");
 
         printf("---\n");
 

@@ -155,6 +155,7 @@ static int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
                 write_be64(kbuf + pos, 0ULL);     /* Extended Value offset */
                 pos += sizeof(uint64_t);
         } else {
+                type = REC_TYPE_LONG_DELETED;
                 val = ((uint64_t)type & ((1ULL << 56) - 1));
                 pos += sizeof(uint64_t);
                 write_be64(kbuf + pos, keylen);     /* Extended length */
@@ -186,12 +187,14 @@ static int zs_read_key_rec(struct zsdb_file *f, size_t *offset,
         data = read_be64(fptr);
         key->base.type = data >> 56;
 
-        if (key->base.type == REC_TYPE_KEY) {
+        if (key->base.type == REC_TYPE_KEY ||
+            key->base.type == REC_TYPE_DELETED) {
                 key->base.slen = data >> 40;
                 key->base.sval_offset = data & ((1ULL >> 40) - 1);
                 key->base.llen = 0;
                 key->base.lval_offset = 0;
-        } else if (key->base.type == REC_TYPE_LONG_KEY) {
+        } else if (key->base.type == REC_TYPE_LONG_KEY ||
+                   key->base.type == REC_TYPE_LONG_DELETED) {
                 key->base.slen = 0;
                 key->base.sval_offset = 0;
                 key->base.llen = read_be64(fptr + 8);
@@ -261,6 +264,26 @@ static int zs_read_key_val_record(struct zsdb_file *f, size_t *offset,
         return ret;
 }
 
+static int zs_read_deleted_record(struct zsdb_file *f, size_t *offset,
+                                  foreach_cb *cb, void *cbdata)
+{
+        struct zs_key key;
+        size_t keylen;
+
+        zs_read_key_rec(f, offset, &key);
+
+        keylen = (key.base.type == REC_TYPE_DELETED) ?
+                key.base.slen : key.base.llen;
+
+        *offset += ZS_KEY_BASE_REC_SIZE + roundup64bits(keylen);
+
+        if (cb) {
+                cb(cbdata, key.data, keylen, NULL, 0);
+        }
+
+        return ZS_OK;
+}
+
 static int zs_read_one_active_record(struct zsdb_file *f, size_t *offset,
                                      foreach_cb *cb, void *cbdata)
 {
@@ -280,6 +303,7 @@ static int zs_read_one_active_record(struct zsdb_file *f, size_t *offset,
         switch(rectype) {
         case REC_TYPE_KEY:
         case REC_TYPE_LONG_KEY:
+                printf("[KV]\n");
                 zs_read_key_val_record(f, offset, cb, cbdata);
                 break;
         case REC_TYPE_VALUE:
@@ -299,12 +323,9 @@ static int zs_read_one_active_record(struct zsdb_file *f, size_t *offset,
         case REC_TYPE_LONG_FINAL:
                 break;
         case REC_TYPE_DELETED:
-        {
-                struct zs_key key;
-                zs_read_key_rec(f, offset, &key);
-                zslog(LOGDEBUG, "Deleted key!\n");
-                /* TODO: Implement */
-        }
+        case REC_TYPE_LONG_DELETED:
+                printf("[D]\n");
+                zs_read_deleted_record(f, offset, cb, cbdata);
                 break;
         case REC_TYPE_UNUSED:
                 break;
