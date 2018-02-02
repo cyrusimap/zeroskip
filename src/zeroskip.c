@@ -29,6 +29,21 @@
 /**
  * Private functions
  */
+static int load_active_records_cb(void *data,
+                                  unsigned char *key, size_t keylen,
+                                  unsigned char *value, size_t vallen)
+{
+        struct btree *memtree = (struct btree *)data;
+        struct record *rec;
+
+        btree_remove(memtree, key, keylen);
+
+        rec = record_new(key, keylen, value, vallen);
+        btree_insert(memtree, rec);
+
+        return 0;
+}
+
 static int process_active_file(const char *path, void *data)
 {
         struct zsdb_priv *priv;
@@ -65,12 +80,12 @@ static int process_active_file(const char *path, void *data)
                 goto done;
         }
 
+        /* Load records from active file to in-memory tree */
+        zs_active_file_record_foreach(priv, load_active_records_cb,
+                                      priv->memtree);
+
         if (mfsize)
                 mappedfile_seek(&priv->factive.mf, mfsize, NULL);
-
-
-        /* TODO: Load records from active file to in-memory tree */
-
 
         zslog(LOGDEBUG, "opened active file: %s\n", path);
 done:
@@ -466,7 +481,8 @@ int zsdb_add(struct zsdb *db,
         crc32_begin(&priv->factive.mf);
 
         /* Add the entry to the active file */
-        ret = zs_active_file_write_keyval_record(priv, key, keylen, value, vallen);
+        ret = zs_active_file_write_keyval_record(priv, key, keylen, value,
+                                                 vallen);
         if (ret != ZS_OK) {
                 crc32_end(&priv->factive.mf);
                 goto done;
@@ -475,7 +491,11 @@ int zsdb_add(struct zsdb *db,
 
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, value, vallen);
+        btree_remove(priv->memtree, key, keylen);
         btree_insert(priv->memtree, rec);
+
+        /* TODO: REMOVE THE PRINTING! */
+        btree_print_node_data(priv->memtree, NULL);
 
         zslog(LOGDEBUG, "Inserted record into the DB.\n");
 
@@ -526,9 +546,14 @@ int zsdb_remove(struct zsdb *db,
         priv->factive.dirty = 1;
 
         zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
+
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, NULL, 0);
+        btree_remove(priv->memtree, key, keylen);
         btree_insert(priv->memtree, rec);
+
+        /* TODO: REMOVE THE PRINTING! */
+        btree_print_node_data(priv->memtree, NULL);
 
 done:
         return ret;

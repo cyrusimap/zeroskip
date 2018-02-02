@@ -186,7 +186,7 @@ static void node_split(struct btree_node **branch, struct btree_node *node,
         }
 
         left->count = split;
-        left->count = BTREE_MAX_ELEMENTS - split;
+        right->count = BTREE_MAX_ELEMENTS - split;
 
         /* Insert key/val */
         if (pos <= BTREE_MIN_ELEMENTS) {
@@ -326,7 +326,7 @@ static void node_restore(struct btree_node *node, uint32_t pos)
         }
 }
 
-/* node_remove_leave_element():
+/* node_remove_leaf_element():
  */
 static void node_remove_leaf_element(struct btree_node *node, uint32_t pos)
 {
@@ -369,10 +369,21 @@ static int node_walk_forward(const struct btree_node *node,
 
 int node_print_data(struct record *record, void *data _unused_)
 {
-        printf("%s : %s\n", record->key, record->val);
+        size_t i;
+
+        for (i = 0; i < record->keylen; i++)
+                printf("%c", record->key[i]);
+
+        printf(" : ");
+
+        for (i = 0; i < record->vallen; i++)
+                printf("%c", record->val[i]);
+
+        printf("\n");
 
         return 1;
 }
+
 /**
  * Public functions
  */
@@ -420,6 +431,9 @@ int btree_remove(struct btree *btree, unsigned char *key, size_t keylen)
         btree_iter_t iter;
 
         if (btree_find(btree, key, keylen, iter)) {
+                if (iter->record)
+                        record_free(iter->record);
+
                 btree_remove_at(iter);
                 return BTREE_OK;
         }
@@ -442,7 +456,10 @@ unsigned int btree_memcmp(unsigned char *key, size_t keylen,
 
         while (count) {
                 unsigned int middle = count >> 1;
-                unsigned char* b = (unsigned char*)recs[start + middle]->key;
+                unsigned int pos = start + middle;
+                unsigned char* b;
+
+                b = (unsigned char*)recs[pos]->key;
 
                 int c = memcmp(k, b, keylen);
                 if (c == 0)
@@ -651,11 +668,11 @@ struct record * record_new(unsigned char *key, size_t keylen,
 
         rec = xmalloc(sizeof(struct record));
 
-        rec->key = xmalloc(sizeof(unsigned char) * keylen + 1);
+        rec->key = xmalloc(keylen + 1);
         memcpy(rec->key, key, keylen);
         rec->keylen = keylen;
 
-        rec->val = xmalloc(sizeof(unsigned char) * vallen + 1);
+        rec->val = xmalloc(vallen + 1);
         memcpy(rec->val, val, vallen);
         rec->vallen = vallen;
 

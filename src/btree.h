@@ -17,7 +17,7 @@
 #include <stdint.h>
 
 #define BTREE_MAX_ELEMENTS 10
-#define BTREE_MIN_ELEMENTS 5
+#define BTREE_MIN_ELEMENTS (BTREE_MAX_ELEMENTS >> 1)
 
 enum NodeType {
         LEAF_NODE,

@@ -303,7 +303,6 @@ static int zs_read_one_active_record(struct zsdb_file *f, size_t *offset,
         switch(rectype) {
         case REC_TYPE_KEY:
         case REC_TYPE_LONG_KEY:
-                printf("[KV]\n");
                 zs_read_key_val_record(f, offset, cb, cbdata);
                 break;
         case REC_TYPE_VALUE:
@@ -324,7 +323,6 @@ static int zs_read_one_active_record(struct zsdb_file *f, size_t *offset,
                 break;
         case REC_TYPE_DELETED:
         case REC_TYPE_LONG_DELETED:
-                printf("[D]\n");
                 zs_read_deleted_record(f, offset, cb, cbdata);
                 break;
         case REC_TYPE_UNUSED:
