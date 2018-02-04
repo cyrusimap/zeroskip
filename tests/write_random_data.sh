@@ -1,5 +1,16 @@
 #!/bin/bash
+# set -x
 
+if [[ $# < 2 ]]; then
+    echo "Usage:"
+    echo "  $0 [dbdir] [num-messages]"
+    exit 1
+fi
+
+dbdir=$1
+nummsgs=$2
+
+# Chec
 # Generates a number between 0 and 9999
 gen_length()
 {
@@ -13,7 +24,7 @@ gen_length()
 
 gen_key_val()
 {
-    for i in {1..1000}
+    for i in `seq 1 $nummsgs`
     do
         local klen=$(gen_length)
         KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$klen" | head -1)
@@ -21,9 +32,8 @@ gen_key_val()
         local vlen=$(gen_length)
         VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
 
-        RET=$(../tools/zeroskip set ../foobar "$KEY" "$VAL")
+        RET=$(../tools/zeroskip set $dbdir "$KEY" "$VAL")
     done
 }
-
 
 gen_key_val
