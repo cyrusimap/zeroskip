@@ -418,7 +418,90 @@ int zs_active_file_close(struct zsdb_priv *priv)
 int zs_active_file_finalise(struct zsdb_priv *priv _unused_)
 {
         int ret = ZS_OK;
+        cstring newfname = CSTRING_INIT;
+        char index[11] = { 0 };
 
+        if (!file_lock_is_locked(&priv->wlk)) {
+                zslog(LOGDEBUG, "Need a write lock to finalise.\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
+
+        ret = zs_active_file_write_commit_record(priv);
+        if (ret != ZS_OK)
+                goto done;
+
+        mappedfile_flush(&priv->factive.mf);
+        mappedfile_close(&priv->factive.mf);
+
+
+        /* Rename the current active db file */
+        cstring_dup(&priv->factive.fname, &newfname);
+        cstring_addch(&newfname, '-');
+        snprintf(index, 10, "%d", priv->dotzsdb.curidx);
+        cstring_addstr(&newfname, index);
+        if (rename(priv->factive.fname.buf, newfname.buf) < 0) {
+                ret = ZS_INTERNAL;
+                perror("Rename");
+                goto done;
+        }
+        cstring_release(&newfname);
+
+        priv->factive.is_open = 0;
+done:
+        return ret;
+}
+
+int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
+{
+        int ret = ZS_OK;
+        size_t mfsize;
+        int mappedfile_flags = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
+
+        /* Update the index */
+        zs_dotzsdb_update_index(priv, idx);
+        zs_filename_generate_active(priv, &priv->factive.fname);
+
+        /* Initialise the header fields of factive */
+        priv->factive.header.signature = ZS_SIGNATURE;
+        priv->factive.header.version = ZS_VERSION;
+        priv->factive.header.startidx = idx;
+        priv->factive.header.endidx = idx;
+        priv->factive.header.crc32 = 0;
+
+       /* Open the active filename for use */
+        ret = mappedfile_open(priv->factive.fname.buf,
+                              mappedfile_flags, &priv->factive.mf);
+        if (ret) {
+                ret = ZS_IOERROR;
+                goto done;
+        }
+
+        priv->factive.is_open = 1;
+
+        mappedfile_size(&priv->factive.mf, &mfsize);
+        /* The filesize is zero, it is a new file. */
+        if (mfsize == 0) {
+                ret = zs_header_write(&priv->factive);
+                if (ret) {
+                        zslog(LOGDEBUG, "Could not write zeroskip header.\n");
+                        mappedfile_close(&priv->factive.mf);
+                        goto done;
+                }
+        }
+
+        priv->open = 1;
+
+        if (zs_header_validate(&priv->factive)) {
+                ret = ZS_INVALID_DB;
+                mappedfile_close(&priv->factive.mf);
+                goto done;
+        }
+
+        /* Seek to location after header */
+        mfsize = ZS_HDR_SIZE;
+        mappedfile_seek(&priv->factive.mf, mfsize, NULL);
+done:
         return ret;
 }
 
@@ -655,3 +738,4 @@ int zs_active_file_record_foreach(struct zsdb_priv *priv,
 
         return ret;
 }
+

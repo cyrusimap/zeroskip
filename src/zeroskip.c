@@ -471,8 +471,14 @@ int zsdb_add(struct zsdb *db,
         /* check file size and finalise if necessary */
         mappedfile_size(&priv->factive.mf, &mfsize);
         if (mfsize >= TWOMB) {
-                /* TODO: Finalize file here */
                 zslog(LOGDEBUG, "File %s is > 2MB, finalising.\n",
+                        priv->factive.fname.buf);
+                ret = zs_active_file_finalise(priv);
+                if (ret != ZS_OK) goto done;
+
+                ret = zs_active_file_new(priv,
+                                         priv->dotzsdb.curidx + 1);
+                zslog(LOGDEBUG, "New active log file %s created.\n",
                         priv->factive.fname.buf);
         }
 
@@ -495,7 +501,7 @@ int zsdb_add(struct zsdb *db,
         btree_insert(priv->memtree, rec);
 
         /* TODO: REMOVE THE PRINTING! */
-        btree_print_node_data(priv->memtree, NULL);
+        /* btree_print_node_data(priv->memtree, NULL); */
 
         zslog(LOGDEBUG, "Inserted record into the DB.\n");
 
@@ -553,7 +559,7 @@ int zsdb_remove(struct zsdb *db,
         btree_insert(priv->memtree, rec);
 
         /* TODO: REMOVE THE PRINTING! */
-        btree_print_node_data(priv->memtree, NULL);
+        /* btree_print_node_data(priv->memtree, NULL); */
 
 done:
         return ret;

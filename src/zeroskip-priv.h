@@ -214,11 +214,12 @@ extern int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
                                               unsigned char *key, size_t keylen,
                                               unsigned char *val, size_t vallen);
 extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
-int zs_active_file_write_delete_record(struct zsdb_priv *priv,
-                                       unsigned char *key,
-                                       size_t keylen);
+extern int zs_active_file_write_delete_record(struct zsdb_priv *priv,
+                                              unsigned char *key,
+                                              size_t keylen);
 extern int zs_active_file_record_foreach(struct zsdb_priv *priv,
                                          foreach_cb *cb, void *cbdata);
+extern int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx);
 
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
