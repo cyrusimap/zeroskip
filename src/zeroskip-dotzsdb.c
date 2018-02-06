@@ -12,6 +12,10 @@
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 /*
  * zs_dotzsdb_create():
  * Creates a .zsdb file in the DB directory. This function assumes the caller
@@ -32,6 +36,7 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         int ret = 1;
         size_t nbytes = 0;
         cstring dotzsdbfname = CSTRING_INIT;
+        struct stat sb = { 0 };
 
         memset(&stackbuf, 0, DOTZSDB_SIZE);
         sptr = stackbuf;
@@ -77,6 +82,11 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
 
         zslog(LOGDEBUG, "Created db with UUID %s\n", priv->dotzsdb.uuidstr);
 
+        /* stat() the .zsdb file to get the inode number. The .zsdb file is
+         * used for synchronisation among various processes.
+         */
+        stat(dotzsdbfname.buf, &sb);
+        priv->dotzsdb_ino = sb.st_ino;
 fail2:
         mappedfile_close(&mf);
 
@@ -100,6 +110,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         struct dotzsdb *dothdr;
         int ret = 1;
         cstring dotzsdbfname = CSTRING_INIT;
+        struct stat sb = { 0 };
 
         /* The filename */
         cstring_dup(&priv->dbdir, &dotzsdbfname);
@@ -112,8 +123,13 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                 goto fail1;
         }
 
-        mappedfile_size(&mf, &mfsize);
+        /* stat() the .zsdb file to get the inode number. The .zsdb file is
+         * used for synchronisation among various processes.
+         */
+        stat(dotzsdbfname.buf, &sb);
+        priv->dotzsdb_ino = sb.st_ino;
 
+        mappedfile_size(&mf, &mfsize);
         if (mfsize < DOTZSDB_SIZE) {
                 zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);

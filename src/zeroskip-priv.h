@@ -190,6 +190,9 @@ struct zsdb_store {
 struct zsdb_priv {
         uuid_t uuid;              /* The UUID for the DB */
         struct dotzsdb dotzsdb;   /* .zsdb contents */
+        ino_t dotzsdb_ino;        /* The inode number of of the .zsdb file
+                                   * when opened.
+                                   */
         cstring dbdir;            /* The directory path */
 
         struct zsdb_file factive; /* The active file */
