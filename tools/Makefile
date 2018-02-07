@@ -13,6 +13,7 @@ TOOL_OBJS =			\
 	cmd-new.o		\
 	cmd-set.o		\
 	cmd-show.o		\
+	cmd-info.o		\
 	zeroskip.o 		\
 	$(NULL)
 

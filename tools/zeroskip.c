@@ -31,6 +31,7 @@ static struct {
         DBCMD(repack),
         DBCMD(show),
         DBCMD(set),
+        DBCMD(info),
 };
 #undef DBCMD
 
