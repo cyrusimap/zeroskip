@@ -100,7 +100,11 @@ void *xmalloc(size_t size);
 void *xrealloc(void *ptr, size_t size);
 void *xcalloc(size_t nmemb, size_t size);
 char *xstrdup(const char *s);
-void xfree(void *ptr);
+#define xfree(ptr) do {                                 \
+                if (ptr) { free(ptr); ptr = NULL; }     \
+        } while (0)
+
+
 inline size_t off_to_size_t(off_t len)
 {
         size_t size = (size_t) len;

@@ -28,7 +28,8 @@ void str_array_clear(struct str_array *arr)
         if (arr->datav != null_data) {
                 int i;
                 for (i = 0; i < arr->count; i++) {
-                        xfree((char *)arr->datav[i]);
+                        char *data = (char *)arr->datav[i];
+                        xfree(data);
                 }
                 xfree(arr->datav);
         }
@@ -66,9 +67,12 @@ void str_array_addv(struct str_array *arr, const char **argv)
  */
 void str_array_remove(struct str_array *arr)
 {
+        char *data;
+
         if (!arr->count)
                 return;
-        xfree((char *)arr->datav[arr->count - 1]);
+        data = (char *)arr->datav[arr->count - 1];
+        xfree(data);
         arr->datav[arr->count - 1] = NULL;
         arr->count--;
 }

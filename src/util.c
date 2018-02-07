@@ -89,14 +89,6 @@ char *xstrdup(const char *s)
         return ptr;
 }
 
-void xfree(void *ptr)
-{
-        if (ptr) {
-                free(ptr);
-                ptr = NULL;
-        }
-}
-
 /*
   xmkdir(): creates a directory if it doesn't exist.
   returns 0 on success, -1 otherwise. Check errno for
