@@ -490,7 +490,7 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
                 }
         }
 
-        priv->open = 1;
+        priv->factive.is_open = 1;
 
         if (zs_header_validate(&priv->factive)) {
                 ret = ZS_INVALID_DB;

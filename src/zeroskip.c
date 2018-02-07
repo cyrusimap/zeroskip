@@ -187,6 +187,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
                 if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
                         switch(interpret_db_filename(sbuf, strlen(sbuf))) {
                         case DB_FTYPE_ACTIVE:
+                                /* XXX: Shouldn't have more than one active file */
                                 ret = process_active_file(sbuf, data);
                                 cnt++;
                                 break;
@@ -639,6 +640,42 @@ int zsdb_dump(struct zsdb *db,
                 zslog(LOGDEBUG, "Invalid DB dump option\n");
                 return ZS_ERROR;
         }
+
+        return ret;
+}
+
+int zsdb_abort(struct zsdb *db)
+{
+        int ret = ZS_OK;
+
+        assert_zsdb(db);
+
+        return ret;
+}
+
+int zsdb_consistent(struct zsdb *db)
+{
+        int ret = ZS_OK;
+
+        assert_zsdb(db);
+
+        return ret;
+}
+
+int zsdb_repack(struct zsdb *db)
+{
+        int ret = ZS_OK;
+
+        assert_zsdb(db);
+
+        return ret;
+}
+
+int zsdb_info(struct zsdb *db)
+{
+        int ret = ZS_OK;
+
+        assert_zsdb(db);
 
         return ret;
 }
