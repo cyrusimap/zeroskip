@@ -335,6 +335,10 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         cstring_release(&priv->dbdir);
         cstring_addstr(&priv->dbdir, dbdir);
 
+        /* db file list */
+        priv->dbflist.prev = &priv->dbflist;
+        priv->dbflist.next = &priv->dbflist;
+
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
                 zslog(LOGDEBUG, "DB %s doesn't exist\n",

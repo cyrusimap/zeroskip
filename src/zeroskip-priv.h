@@ -14,6 +14,7 @@
 #include "btree.h"
 #include "cstring.h"
 #include "file-lock.h"
+#include "list.h"
 #include "mappedfile.h"
 #include "util.h"
 
@@ -167,6 +168,7 @@ extern void assert_zsdb(struct zsdb *db);
 
 /* File Data */
 struct zsdb_file {
+        struct list_head list;
         enum db_ftype_t type;
         struct zs_header header;
         cstring fname;
@@ -196,6 +198,10 @@ struct zsdb_priv {
         cstring dbdir;            /* The directory path */
 
         struct zsdb_file factive; /* The active file */
+
+        struct list_head dbflist; /* The list of files in the db
+                                     minus the active file.
+                                   */
 
         /* Locks */
         struct file_lock wlk;     /* Lock when writing */
