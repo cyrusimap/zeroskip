@@ -11,113 +11,88 @@
 #ifndef _ZS_LIST_H_
 #define _ZS_LIST_H_
 
+#include <assert.h>
 #include <stdbool.h>            /* for `bool` */
 #include <stddef.h>             /* for offsetof() */
-
-/*
- * struct list_node : a node in a doubly linked list
- */
-struct list_node {
-        struct list_node *next, *prev;
-};
 
 /*
  * struct list_head : the root node of the double linked list
  */
 struct list_head {
-        struct list_node node;
+        struct list_head *prev, *next;
 };
 
 
-/* LIST_HEAD_INIT() : initialise an empty list */
-#define LIST_HEAD_INIT(name) { { &(name).node, &(name).node } }
-
 /* LIST_HEAD() : define and initialise an empty list */
-#define LIST_HEAD(name) struct list_head name = LIST_HEAD_INIT(name)
+#define LIST_HEAD(name) struct list_head name = { &(name), &(name) }
 
-/* list_head_init() : initialise a list_head */
+/* list_head_init() : initialise a new list */
 static inline void list_head_init(struct list_head *l)
 {
-        l->node.next = l->node-priv = &l->node
+        l->next = l->prev = l;
 }
 
-/* list_node_init() : initialise a list_node */
-static inline void list_node_init(struct list_node *n)
-{
-        n->next = n->priv = n;
-}
-
-/* list_add_after() : add an entry after an existing node in a list
+/* list_add_head() : add an entry at the head of the list
    where:
-   @c - the current node after which the new node should be added
    @n - the new node
+   @h - the list head
  */
-static inline void list_add_after(struct list_node *c,
-                                  struct list_node *n)
+static inline void list_add_head(struct list_head *n,
+                                 struct list_head *h)
 {
-        n->next = c->next;
-        n->prev = p;
-        c->next->prev = n;
-        c->next = n;
+        h->next->prev = n;
+        n->next = h->next;
+        n->prev = h;
+        h->next = n;
 }
 
-/* list_add() : add an entry to the start of a list where:
-   @l - the list to add the node to
-   @n - the node to add to the list
+/* list_add_tail() : add an entry to the tail of the lsit
+   @n - the new node
+   @h - the list head
  */
-static inline void list_add(struct list_head *l,
-                            struct list_node *n)
+static inline void list_add_tail(struct list_head *n,
+                                 struct list_head *h)
 {
-        list_add_after(&l->node, n);
+        h->prev->next = n;
+        n->next = h;
+        n->prev = h->prev;
+        h->prev = n;
 }
 
-/* list_add_before() : add an entry before an existing node in a list
-   where:
-   @c - the current node before which the new node should be added
-   @n - the new node that needs to be added
+/* list_del() : delete a given node.
  */
-static inline void list_add_before(struct list_node *c,
-                                   struct list_node *n)
+static inline void _list_del(struct list_head *prev, struct list_head *next)
 {
-        n->next = c;
-        n->prev = c->prev;
-        c->prev->next = n;
-        c->prev = n;
+        next->prev = prev;
+        prev->next = next;
 }
 
-/* list_add_tail() : add a entry to end of a list where:
-   @l - the list of add the node to
-   @n - the node to add to the list
- */
-static inline void list_add_tail(struct list_head *l,
-                                 struct list_node *n)
+static inline void list_del(struct list_head *e)
 {
-        list_add_before(&l->node, n);
+        _list_del(e->prev, e->next);
+}
+
+static inline void list_del_init(struct list_head *e)
+{
+        list_del(e);
+        list_head_init(e);
+}
+
+/* list_replace() : replace an existing entry in the list
+ */
+static inline void list_replace(struct list_head *cur, struct list_head *n)
+{
+        n->next = cur->next;
+        n->prev = cur->prev;
+        n->prev->next = n;
+        n->next->prev = n;
 }
 
 /* list_empty() : check if a list is empty and return true if it is.
  */
 static inline bool list_empty(struct list_head *l)
 {
-        return (l->node.next == &l->node);
-}
-
-/* list_del() : delete a given node without the list information that it
-                belongs to.
- */
-static inline void list_del(struct list_node *n)
-{
-        n->next = n->prev = NULL;
-        list_node_init(n);
-}
-
-/* list_del_from() : delete a node 'n' from a list 'l'
- */
-static inline void list_del_from(struct list_head *l,
-                                 struct list_node *n)
-{
-        assert(!list_empty(l));
-        list_del(n);
+        return (l == l->next);
 }
 
 /* list_entry() : convert the list_node back to the structure containing it,
