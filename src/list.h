@@ -115,7 +115,7 @@ static inline bool list_empty(struct list_head *l)
 /* list_for_each_forward_safe(): list iterator, where entries can be removed */
 #define list_for_each_forward_safe(pos, ptr, l) \
         for (pos = (l)->next, ptr = pos->next; \
-             pos != (head); \
+             pos != (l); \
              pos = ptr, ptr = pos->next)
 
 /* list_for_each_reverse(): list iterator */

@@ -199,10 +199,9 @@ struct zsdb_priv {
 
         struct zsdb_file factive; /* The active file */
 
-        struct list_head dbflist; /* The list of files in the db
-                                     minus the active file.
-                                   */
-
+        struct list_head pflist;  /* The list of packed files */
+        struct list_head fflist;  /* The list of finalised files */
+        unsigned int fcount;      /* Total list of files */
         /* Locks */
         struct file_lock wlk;     /* Lock when writing */
         struct file_lock plk;     /* Lock when packing */
@@ -238,6 +237,10 @@ extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
 
 /* zeroskip-filename.c */
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);
+
+/* zeroskip-finalised.c */
+extern int zs_finalised_file_open(const char * path, struct zsdb_file **fptr);
+extern int zs_finalised_file_close(struct zsdb_file **fptr);
 
 /* zeroskip-header.c */
 extern int zs_header_write(struct zsdb_file *f);

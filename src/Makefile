@@ -14,6 +14,7 @@ ZS_LIBOBJS =  			\
 	zeroskip-active.o	\
 	zeroskip-dotzsdb.o	\
 	zeroskip-filename.o	\
+	zeroskip-finalised.o	\
 	zeroskip-header.o	\
 	$(NULL)
 

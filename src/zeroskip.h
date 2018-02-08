@@ -40,6 +40,7 @@ enum {
         ZS_NOMEM          = -10,
         ZS_INVALID_MODE   = -11,
         ZS_NOT_OPEN       = -12,
+        ZS_INVALID_FILE   = -13,
 };
 
 /*

@@ -87,15 +87,39 @@ static int process_active_file(const char *path, void *data)
         if (mfsize)
                 mappedfile_seek(&priv->factive.mf, mfsize, NULL);
 
+
+        priv->fcount++;
         zslog(LOGDEBUG, "opened active file: %s\n", path);
 done:
         return ret;
 }
 
-static int process_finalised_file(const char *path, void *data _unused_)
+static int process_finalised_file(const char *path, void *data)
 {
+        struct zsdb_priv *priv;
+        int ret = ZS_OK;
+        struct zsdb_file *f;
+
+        if (!data) {
+                zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
+                ret = ZS_INTERNAL;
+                goto done;
+        }
+
         zslog(LOGDEBUG, "processing finalised file: %s\n", path);
-        return 0;
+
+        priv = (struct zsdb_priv *)data;
+
+        ret = zs_finalised_file_open(path, &f);
+        if (ret != ZS_OK) {
+                zslog(LOGDEBUG, "skipping file %s\n", path);
+                goto done;
+        }
+
+        priv->fcount++;
+        list_add_tail(&f->list, &priv->fflist);
+done:
+        return ret;
 }
 
 static int process_packed_file(const char *path, void *data _unused_)
@@ -141,8 +165,7 @@ enum {
 
 static int for_each_db_file_in_dbdir(char *const path[],
                                      int full_path,
-                                     void *data,
-                                     int *count)
+                                     void *data)
 {
         FTS *ftsp = NULL;
         FTSENT *fp = NULL;
@@ -150,7 +173,6 @@ static int for_each_db_file_in_dbdir(char *const path[],
         char *const def_path[] = {".", NULL};
         char buf[PATH_MAX];
         int err = 0;
-        int cnt = 0;
         int ret = ZS_OK;
 
         if (getcwd(buf, sizeof(buf)) == NULL)
@@ -189,15 +211,12 @@ static int for_each_db_file_in_dbdir(char *const path[],
                         case DB_FTYPE_ACTIVE:
                                 /* XXX: Shouldn't have more than one active file */
                                 ret = process_active_file(sbuf, data);
-                                cnt++;
                                 break;
                         case DB_FTYPE_FINALISED:
                                 ret = process_finalised_file(sbuf, data);
-                                cnt++;
                                 break;
                         case DB_FTYPE_PACKED:
                                 ret = process_packed_file(sbuf, data);
-                                cnt++;
                                 break;
                         default:
                                 break;
@@ -216,7 +235,6 @@ static int for_each_db_file_in_dbdir(char *const path[],
 
         err = ret;
 
-        *count = cnt;
         return err;
 }
 
@@ -319,7 +337,6 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         struct zsdb_priv *priv;
         int ret = ZS_OK;
         struct stat sb = { 0 };
-        int fcount = 0;
         int newdb = 0;
 
         assert_zsdb(db);
@@ -336,8 +353,11 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         cstring_addstr(&priv->dbdir, dbdir);
 
         /* db file list */
-        priv->dbflist.prev = &priv->dbflist;
-        priv->dbflist.next = &priv->dbflist;
+        priv->pflist.prev = &priv->pflist;
+        priv->pflist.next = &priv->pflist;
+
+        priv->fflist.prev = &priv->fflist;
+        priv->fflist.next = &priv->fflist;
 
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
@@ -393,13 +413,12 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                  * db files.
                  */
                 ret = for_each_db_file_in_dbdir(&priv->dbdir.buf,
-                                                DB_ABS_PATH, priv,
-                                                &fcount);
+                                                DB_ABS_PATH, priv);
                 if (ret != ZS_OK)
                         goto done;
 
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
-                      fcount, priv->dbdir.buf);
+                      priv->fcount, priv->dbdir.buf);
         }
 
         zslog(LOGDEBUG, "DB `%s` opened.\n", priv->dbdir.buf);
@@ -414,6 +433,7 @@ int zsdb_close(struct zsdb *db)
 {
         int ret  = ZS_OK;
         struct zsdb_priv *priv;
+        struct list_head *pos, *p;
 
         if (!db) {
                 ret = ZS_IOERROR;
@@ -428,6 +448,13 @@ int zsdb_close(struct zsdb *db)
                 zsdb_write_lock_release(db);
 
         zs_active_file_close(priv);
+
+        list_for_each_forward_safe(pos, p, &priv->fflist) {
+                struct zsdb_file *f;
+                list_del(pos);
+                f = list_entry(pos, struct zsdb_file, list);
+                zs_finalised_file_close(&f);
+        }
 
         if (priv->memtree)
                 btree_free(priv->memtree);
@@ -678,8 +705,38 @@ int zsdb_repack(struct zsdb *db)
 int zsdb_info(struct zsdb *db)
 {
         int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        struct list_head *pos;
 
         assert_zsdb(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        fprintf(stderr, "==============\n");
+        fprintf(stderr, "== Zeroskip ==\n");
+        fprintf(stderr, "==============\n");
+
+        fprintf(stderr, "DBNAME  : %s\n", priv->dbdir.buf);
+        fprintf(stderr, "UUID    : %s\n", priv->dotzsdb.uuidstr);
+        fprintf(stderr, "Number of files: %d\n", priv->fcount);
+
+        fprintf(stderr, ">> Active file:\n");
+        fprintf(stderr, "\t * %s\n", basename(priv->factive.fname.buf));
+
+        fprintf(stderr, ">> Finalised file(s):\n");
+        list_for_each_forward(pos, &priv->fflist) {
+                struct zsdb_file *f;
+                f = list_entry(pos, struct zsdb_file, list);
+                fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+        }
+
+        fprintf(stderr, ">> Packed file(s):\n");
+        list_for_each_forward(pos, &priv->pflist) {
+                struct zsdb_file *f;
+                f = list_entry(pos, struct zsdb_file, list);
+                fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+        }
 
         return ret;
 }
