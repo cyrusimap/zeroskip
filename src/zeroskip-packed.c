@@ -1,10 +1,13 @@
 /*
- * zeroskip
+ * zeroskip-packed.c
+ *
+ * This file is part of zeroskip.
  *
  * zeroskip is free software; you can redistribute it and/or modify
  * it under the terms of the MIT license. See LICENSE for details.
- *
  */
+
+
 #include "log.h"
 #include "util.h"
 #include "zeroskip.h"
@@ -14,7 +17,12 @@
 /*
  * Public functions
  */
-int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
+
+/* zs_packed_file_open():
+ * Open an existing packed file in read-only mode.
+ */
+int zs_packed_file_open(const char *path,
+                        struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
         struct zsdb_file *f;
@@ -26,7 +34,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
         cstring_init(&f->fname, 0);
         cstring_addstr(&f->fname, path);
 
-      /* Open the filename for use */
+        /* Open the filename for use */
         ret = mappedfile_open(f->fname.buf,
                               mappedfile_flags, &f->mf);
         if (ret) {
@@ -70,7 +78,23 @@ done:
         return ret;
 }
 
-int zs_finalised_file_close(struct zsdb_file **fptr)
+/* zs_packed_file_new():
+ * Open a new file to be used as a packed file for writing.
+ */
+int zs_packed_file_new(const char *path _unused_,
+                       uint32_t startidx _unused_, uint32_t endidx _unused_,
+                       struct zsdb_file **fptr _unused_)
+{
+        int ret = ZS_OK;
+        struct zsdb_file *f _unused_;
+        size_t mf_size _unused_;
+        int mappedfile_flags _unused_ = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
+
+        return ret;
+}
+
+
+int zs_packed_file_close(struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
         struct zsdb_file *f;

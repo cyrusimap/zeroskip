@@ -240,11 +240,19 @@ extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);
 
 /* zeroskip-finalised.c */
-extern int zs_finalised_file_open(const char * path, struct zsdb_file **fptr);
+extern int zs_finalised_file_open(const char *path, struct zsdb_file **fptr);
 extern int zs_finalised_file_close(struct zsdb_file **fptr);
 
 /* zeroskip-header.c */
 extern int zs_header_write(struct zsdb_file *f);
 extern int zs_header_validate(struct zsdb_file *f);
+
+/* zeroskip-packed.c */
+extern int zs_packed_file_open(const char *path, struct zsdb_file **fptr);
+extern int zs_packed_file_new(const char *path,
+                              uint32_t startidx, uint32_t endidx,
+                              struct zsdb_file **fptr);
+
+extern int zs_packed_file_close(struct zsdb_file **fptr);
 
 #endif  /* _ZEROSKIP_PRIV_H_ */

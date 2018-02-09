@@ -16,6 +16,7 @@ ZS_LIBOBJS =  			\
 	zeroskip-filename.o	\
 	zeroskip-finalised.o	\
 	zeroskip-header.o	\
+	zeroskip-packed.o	\
 	$(NULL)
 
 # Headers

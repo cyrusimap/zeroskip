@@ -128,18 +128,24 @@ static int process_packed_file(const char *path, void *data _unused_)
         int ret = ZS_OK;
         struct zsdb_file *f _unused_;
 
-        zslog(LOGDEBUG, "processing packed file: %s\n", path);
-
         if (!data) {
                 zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
                 ret = ZS_INTERNAL;
                 goto done;
         }
 
+        zslog(LOGDEBUG, "processing packed file: %s\n", path);
+
         priv = (struct zsdb_priv *)data;
 
-        priv->pfcount++;
+        ret = zs_packed_file_open(path, &f);
+        if (ret != ZS_OK) {
+                zslog(LOGDEBUG, "skipping file %s\n", path);
+                goto done;
+        }
 
+        priv->pfcount++;
+        list_add_tail(&f->list, &priv->pflist);
 done:
         return ret;
 }
@@ -475,6 +481,15 @@ int zsdb_close(struct zsdb *db)
                 list_del(pos);
                 f = list_entry(pos, struct zsdb_file, list);
                 zs_finalised_file_close(&f);
+                priv->ffcount--;
+        }
+
+        list_for_each_forward_safe(pos, p, &priv->pflist) {
+                struct zsdb_file *f;
+                list_del(pos);
+                f = list_entry(pos, struct zsdb_file, list);
+                zs_packed_file_close(&f);
+                priv->pfcount--;
         }
 
         if (priv->memtree)
