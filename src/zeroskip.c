@@ -58,7 +58,7 @@ static int process_active_file(const char *path, void *data)
 
         priv = (struct zsdb_priv *)data;
 
-        if (priv->factive.is_open) {
+        if (priv->factive.is_open || (priv->afcount == 1)) {
                 zslog(LOGWARNING, "DB has more than one active file. Invalid!\n");
                 ret = ZS_INTERNAL;
                 goto done;
@@ -88,7 +88,7 @@ static int process_active_file(const char *path, void *data)
                 mappedfile_seek(&priv->factive.mf, mfsize, NULL);
 
 
-        priv->fcount++;
+        priv->afcount++;
         zslog(LOGDEBUG, "opened active file: %s\n", path);
 done:
         return ret;
@@ -116,7 +116,7 @@ static int process_finalised_file(const char *path, void *data)
                 goto done;
         }
 
-        priv->fcount++;
+        priv->ffcount++;
         list_add_tail(&f->list, &priv->fflist);
 done:
         return ret;
@@ -124,8 +124,24 @@ done:
 
 static int process_packed_file(const char *path, void *data _unused_)
 {
+        struct zsdb_priv *priv;
+        int ret = ZS_OK;
+        struct zsdb_file *f _unused_;
+
         zslog(LOGDEBUG, "processing packed file: %s\n", path);
-        return 0;
+
+        if (!data) {
+                zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
+                ret = ZS_INTERNAL;
+                goto done;
+        }
+
+        priv = (struct zsdb_priv *)data;
+
+        priv->pfcount++;
+
+done:
+        return ret;
 }
 
 static enum db_ftype_t interpret_db_filename(const char *str, size_t len)
@@ -359,6 +375,10 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         priv->fflist.prev = &priv->fflist;
         priv->fflist.next = &priv->fflist;
 
+        priv->afcount = 0;
+        priv->ffcount = 0;
+        priv->pfcount = 0;
+
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
                 zslog(LOGDEBUG, "DB %s doesn't exist\n",
@@ -418,7 +438,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         goto done;
 
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
-                      priv->fcount, priv->dbdir.buf);
+                      priv->afcount + priv->ffcount + priv->pfcount,
+                      priv->dbdir.buf);
         }
 
         zslog(LOGDEBUG, "DB `%s` opened.\n", priv->dbdir.buf);
@@ -719,23 +740,28 @@ int zsdb_info(struct zsdb *db)
 
         fprintf(stderr, "DBNAME  : %s\n", priv->dbdir.buf);
         fprintf(stderr, "UUID    : %s\n", priv->dotzsdb.uuidstr);
-        fprintf(stderr, "Number of files: %d\n", priv->fcount);
+        fprintf(stderr, "Number of files: %d\n",
+                priv->afcount + priv->ffcount + priv->pfcount);
 
         fprintf(stderr, ">> Active file:\n");
         fprintf(stderr, "\t * %s\n", basename(priv->factive.fname.buf));
 
-        fprintf(stderr, ">> Finalised file(s):\n");
-        list_for_each_forward(pos, &priv->fflist) {
-                struct zsdb_file *f;
-                f = list_entry(pos, struct zsdb_file, list);
-                fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+        if (priv->ffcount) {
+                fprintf(stderr, ">> Finalised file(s):\n");
+                list_for_each_forward(pos, &priv->fflist) {
+                        struct zsdb_file *f;
+                        f = list_entry(pos, struct zsdb_file, list);
+                        fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+                }
         }
 
-        fprintf(stderr, ">> Packed file(s):\n");
-        list_for_each_forward(pos, &priv->pflist) {
-                struct zsdb_file *f;
-                f = list_entry(pos, struct zsdb_file, list);
-                fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+        if (priv->pfcount) {
+                fprintf(stderr, ">> Packed file(s):\n");
+                list_for_each_forward(pos, &priv->pflist) {
+                        struct zsdb_file *f;
+                        f = list_entry(pos, struct zsdb_file, list);
+                        fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+                }
         }
 
         return ret;
