@@ -117,7 +117,18 @@ static int process_finalised_file(const char *path, void *data)
         }
 
         priv->ffcount++;
-        list_add_tail(&f->list, &priv->fflist);
+        if (list_empty(&priv->fflist))
+                list_add_tail(&f->list, &priv->fflist);
+        else {
+                int r = 0;
+                struct zsdb_file *cur;
+
+                cur = list_first(&priv->fflist, struct zsdb_file, list);
+                r = strcmp(cur->fname.buf, f->fname.buf);
+                if (r <= 0) list_add_tail(&f->list, &priv->fflist);
+                else list_add_head(&f->list, &priv->fflist);
+        }
+
 done:
         return ret;
 }
@@ -145,7 +156,17 @@ static int process_packed_file(const char *path, void *data _unused_)
         }
 
         priv->pfcount++;
-        list_add_tail(&f->list, &priv->pflist);
+        if (list_empty(&priv->pflist))
+                list_add_tail(&f->list, &priv->pflist);
+        else {
+                int r = 0;
+                struct zsdb_file *cur;
+
+                cur = list_first(&priv->pflist, struct zsdb_file, list);
+                r = strcmp(cur->fname.buf, f->fname.buf);
+                if (r <= 0) list_add_tail(&f->list, &priv->pflist);
+                else list_add_head(&f->list, &priv->pflist);
+        }
 done:
         return ret;
 }
