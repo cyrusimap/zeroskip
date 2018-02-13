@@ -15,7 +15,7 @@ int cmd_show(int argc, char **argv, const char *progname);
 #define cmd_show_usage "show "
 
 int cmd_get(int argc, char **argv, const char *progname);
-#define cmd_get_usage "get "
+#define cmd_get_usage "get [--config CONFIGFILE] DB <key>"
 
 int cmd_set(int argc, char **argv, const char *progname);
 #define cmd_set_usage "set [--config CONFIGFILE] DB <key> <value>"

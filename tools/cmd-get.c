@@ -11,6 +11,9 @@
 #include <stdlib.h>
 
 #include "cmds.h"
+#include "log.h"
+#include "util.h"
+#include "zeroskip.h"
 
 int cmd_get(int argc, char **argv, const char *progname)
 {
@@ -22,8 +25,14 @@ int cmd_get(int argc, char **argv, const char *progname)
         int option;
         int option_index;
         const char *config_file = NULL;
+        struct zsdb *db = NULL;
+        char *dbname = NULL;
+        char *key = NULL;
+        unsigned char *value = NULL;
+        size_t vallen = 0, i;
+        int ret;
 
-        while((option = getopt_long(argc, argv, "c:h", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
                 case 'c':
                         config_file = optarg;
@@ -35,7 +44,49 @@ int cmd_get(int argc, char **argv, const char *progname)
                 };
         }
 
+        if (argc - optind != 2) {
+                cmd_die_usage(progname, cmd_delete_usage);
+        }
+
+        dbname = argv[optind++];
+        key = argv[optind++];
+
         cmd_parse_config(config_file);
 
-        exit(EXIT_SUCCESS);
+        if (zsdb_init(&db) != ZS_OK) {
+                zslog(LOGWARNING, "Failed initialising DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
+                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_fetch(db, (unsigned char *)key, strlen(key), &value, &vallen)) {
+                zslog(LOGDEBUG, "Cannot find record with key %s in %s\n",
+                      key, dbname);
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        fprintf(stderr, "Found record with key %s, has value of length %zu: ",
+                key, vallen);
+        for (i = 0; i < vallen; i++)
+                fprintf(stderr, "%c", value[i]);
+        fprintf(stderr, "\n");
+
+        ret = EXIT_SUCCESS;
+done:
+        xfree(value);
+        if (zsdb_close(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not close DB.\n");
+                ret = EXIT_FAILURE;
+        }
+
+        zsdb_final(&db);
+
+        exit(ret);
 }

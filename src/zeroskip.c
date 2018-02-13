@@ -580,7 +580,10 @@ int zsdb_add(struct zsdb *db,
         }
         priv->factive.dirty = 1;
 
-        /* Add the entry to the in-memory tree */
+        /* Add the entry to the in-memory tree, we remove an entry
+           with the key first, if it exists, just to remove duplicates
+           in the tree.
+         */
         rec = record_new(key, keylen, value, vallen);
         btree_remove(priv->memtree, key, keylen);
         btree_insert(priv->memtree, rec);
@@ -670,13 +673,52 @@ int zsdb_commit(struct zsdb *db)
         return ret;
 }
 
-int zsdb_fetch(struct zsdb *db _unused_,
-               unsigned char *key _unused_,
-               size_t keylen _unused_,
-               unsigned char **value _unused_,
-               size_t *vallen _unused_)
+int zsdb_fetch(struct zsdb *db,
+               unsigned char *key,
+               size_t keylen,
+               unsigned char **value,
+               size_t *vallen)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_NOTFOUND;
+        struct zsdb_priv *priv;
+        btree_iter_t iter;
+
+        assert_zsdb(db);
+        assert(key);
+        assert(keylen);
+
+        priv = db->priv;
+
+        if (!priv->open || !priv->factive.is_open) {
+                zslog(LOGWARNING, "DB `%s` not open.\n!", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        if (!key)
+                return ZS_ERROR;
+
+        /* Look for the key in the in-memory btree */
+        if (btree_find(priv->memtree, key, keylen, iter)) {
+                /* We found the key in-memory */
+                if (iter->record) {
+                        unsigned char *v;
+                        *vallen = iter->record->vallen;
+                        v = xmalloc(*vallen);
+                        memcpy(v, iter->record->val, *vallen);
+                        *value = v;
+                }
+
+                ret = ZS_OK;
+                goto done;
+        } else {
+                /* TODO: Look for the key in the packed files */
+                ret = ZS_NOTFOUND;
+                goto done;
+        }
+
+
+done:
+        return ret;
 }
 
 static int print_rec(void *data _unused_,
@@ -720,6 +762,8 @@ int zsdb_dump(struct zsdb *db,
                 ret = zs_active_file_record_foreach(priv, print_rec,
                                                     NULL);
         } else if (level == DB_DUMP_ALL) {
+                zslog(LOGDEBUG, "Not implemented");
+                return ZS_NOTIMPLEMENTED;
         } else {
                 zslog(LOGDEBUG, "Invalid DB dump option\n");
                 return ZS_ERROR;
