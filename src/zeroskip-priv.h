@@ -242,6 +242,8 @@ extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);
 /* zeroskip-finalised.c */
 extern int zs_finalised_file_open(const char *path, struct zsdb_file **fptr);
 extern int zs_finalised_file_close(struct zsdb_file **fptr);
+extern int zs_finalised_file_record_foreach(struct zsdb_file *fptr,
+                                            foreach_cb *cb, void *cbdata);
 
 /* zeroskip-header.c */
 extern int zs_header_write(struct zsdb_file *f);

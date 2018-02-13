@@ -37,6 +37,8 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
 
         f->is_open = 1;
 
+        /* XXX: No need to check for size here, since zs_header_valid()
+           will do it */
         mappedfile_size(&f->mf, &mf_size);
         if (mf_size <= ZS_HDR_SIZE) {
                 ret = ZS_INVALID_FILE;

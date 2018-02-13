@@ -29,9 +29,9 @@
 /**
  * Private functions
  */
-static int load_active_records_cb(void *data,
-                                  unsigned char *key, size_t keylen,
-                                  unsigned char *value, size_t vallen)
+static int load_records_cb(void *data,
+                           unsigned char *key, size_t keylen,
+                           unsigned char *value, size_t vallen)
 {
         struct btree *memtree = (struct btree *)data;
         struct record *rec;
@@ -69,21 +69,14 @@ static int process_active_file(const char *path, void *data)
                 goto done;
         }
 
+        /* Load records from active file to in-memory tree */
+        zs_active_file_record_foreach(priv, load_records_cb,
+                                      priv->memtree);
+
         /* Seek to the end of the file, that's where the
            records need to appended to.
         */
         mappedfile_size(&priv->factive.mf, &mfsize);
-        if (mfsize < ZS_HDR_SIZE) {
-                zslog(LOGWARNING, "DB %s is in an invalid state.\n",
-                        priv->factive.fname.buf);
-                ret = ZS_INVALID_DB;
-                goto done;
-        }
-
-        /* Load records from active file to in-memory tree */
-        zs_active_file_record_foreach(priv, load_active_records_cb,
-                                      priv->memtree);
-
         if (mfsize)
                 mappedfile_seek(&priv->factive.mf, mfsize, NULL);
 
@@ -116,6 +109,9 @@ static int process_finalised_file(const char *path, void *data)
                 goto done;
         }
 
+        zs_finalised_file_record_foreach(f, load_records_cb,
+                                         priv->memtree);
+
         priv->ffcount++;
         if (list_empty(&priv->fflist))
                 list_add_tail(&f->list, &priv->fflist);
@@ -133,7 +129,7 @@ done:
         return ret;
 }
 
-static int process_packed_file(const char *path, void *data _unused_)
+static int process_packed_file(const char *path, void *data)
 {
         struct zsdb_priv *priv;
         int ret = ZS_OK;
