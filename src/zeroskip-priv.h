@@ -177,6 +177,15 @@ struct zsdb_file {
         int dirty;
 };
 
+struct zsdb_files {
+        struct zsdb_file factive; /* The active file */
+        struct list_head pflist;  /* The list of packed files */
+        struct list_head fflist;  /* The list of finalised files */
+        unsigned int afcount;     /* Number of active files - should be 1 */
+        unsigned int pfcount;     /* Number of packed files */
+        unsigned int ffcount;     /* Number of finalised files */
+};
+
 /* Storage Backend */
 typedef enum _zsdb_be_t {
         ZSDB_BE_MEM,
@@ -197,12 +206,8 @@ struct zsdb_priv {
                                    */
         cstring dbdir;            /* The directory path */
 
-        struct zsdb_file factive; /* The active file */
-        struct list_head pflist;  /* The list of packed files */
-        struct list_head fflist;  /* The list of finalised files */
-        unsigned int afcount;     /* Number of active files - should be 1 */
-        unsigned int pfcount;     /* Number of packed files */
-        unsigned int ffcount;     /* Number of finalised files */
+        struct zsdb_files dbfiles;
+
         /* Locks */
         struct file_lock wlk;     /* Lock when writing */
         struct file_lock plk;     /* Lock when packing */

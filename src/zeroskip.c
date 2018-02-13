@@ -58,7 +58,7 @@ static int process_active_file(const char *path, void *data)
 
         priv = (struct zsdb_priv *)data;
 
-        if (priv->factive.is_open || (priv->afcount == 1)) {
+        if (priv->dbfiles.factive.is_open || (priv->dbfiles.afcount == 1)) {
                 zslog(LOGWARNING, "DB has more than one active file. Invalid!\n");
                 ret = ZS_INTERNAL;
                 goto done;
@@ -76,12 +76,12 @@ static int process_active_file(const char *path, void *data)
         /* Seek to the end of the file, that's where the
            records need to appended to.
         */
-        mappedfile_size(&priv->factive.mf, &mfsize);
+        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
         if (mfsize)
-                mappedfile_seek(&priv->factive.mf, mfsize, NULL);
+                mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
 
 
-        priv->afcount++;
+        priv->dbfiles.afcount++;
         zslog(LOGDEBUG, "opened active file: %s\n", path);
 done:
         return ret;
@@ -112,17 +112,17 @@ static int process_finalised_file(const char *path, void *data)
         zs_finalised_file_record_foreach(f, load_records_cb,
                                          priv->memtree);
 
-        priv->ffcount++;
-        if (list_empty(&priv->fflist))
-                list_add_tail(&f->list, &priv->fflist);
+        priv->dbfiles.ffcount++;
+        if (list_empty(&priv->dbfiles.fflist))
+                list_add_tail(&f->list, &priv->dbfiles.fflist);
         else {
                 int r = 0;
                 struct zsdb_file *cur;
 
-                cur = list_first(&priv->fflist, struct zsdb_file, list);
+                cur = list_first(&priv->dbfiles.fflist, struct zsdb_file, list);
                 r = strcmp(cur->fname.buf, f->fname.buf);
-                if (r <= 0) list_add_head(&f->list, &priv->fflist);
-                else list_add_tail(&f->list, &priv->fflist);
+                if (r <= 0) list_add_head(&f->list, &priv->dbfiles.fflist);
+                else list_add_tail(&f->list, &priv->dbfiles.fflist);
         }
 
 done:
@@ -151,17 +151,17 @@ static int process_packed_file(const char *path, void *data)
                 goto done;
         }
 
-        priv->pfcount++;
-        if (list_empty(&priv->pflist))
-                list_add_tail(&f->list, &priv->pflist);
+        priv->dbfiles.pfcount++;
+        if (list_empty(&priv->dbfiles.pflist))
+                list_add_tail(&f->list, &priv->dbfiles.pflist);
         else {
                 int r = 0;
                 struct zsdb_file *cur;
 
-                cur = list_first(&priv->pflist, struct zsdb_file, list);
+                cur = list_first(&priv->dbfiles.pflist, struct zsdb_file, list);
                 r = strcmp(cur->fname.buf, f->fname.buf);
-                if (r <= 0) list_add_head(&f->list, &priv->pflist);
-                else list_add_tail(&f->list, &priv->pflist);
+                if (r <= 0) list_add_head(&f->list, &priv->dbfiles.pflist);
+                else list_add_tail(&f->list, &priv->dbfiles.pflist);
         }
 done:
         return ret;
@@ -392,15 +392,15 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         cstring_addstr(&priv->dbdir, dbdir);
 
         /* db file list */
-        priv->pflist.prev = &priv->pflist;
-        priv->pflist.next = &priv->pflist;
+        priv->dbfiles.pflist.prev = &priv->dbfiles.pflist;
+        priv->dbfiles.pflist.next = &priv->dbfiles.pflist;
 
-        priv->fflist.prev = &priv->fflist;
-        priv->fflist.next = &priv->fflist;
+        priv->dbfiles.fflist.prev = &priv->dbfiles.fflist;
+        priv->dbfiles.fflist.next = &priv->dbfiles.fflist;
 
-        priv->afcount = 0;
-        priv->ffcount = 0;
-        priv->pfcount = 0;
+        priv->dbfiles.afcount = 0;
+        priv->dbfiles.ffcount = 0;
+        priv->dbfiles.pfcount = 0;
 
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
@@ -450,7 +450,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         goto done;
 
                 zslog(LOGDEBUG, "Created active file: %s\n",
-                      priv->factive.fname.buf);
+                      priv->dbfiles.factive.fname.buf);
         } else {
                 /* If it is an existing DB, scan the directory for
                  * db files.
@@ -461,7 +461,9 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         goto done;
 
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
-                      priv->afcount + priv->ffcount + priv->pfcount,
+                      priv->dbfiles.afcount +
+                      priv->dbfiles.ffcount +
+                      priv->dbfiles.pfcount,
                       priv->dbdir.buf);
         }
 
@@ -488,25 +490,25 @@ int zsdb_close(struct zsdb *db)
 
         zslog(LOGDEBUG, "Closing DB `%s`.\n", priv->dbdir.buf);
 
-        if (priv->factive.is_open)
+        if (priv->dbfiles.factive.is_open)
                 zsdb_write_lock_release(db);
 
         zs_active_file_close(priv);
 
-        list_for_each_forward_safe(pos, p, &priv->fflist) {
+        list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
                 struct zsdb_file *f;
                 list_del(pos);
                 f = list_entry(pos, struct zsdb_file, list);
                 zs_finalised_file_close(&f);
-                priv->ffcount--;
+                priv->dbfiles.ffcount--;
         }
 
-        list_for_each_forward_safe(pos, p, &priv->pflist) {
+        list_for_each_forward_safe(pos, p, &priv->dbfiles.pflist) {
                 struct zsdb_file *f;
                 list_del(pos);
                 f = list_entry(pos, struct zsdb_file, list);
                 zs_packed_file_close(&f);
-                priv->pfcount--;
+                priv->dbfiles.pfcount--;
         }
 
         if (priv->memtree)
@@ -543,7 +545,7 @@ int zsdb_add(struct zsdb *db,
 
         priv = db->priv;
 
-        if (!priv->open || !priv->factive.is_open) {
+        if (!priv->open || !priv->dbfiles.factive.is_open) {
                 return ZS_NOT_OPEN;
         }
 
@@ -554,31 +556,31 @@ int zsdb_add(struct zsdb *db,
         }
 
         /* check file size and finalise if necessary */
-        mappedfile_size(&priv->factive.mf, &mfsize);
+        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
         if (mfsize >= TWOMB) {
                 zslog(LOGDEBUG, "File %s is > 2MB, finalising.\n",
-                        priv->factive.fname.buf);
+                        priv->dbfiles.factive.fname.buf);
                 ret = zs_active_file_finalise(priv);
                 if (ret != ZS_OK) goto done;
 
                 ret = zs_active_file_new(priv,
                                          priv->dotzsdb.curidx + 1);
                 zslog(LOGDEBUG, "New active log file %s created.\n",
-                        priv->factive.fname.buf);
+                        priv->dbfiles.factive.fname.buf);
         }
 
         /* Start computing the crc32. Will end when the transaction is
            committed */
-        crc32_begin(&priv->factive.mf);
+        crc32_begin(&priv->dbfiles.factive.mf);
 
         /* Add the entry to the active file */
         ret = zs_active_file_write_keyval_record(priv, key, keylen, value,
                                                  vallen);
         if (ret != ZS_OK) {
-                crc32_end(&priv->factive.mf);
+                crc32_end(&priv->dbfiles.factive.mf);
                 goto done;
         }
-        priv->factive.dirty = 1;
+        priv->dbfiles.factive.dirty = 1;
 
         /* Add the entry to the in-memory tree, we remove an entry
            with the key first, if it exists, just to remove duplicates
@@ -616,7 +618,7 @@ int zsdb_remove(struct zsdb *db,
 
         priv = db->priv;
 
-        if (!priv->open || !priv->factive.is_open) {
+        if (!priv->open || !priv->dbfiles.factive.is_open) {
                 return ZS_NOT_OPEN;
         }
 
@@ -628,16 +630,16 @@ int zsdb_remove(struct zsdb *db,
 
         /* Start computing the crc32. Will end when the transaction is
            committed */
-        crc32_begin(&priv->factive.mf);
+        crc32_begin(&priv->dbfiles.factive.mf);
 
         ret = zs_active_file_write_delete_record(priv, key, keylen);
         if (ret != ZS_OK) {
-                crc32_end(&priv->factive.mf);
+                crc32_end(&priv->dbfiles.factive.mf);
                 zslog(LOGDEBUG, "Failed removing key from DB `%s`\n",
                       priv->dbdir.buf);
                 goto done;
         }
-        priv->factive.dirty = 1;
+        priv->dbfiles.factive.dirty = 1;
 
         zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
 
@@ -663,12 +665,12 @@ int zsdb_commit(struct zsdb *db)
 
         priv = db->priv;
 
-        if (!priv->factive.is_open)
+        if (!priv->dbfiles.factive.is_open)
                 return ZS_NOT_OPEN;
 
         ret = zs_active_file_write_commit_record(priv);
         if (ret == ZS_OK)
-                priv->factive.dirty = 0;
+                priv->dbfiles.factive.dirty = 0;
 
         return ret;
 }
@@ -689,7 +691,7 @@ int zsdb_fetch(struct zsdb *db,
 
         priv = db->priv;
 
-        if (!priv->open || !priv->factive.is_open) {
+        if (!priv->open || !priv->dbfiles.factive.is_open) {
                 zslog(LOGWARNING, "DB `%s` not open.\n!", priv->dbdir.buf);
                 return ZS_NOT_OPEN;
         }
@@ -817,23 +819,25 @@ int zsdb_info(struct zsdb *db)
         fprintf(stderr, "DBNAME  : %s\n", priv->dbdir.buf);
         fprintf(stderr, "UUID    : %s\n", priv->dotzsdb.uuidstr);
         fprintf(stderr, "Number of files: %d\n",
-                priv->afcount + priv->ffcount + priv->pfcount);
+                priv->dbfiles.afcount +
+                priv->dbfiles.ffcount +
+                priv->dbfiles.pfcount);
 
         fprintf(stderr, ">> Active file:\n");
-        fprintf(stderr, "\t * %s\n", basename(priv->factive.fname.buf));
+        fprintf(stderr, "\t * %s\n", basename(priv->dbfiles.factive.fname.buf));
 
-        if (priv->ffcount) {
+        if (priv->dbfiles.ffcount) {
                 fprintf(stderr, ">> Finalised file(s):\n");
-                list_for_each_forward(pos, &priv->fflist) {
+                list_for_each_forward(pos, &priv->dbfiles.fflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
                         fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
                 }
         }
 
-        if (priv->pfcount) {
+        if (priv->dbfiles.pfcount) {
                 fprintf(stderr, ">> Packed file(s):\n");
-                list_for_each_forward(pos, &priv->pflist) {
+                list_for_each_forward(pos, &priv->dbfiles.pflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
                         fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
