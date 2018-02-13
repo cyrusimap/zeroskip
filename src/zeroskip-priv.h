@@ -255,4 +255,7 @@ extern int zs_packed_file_new(const char *path,
 
 extern int zs_packed_file_close(struct zsdb_file **fptr);
 
+/* zeroskip-record.c */
+extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
+                                    foreach_cb *cb, void *cbdata);
 #endif  /* _ZEROSKIP_PRIV_H_ */

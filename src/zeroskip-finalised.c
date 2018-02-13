@@ -10,7 +10,6 @@
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
-
 /*
  * Public functions
  */
@@ -84,6 +83,29 @@ int zs_finalised_file_close(struct zsdb_file **fptr)
         mappedfile_close(&f->mf);
         cstring_release(&f->fname);
         xfree(f);
+
+        return ret;
+}
+
+int zs_finalised_file_record_foreach(struct zsdb_file *fptr,
+                                     foreach_cb *cb, void *cbdata)
+{
+        int ret = ZS_OK;
+        size_t mfsize = 0, offset = ZS_HDR_SIZE;
+
+        mappedfile_size(&fptr->mf, &mfsize);
+        if (mfsize == 0 || mfsize < ZS_HDR_SIZE) {
+                zslog(LOGDEBUG, "Not a valid finalised DB file.\n");
+                return ZS_INVALID_DB;
+        } else if (mfsize == ZS_HDR_SIZE) {
+                zslog(LOGDEBUG, "No records in finalised DB file.\n");
+                return ret;
+        }
+
+        while (offset < mfsize) {
+                ret = zs_record_read_from_file(fptr, &offset,
+                                               cb, cbdata);
+        }
 
         return ret;
 }
