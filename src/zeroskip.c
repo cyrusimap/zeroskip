@@ -125,8 +125,8 @@ static int process_finalised_file(const char *path, void *data)
 
                 cur = list_first(&priv->fflist, struct zsdb_file, list);
                 r = strcmp(cur->fname.buf, f->fname.buf);
-                if (r <= 0) list_add_tail(&f->list, &priv->fflist);
-                else list_add_head(&f->list, &priv->fflist);
+                if (r <= 0) list_add_head(&f->list, &priv->fflist);
+                else list_add_tail(&f->list, &priv->fflist);
         }
 
 done:
@@ -164,8 +164,8 @@ static int process_packed_file(const char *path, void *data _unused_)
 
                 cur = list_first(&priv->pflist, struct zsdb_file, list);
                 r = strcmp(cur->fname.buf, f->fname.buf);
-                if (r <= 0) list_add_tail(&f->list, &priv->pflist);
-                else list_add_head(&f->list, &priv->pflist);
+                if (r <= 0) list_add_head(&f->list, &priv->pflist);
+                else list_add_tail(&f->list, &priv->pflist);
         }
 done:
         return ret;
