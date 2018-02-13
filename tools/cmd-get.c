@@ -45,7 +45,7 @@ int cmd_get(int argc, char **argv, const char *progname)
         }
 
         if (argc - optind != 2) {
-                cmd_die_usage(progname, cmd_delete_usage);
+                cmd_die_usage(progname, cmd_get_usage);
         }
 
         dbname = argv[optind++];
