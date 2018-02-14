@@ -141,10 +141,10 @@ bool_t file_exists(const char *file)
 
 
 /*
-  file_rename():
+  xrename():
   returns 0 if mode changed successfully, -1 otherwise.
  */
-int file_rename(const char *oldpath, const char *newpath)
+int xrename(const char *oldpath, const char *newpath)
 {
         if ((oldpath  == NULL) || (newpath == NULL)) {
                 return -1;
@@ -153,6 +153,20 @@ int file_rename(const char *oldpath, const char *newpath)
         return rename(oldpath, newpath);
 }
 
+/*
+  xunlink():
+  returns 0 on success, non zero otherwise with errno set
+  appropriately.
+ */
+int xunlink(const char *path)
+{
+        int ret;
+
+        ret = unlink(path);
+        if (!ret || errno == ENOENT)
+                return 0;
+        return ret;
+}
 
 /* get_filenames_with_matching_prefix()
  * get files(only) in a given path, matching a prefix.

@@ -254,9 +254,10 @@ static inline size_t st_mult(size_t a, size_t b)
 
 int file_change_mode_rw(const char *path);
 bool_t file_exists(const char *file);
-int file_rename(const char *oldpath, const char *newpath);
 
+int xrename(const char *oldpath, const char *newpath);
 int xmkdir(const char *path, mode_t mode);
+int xunlink(const char *path);
 
 int get_filenames_with_matching_prefix(char *const path[], const char *prefix,
                                        struct str_array *arr, int full_path);
