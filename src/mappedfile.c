@@ -25,7 +25,7 @@
 #include "util.h"
 
 
-static struct mappedfile mf_init = {"", -1, MAP_FAILED, 0, 0, 0, 0, -1, -1, 0};
+static struct mappedfile mf_init = {"", -1, MAP_FAILED, 0, 0, 0, 0, -1, -1, 0, 0};
 
 #define OPEN_MODE 0644
 
@@ -69,7 +69,7 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
                 mflags = PROT_READ | PROT_WRITE;
                 oflags = O_RDWR;
         } else if (flags & MAPPEDFILE_WR) {
-                mflags = PROT_WRITE;
+                mflags = PROT_READ | PROT_WRITE;
                 oflags = O_WRONLY;
         } else if (flags & MAPPEDFILE_RD) {
                 mflags = PROT_READ;
@@ -94,6 +94,7 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
                 perror("mappedfile_open:fstat");
                 return err;
         }
+
         mf->size = st.st_size;
         if (mf->size) {
                 mf->ptr = mmap(0, mf->size, mflags, MAP_SHARED, mf->fd, 0);
@@ -105,10 +106,46 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
         } else
                 mf->ptr = NULL;
 
+        mf->mflags = mflags;
+
         *mfp = mf;
 
         return ret;
 }
+
+/*
+  XXX: At a later point in time, mappedfile_open() will be split into 2
+  operations. The first one would be to open() the file and get a valid fd.
+  And then the mappedfile_map() to actually map it in memory.
+ */
+#if 0
+/*
+ * mappedfile_map()
+ *
+ */
+int mappedfile_map(struct mappedfile **mfp)
+{
+        if (mfp && *mfp) {
+                struct mappedfile *mf = *mfp;
+
+                if (mf == &mf_init)
+                        return 0;
+
+                if (mf->size) {
+                        mf->ptr = mmap(0, mf->size, mf->mflags,
+                                       MAP_SHARED, mf->fd, 0);
+                        if (mf->ptr == MAP_FAILED) {
+                                int err = errno;
+                                close(mf->fd);
+                                return err;
+                        }
+                } else
+                        mf->ptr = NULL;
+        }
+
+        return 0;
+}
+#endif
 
 /*
  * mappedfile_close()

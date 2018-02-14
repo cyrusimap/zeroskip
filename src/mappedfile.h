@@ -29,7 +29,8 @@ struct mappedfile {
         size_t crc32_data_len;
         size_t size;
         size_t offset;
-        uint32_t flags;
+        uint32_t flags;         /* flags passed into the mappedfile api */
+        int mflags;             /* flags parsed into what mmap() understands */
 };
 
 enum {
@@ -43,6 +44,9 @@ enum {
 
 extern int mappedfile_open(const char *fname, uint32_t flags,
                            struct mappedfile **mfp);
+#if 0                           /* Will eventually split the open() function */
+extern int mappedfile_map(struct mappedfile **mfp);
+#endif
 extern int mappedfile_close(struct mappedfile **mfp);
 extern int mappedfile_read(struct mappedfile **mfp, void *obuf,
                            size_t obufsize, size_t *nbytes);
