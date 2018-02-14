@@ -219,7 +219,9 @@ static int for_each_db_file_in_dbdir(char *const path[],
 
         ftsp = fts_open(*path ? path : def_path, fts_options, NULL);
         if (ftsp == NULL) {
+                err = errno;
                 perror("fts_open:");
+                errno = err;
                 return errno;
         }
 

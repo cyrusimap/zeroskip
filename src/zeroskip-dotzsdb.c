@@ -218,3 +218,23 @@ fail1:
         cstring_release(&dotzsdbfname);
         return ret;
 }
+
+ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv)
+{
+        cstring dotzsdbfname = CSTRING_INIT;
+        struct stat sb = { 0 };
+
+        /* The filename */
+        cstring_dup(&priv->dbdir, &dotzsdbfname);
+        cstring_addch(&dotzsdbfname, '/');
+        cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
+
+        /* stat() the .zsdb file to get the inode number. The .zsdb file is
+         * used for synchronisation among various processes.
+         */
+        stat(dotzsdbfname.buf, &sb);
+
+        cstring_release(&dotzsdbfname);
+
+        return sb.st_ino;
+}

@@ -239,6 +239,7 @@ extern int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx);
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
 extern int zs_dotzsdb_validate(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
+extern ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv);
 
 
 /* zeroskip-filename.c */
