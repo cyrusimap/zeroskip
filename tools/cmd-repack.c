@@ -11,6 +11,8 @@
 #include <stdlib.h>
 
 #include "cmds.h"
+#include "log.h"
+#include "zeroskip.h"
 
 int cmd_repack(int argc, char **argv, const char *progname)
 {
@@ -21,9 +23,12 @@ int cmd_repack(int argc, char **argv, const char *progname)
         };
         int option;
         int option_index;
+        struct zsdb *db = NULL;
+        const char *dbname;
+        int ret;
         const char *config_file = NULL;
 
-        while((option = getopt_long(argc, argv, "c:h", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
                 case 'c':
                         config_file = optarg;
@@ -35,7 +40,39 @@ int cmd_repack(int argc, char **argv, const char *progname)
                 };
         }
 
+        if (argc - optind != 1) {
+                cmd_die_usage(progname, cmd_repack_usage);
+        }
+
+        dbname = argv[optind];
+
         cmd_parse_config(config_file);
 
-        exit(EXIT_SUCCESS);
+        if (zsdb_init(&db) != ZS_OK) {
+                zslog(LOGWARNING, "Failed initialising DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
+                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        /* TODO: Acquire packing lock! */
+
+        if (zsdb_repack(db) != ZS_OK) {
+                zslog(LOGWARNING, "Failed repacking DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        /* RELEASE: Acquire packing lock! */
+
+        ret = EXIT_SUCCESS;
+done:
+        zsdb_final(&db);
+
+        exit(ret);
 }

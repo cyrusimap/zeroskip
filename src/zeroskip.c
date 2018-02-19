@@ -694,7 +694,7 @@ int zsdb_fetch(struct zsdb *db,
         priv = db->priv;
 
         if (!priv->open || !priv->dbfiles.factive.is_open) {
-                zslog(LOGWARNING, "DB `%s` not open.\n!", priv->dbdir.buf);
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
                 return ZS_NOT_OPEN;
         }
 
@@ -758,7 +758,7 @@ int zsdb_dump(struct zsdb *db,
                 priv = db->priv;
 
         if (!priv->open) {
-                zslog(LOGWARNING, "DB `%s` not open.\n!", priv->dbdir.buf);
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
                 return ZS_NOT_OPEN;
         }
 
@@ -794,11 +794,33 @@ int zsdb_consistent(struct zsdb *db)
         return ret;
 }
 
+/*
+ * zsdb_repack(): Repack a DB
+ * When the DB is being packed, records can be still be written to the
+ * db, but there can only be one 'packing' process running at any given
+ * moment.
+ * Also, other processes that are writing to or reading from the db, should
+ * check the inode number of the .zsdb file and if it has changed, since the
+ * time the db was last opened, the process would have to close the db and
+ * reopen again.
+ */
 int zsdb_repack(struct zsdb *db)
 {
         int ret = ZS_OK;
+        struct zsdb_priv *priv;
 
         assert_zsdb(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        /* TODO: Ensure pack lock is acquired */
+        /* TODO: Ensure that the inode number of .zsdb is still the same */
 
         return ret;
 }
@@ -813,6 +835,11 @@ int zsdb_info(struct zsdb *db)
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
 
         fprintf(stderr, "==============\n");
         fprintf(stderr, "== Zeroskip ==\n");

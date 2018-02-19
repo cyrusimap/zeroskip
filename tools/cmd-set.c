@@ -84,14 +84,14 @@ int cmd_set(int argc, char **argv, const char *progname)
                 goto done;
         }
 
+        ret = EXIT_SUCCESS;
+done:
         if (zsdb_write_lock_release(db) != ZS_OK) {
                 zslog(LOGWARNING, "Could not release write lock after deletion.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
-        ret = EXIT_SUCCESS;
-done:
         if (zsdb_close(db) != ZS_OK) {
                 zslog(LOGWARNING, "Could not close DB.\n");
                 ret = EXIT_FAILURE;

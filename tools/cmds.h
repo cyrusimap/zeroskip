@@ -30,7 +30,7 @@ int cmd_consistent(int argc, char **argv, const char *progname);
 #define cmd_consistent_usage "consistent "
 
 int cmd_repack(int argc, char **argv, const char *progname);
-#define cmd_repack_usage "repack "
+#define cmd_repack_usage "repack [--config CONFIGFILE] DB"
 
 int cmd_damage(int argc, char **argv, const char *progname);
 #define cmd_damage_usage "damage "
