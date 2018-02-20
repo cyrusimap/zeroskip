@@ -109,9 +109,6 @@ static int process_finalised_file(const char *path, void *data)
                 goto done;
         }
 
-        zs_finalised_file_record_foreach(f, load_records_cb,
-                                         priv->memtree);
-
         priv->dbfiles.ffcount++;
         if (list_empty(&priv->dbfiles.fflist))
                 list_add_tail(&f->list, &priv->dbfiles.fflist);
@@ -457,10 +454,22 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 /* If it is an existing DB, scan the directory for
                  * db files.
                  */
+                struct list_head *pos;
                 ret = for_each_db_file_in_dbdir(&priv->dbdir.buf,
                                                 DB_ABS_PATH, priv);
                 if (ret != ZS_OK)
                         goto done;
+
+                if (priv->dbfiles.ffcount) {
+                        zslog(LOGDEBUG, "Loading data from finalised files\n");
+                        list_for_each_reverse(pos, &priv->dbfiles.fflist) {
+                                struct zsdb_file *f;
+                                f = list_entry(pos, struct zsdb_file, list);
+                                zs_finalised_file_record_foreach(f,
+                                                                 load_records_cb,
+                                                                 priv->memtree);
+                        }
+                }
 
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
                       priv->dbfiles.afcount +
@@ -819,9 +828,14 @@ int zsdb_repack(struct zsdb *db)
                 return ZS_NOT_OPEN;
         }
 
-        /* TODO: Ensure pack lock is acquired */
+        if (!zsdb_pack_lock_is_locked(db)) {
+                zslog(LOGDEBUG, "Need a pack lock to repack.\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
         /* TODO: Ensure that the inode number of .zsdb is still the same */
 
+done:
         return ret;
 }
 
