@@ -332,6 +332,7 @@ static void node_remove_leaf_element(struct btree_node *node, uint32_t pos)
 {
         uint32_t i;
 
+        record_free(node->recs[pos]);
         for (i = pos + 1; i < node->count; i++) {
                 node->recs[i-1] = node->recs[i];
         }
@@ -416,7 +417,7 @@ void btree_free(struct btree *btree)
 
 int btree_insert(struct btree *btree, struct record *record)
 {
-        btree_iter_t iter;
+        btree_iter_t iter = { 0 };
 
         if (btree_find(btree, record->key, record->keylen, iter))
                 return BTREE_DUPLICATE;
@@ -428,12 +429,9 @@ int btree_insert(struct btree *btree, struct record *record)
 
 int btree_remove(struct btree *btree, unsigned char *key, size_t keylen)
 {
-        btree_iter_t iter;
+        btree_iter_t iter = { 0 };
 
         if (btree_find(btree, key, keylen, iter)) {
-                if (iter->record)
-                        record_free(iter->record);
-
                 btree_remove_at(iter);
                 return BTREE_OK;
         }
@@ -685,5 +683,7 @@ void record_free(struct record *record)
 
         xfree(record->key);
         xfree(record->val);
+        record->keylen = 0;
+        record->vallen = 0;
         xfree(record);
 }
