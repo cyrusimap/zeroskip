@@ -60,7 +60,12 @@ int cmd_repack(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        /* TODO: Acquire packing lock! */
+        if (zsdb_pack_lock_acquire(db, 0) != ZS_OK) {
+                zslog(LOGWARNING, "Could not acquire pack lock for packing.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
 
         if (zsdb_repack(db) != ZS_OK) {
                 zslog(LOGWARNING, "Failed repacking DB.\n");
@@ -68,10 +73,20 @@ int cmd_repack(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        /* RELEASE: Acquire packing lock! */
-
         ret = EXIT_SUCCESS;
 done:
+        if (zsdb_pack_lock_release(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not release pack lock.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+
+        if (zsdb_close(db) != ZS_OK) {
+                zslog(LOGWARNING, "Could not close DB.\n");
+                ret = EXIT_FAILURE;
+        }
+
         zsdb_final(&db);
 
         exit(ret);

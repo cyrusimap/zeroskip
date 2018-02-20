@@ -87,7 +87,7 @@ int cmd_set(int argc, char **argv, const char *progname)
         ret = EXIT_SUCCESS;
 done:
         if (zsdb_write_lock_release(db) != ZS_OK) {
-                zslog(LOGWARNING, "Could not release write lock after deletion.\n");
+                zslog(LOGWARNING, "Could not release write lock after addition.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
