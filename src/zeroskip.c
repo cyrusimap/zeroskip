@@ -48,7 +48,6 @@ static int process_active_file(const char *path, void *data)
 {
         struct zsdb_priv *priv;
         int ret = ZS_OK;
-        size_t mfsize;
 
         if (!data) {
                 zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
@@ -68,18 +67,6 @@ static int process_active_file(const char *path, void *data)
                 file_lock_release(&priv->wlk);
                 goto done;
         }
-
-        /* Load records from active file to in-memory tree */
-        zs_active_file_record_foreach(priv, load_records_cb,
-                                      priv->memtree);
-
-        /* Seek to the end of the file, that's where the
-           records need to appended to.
-        */
-        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
-        if (mfsize)
-                mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
-
 
         priv->dbfiles.afcount++;
         zslog(LOGDEBUG, "opened active file: %s\n", path);
@@ -454,22 +441,36 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 /* If it is an existing DB, scan the directory for
                  * db files.
                  */
+                size_t mfsize;
                 struct list_head *pos;
                 ret = for_each_db_file_in_dbdir(&priv->dbdir.buf,
                                                 DB_ABS_PATH, priv);
                 if (ret != ZS_OK)
                         goto done;
 
+                /* Load data from finalised files */
                 if (priv->dbfiles.ffcount) {
                         zslog(LOGDEBUG, "Loading data from finalised files\n");
                         list_for_each_reverse(pos, &priv->dbfiles.fflist) {
                                 struct zsdb_file *f;
                                 f = list_entry(pos, struct zsdb_file, list);
+                                zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
                                 zs_finalised_file_record_foreach(f,
                                                                  load_records_cb,
                                                                  priv->memtree);
                         }
                 }
+
+                /* Load records from active file to in-memory tree */
+                zs_active_file_record_foreach(priv, load_records_cb,
+                                              priv->memtree);
+
+                /* Seek to the end of the file, that's where the
+                   records need to appended to.
+                */
+                mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
+                if (mfsize)
+                        mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
 
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
                       priv->dbfiles.afcount +
