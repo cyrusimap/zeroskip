@@ -4,6 +4,7 @@
 # Object files
 ZS_LIBOBJS =  			\
 	btree.o			\
+	bptree.o		\
 	cstring.o		\
 	file-lock.o		\
 	log.o			\
