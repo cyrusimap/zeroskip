@@ -23,6 +23,17 @@
  * Private functions
  */
 
+static int nodecount = 0;
+
+void print_rec_entry(unsigned char *d, size_t l)
+{
+        size_t i;
+        for (i = 0; i < l; i++)
+                printf("%c", d[i]);
+        printf("\n");
+
+}
+
 /* btree_ascend()
  *  returns 0 - if iter->node does not have a parent
  *  returns 1 - if iter->node has a parent and ascends
@@ -333,6 +344,7 @@ static void node_remove_leaf_element(struct btree_node *node, uint32_t pos)
         uint32_t i;
 
         record_free(node->recs[pos]);
+
         for (i = pos + 1; i < node->count; i++) {
                 node->recs[i-1] = node->recs[i];
         }
@@ -349,16 +361,14 @@ static int node_walk_forward(const struct btree_node *node,
 
         if (!node->depth) {
                 for (i = 0; i < count; i++) {
-                        if (!action((void *)node->recs[i], data))
-                                return 0;
+                        action((void *)node->recs[i], data);
                 }
         } else {
                 for (i = 0; i < count; i++) {
                         if (!node_walk_forward(node->branches[i],
                                                action, data))
                                 return 0;
-                        if (!action((void *)node->recs[i], data))
-                                return 0;
+                        action((void *)node->recs[i], data);
                 }
 
                 if (!node_walk_forward(node->branches[count], action, data))
@@ -371,6 +381,9 @@ static int node_walk_forward(const struct btree_node *node,
 int node_print_data(struct record *record, void *data _unused_)
 {
         size_t i;
+
+        if (!record)
+                return 0;
 
         for (i = 0; i < record->keylen; i++)
                 printf("%c", record->key[i]);
@@ -419,8 +432,8 @@ int btree_insert(struct btree *btree, struct record *record)
 {
         btree_iter_t iter = { 0 };
 
-        if (btree_find(btree, record->key, record->keylen, iter))
-                return BTREE_DUPLICATE;
+
+        btree_find(btree, record->key, record->keylen, iter);
 
         btree_insert_at(iter, record);
 
@@ -456,10 +469,16 @@ unsigned int btree_memcmp(unsigned char *key, size_t keylen,
                 unsigned int middle = count >> 1;
                 unsigned int pos = start + middle;
                 unsigned char* b;
+                int c = -1;
 
                 b = (unsigned char*)recs[pos]->key;
 
-                int c = memcmp(k, b, keylen);
+                if (keylen < recs[pos]->keylen)
+                        goto lessthan;
+                if (keylen > recs[pos]->keylen)
+                        goto greaterthan;
+
+                c = memcmp(k, b, keylen);
                 if (c == 0)
                         goto equals;
                 if (c < 0)
@@ -582,13 +601,15 @@ done:
 
 int btree_deref(btree_iter_t iter)
 {
-        struct btree_iter tmp = *iter;
 
-        while (iter->pos >= iter->node->count) {
-                if (btree_ascend(iter)) {
-                        *iter = tmp;
-                        return 0;
-                }
+        if (iter->pos >= iter->node->count) {
+                struct btree_iter tmp = *iter;
+                do {
+                        if (!btree_ascend(iter)) {
+                                *iter = tmp;
+                                return 0;
+                        }
+                } while (iter->pos >= iter->node->count);
         }
 
         iter->record = iter->node->recs[iter->pos];
@@ -604,7 +625,10 @@ int btree_remove_at(btree_iter_t iter)
         if (!btree_deref(iter))
                 return 0;
 
+        /* record_free(iter->record); */
+
         if (!iter->node->depth) {
+                printf("#### removing from pos %d\n", iter->pos);
                 node_remove_leaf_element(iter->node, iter->pos);
                 if (iter->node->count >= BTREE_MIN_ELEMENTS ||
                     !iter->node->parent)
@@ -619,7 +643,11 @@ int btree_remove_at(btree_iter_t iter)
 
                 /* Replace with the successor */
                 *rec = iter->node->recs[0];
+                printf("Replacing: ");
+                print_rec_entry(iter->node->recs[iter->pos]->key,
+                                iter->node->recs[iter->pos]->keylen);
 
+                printf("#### removing internal node 0(%d)\n", iter->pos);
                 node_remove_leaf_element(iter->node, 0);
         }
 
@@ -674,6 +702,7 @@ struct record * record_new(unsigned char *key, size_t keylen,
         memcpy(rec->val, val, vallen);
         rec->vallen = vallen;
 
+        nodecount++;
         return rec;
 }
 
@@ -686,4 +715,6 @@ void record_free(struct record *record)
         record->keylen = 0;
         record->vallen = 0;
         xfree(record);
+
+        nodecount--;
 }

@@ -123,6 +123,7 @@ int btree_deref(btree_iter_t iter);
 
 /* Lookup/Find functions */
 int btree_lookup(struct btree *tree, const void *key);
+
 /* btree_find():
  * Return value:
  *  On Success: returns 1 with iter->element containing the match
