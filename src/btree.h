@@ -132,6 +132,10 @@ int btree_lookup(struct btree *tree, const void *key);
 int btree_find(struct btree *tree, unsigned char *key, size_t keylen,
                btree_iter_t iter);
 
+
+int btree_prev(btree_iter_t iter);
+int btree_next(btree_iter_t iter);
+
 /* These are the default callbacks that are used in the absence of
  * callbacks from the user.
  */
