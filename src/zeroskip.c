@@ -37,7 +37,7 @@ static int load_records_cb(void *data,
         struct record *rec;
 
         rec = record_new(key, keylen, value, vallen);
-        btree_insert(memtree, rec);
+        btree_replace(memtree, rec);
 
         return 0;
 }
@@ -593,7 +593,7 @@ int zsdb_add(struct zsdb *db,
         priv->dbfiles.factive.dirty = 1;
 
         rec = record_new(key, keylen, value, vallen);
-        btree_insert(priv->memtree, rec);
+        btree_replace(priv->memtree, rec);
 
         /* TODO: REMOVE THE PRINTING! */
         /* btree_print_node_data(priv->memtree, NULL); */
@@ -650,7 +650,7 @@ int zsdb_remove(struct zsdb *db,
 
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, NULL, 0);
-        btree_insert(priv->memtree, rec);
+        btree_replace(priv->memtree, rec);
 
         /* TODO: REMOVE THE PRINTING! */
         /* btree_print_node_data(priv->memtree, NULL); */

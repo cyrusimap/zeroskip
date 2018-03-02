@@ -92,12 +92,32 @@ struct btree *btree_new(btree_action_cb_t destroy, btree_search_cb_t search);
 
 void btree_free(struct btree *tree);
 
-/* btree_insert():
+/* btree_insert_opt():
+ * if `replace` is 1, replaces the value, otherwise, inserts another entry
+ * with the same key/value.
  * Returns:
  *   On Success - returns BTREE_OK
  *   On Failure - returns non 0
  */
-int btree_insert(struct btree *tree, struct record *record);
+int btree_insert_opt(struct btree *tree, struct record *record, int replace);
+
+/* btree_insert():
+ * insert a record into the tree, duplicates allowed.
+ */
+static inline int btree_insert(struct btree *tree, struct record *record)
+{
+        return btree_insert_opt(tree, record, 0);
+}
+
+/* btree_replace():
+ * insert a record into the tree, replace the existing record, if the record
+ * exists.
+ */
+static inline int btree_replace(struct btree *tree, struct record *record)
+{
+        return btree_insert_opt(tree, record, 1);
+}
+
 
 /* btree_insert_at():
  * Insert a record before the one pointed to by iter
