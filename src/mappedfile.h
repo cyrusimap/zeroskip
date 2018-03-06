@@ -40,6 +40,7 @@ enum {
         MAPPEDFILE_CREATE = 0x00000010,
         MAPPEDFILE_WR_CR  = (MAPPEDFILE_WR | MAPPEDFILE_CREATE),
         MAPPEDFILE_RW_CR  = (MAPPEDFILE_RW | MAPPEDFILE_CREATE),
+        MAPPEDFILE_EXCL   = 0x00000040,
 };
 
 extern int mappedfile_open(const char *fname, uint32_t flags,

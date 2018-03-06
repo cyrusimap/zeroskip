@@ -82,6 +82,9 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
         if (flags & MAPPEDFILE_CREATE)
                 oflags |= O_CREAT;
 
+        if (flags & MAPPEDFILE_EXCL)
+                oflags |= O_EXCL;
+
         mf->fd = open(fname, oflags, OPEN_MODE);
         if (mf->fd < 0) {
                 perror("mappedfile_open:open");
