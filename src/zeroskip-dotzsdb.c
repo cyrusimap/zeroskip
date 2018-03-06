@@ -12,9 +12,53 @@
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <signal.h>
 #include <unistd.h>
+
+typedef void (*sigfunc)(int);
+
+static struct file_lock dblock;
+static struct mappedfile *zsdbfile;
+
+/**
+ * Internal/Private functions
+ */
+static void cleanup_lockfile(void)
+{
+        if (dblock.fd)
+                close(dblock.fd);
+        if (zsdbfile->fd)
+                mappedfile_close(&zsdbfile);
+
+        file_lock_release(&dblock);
+}
+
+static void cleanup_lockfile_on_exit(void)
+{
+        cleanup_lockfile();
+}
+
+static void cleanup_lockfile_on_signal(int signum)
+{
+        cleanup_lockfile();
+        signal(signum, cleanup_lockfile_on_signal);
+        raise(signum);
+}
+
+static void register_signal_handlers(sigfunc f)
+{
+        signal(SIGTERM, f);
+        signal(SIGQUIT, f);
+        signal(SIGINT, f);
+        signal(SIGHUP, f);
+}
+
+/**
+ * Public functions
+ */
 
 /*
  * zs_dotzsdb_create():
@@ -35,7 +79,6 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         struct mappedfile *mf;
         int ret = 1;
         size_t nbytes = 0;
-        cstring dotzsdbfname = CSTRING_INIT;
         struct stat sb = { 0 };
 
         memset(&stackbuf, 0, DOTZSDB_SIZE);
@@ -44,11 +87,6 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         /* Generate a new uuid */
         uuid_generate(uuid);
         uuid_unparse_lower(uuid, priv->dotzsdb.uuidstr);
-
-        /* The filename */
-        cstring_dup(&priv->dbdir, &dotzsdbfname);
-        cstring_addch(&dotzsdbfname, '/');
-        cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
 
         /* Header */
         priv->dotzsdb.signature = ZS_SIGNATURE;
@@ -65,15 +103,16 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         sptr += UUID_STRLEN;
 
         /* Write to file */
-        if (mappedfile_open(dotzsdbfname.buf, MAPPEDFILE_RW_CR, &mf) != 0) {
-                zslog(LOGDEBUG, "Could not create %s!\n", dotzsdbfname.buf);
+        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RW_CR, &mf) != 0) {
+                zslog(LOGDEBUG, "Could not create %s!\n",
+                      priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail1;
         }
 
         if (mappedfile_write(&mf, &stackbuf, DOTZSDB_SIZE, &nbytes) != 0) {
                 zslog(LOGDEBUG, "Could not write to file %s!",
-                      dotzsdbfname.buf);
+                      priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail2;
         }
@@ -85,13 +124,12 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         /* stat() the .zsdb file to get the inode number. The .zsdb file is
          * used for synchronisation among various processes.
          */
-        stat(dotzsdbfname.buf, &sb);
+        stat(priv->dotzsdbfname.buf, &sb);
         priv->dotzsdb_ino = sb.st_ino;
 fail2:
         mappedfile_close(&mf);
 
 fail1:
-        cstring_release(&dotzsdbfname);
         return ret;
 }
 
@@ -109,16 +147,11 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         size_t mfsize;
         struct dotzsdb *dothdr;
         int ret = 1;
-        cstring dotzsdbfname = CSTRING_INIT;
         struct stat sb = { 0 };
 
-        /* The filename */
-        cstring_dup(&priv->dbdir, &dotzsdbfname);
-        cstring_addch(&dotzsdbfname, '/');
-        cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
-
-        if (mappedfile_open(dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
-                zslog(LOGDEBUG, "Could not open %s!\n", dotzsdbfname.buf);
+        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
+                zslog(LOGDEBUG, "Could not open %s!\n",
+                      priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail1;
         }
@@ -126,7 +159,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         /* stat() the .zsdb file to get the inode number. The .zsdb file is
          * used for synchronisation among various processes.
          */
-        stat(dotzsdbfname.buf, &sb);
+        stat(priv->dotzsdbfname.buf, &sb);
         priv->dotzsdb_ino = sb.st_ino;
 
         mappedfile_size(&mf, &mfsize);
@@ -153,7 +186,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                 uuid_parse(priv->dotzsdb.uuidstr, priv->uuid);
         } else {
                 zslog(LOGDEBUG, "Invalid zeroskip DB %s.\n",
-                        dotzsdbfname.buf);
+                        priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail2;
         }
@@ -162,7 +195,6 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
 fail2:
         mappedfile_close(&mf);
 fail1:
-        cstring_release(&dotzsdbfname);
         return ret;
 }
 
@@ -175,16 +207,11 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
         struct mappedfile *mf;
         size_t mfsize;
         struct dotzsdb *dothdr;
-        cstring dotzsdbfname = CSTRING_INIT;
         int ret = 1;
 
-        /* The filename */
-        cstring_dup(&priv->dbdir, &dotzsdbfname);
-        cstring_addch(&dotzsdbfname, '/');
-        cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
-
-        if (mappedfile_open(dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
-                zslog(LOGDEBUG, "Could not open %s!\n", dotzsdbfname.buf);
+        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
+                zslog(LOGDEBUG, "Could not open %s!\n",
+                      priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail1;
         }
@@ -205,7 +232,7 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
                 priv->dotzsdb.curidx = idx;
         } else {
                 zslog(LOGDEBUG, "Invalid zeroskip DB %s Failed updating index.\n",
-                        dotzsdbfname.buf);
+                        priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail2;
         }
@@ -215,7 +242,6 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
 fail2:
         mappedfile_close(&mf);
 fail1:
-        cstring_release(&dotzsdbfname);
         return ret;
 }
 
@@ -238,3 +264,146 @@ ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv)
 
         return sb.st_ino;
 }
+
+/*
+ * zs_dotzsdb_update_begin():
+ * Acquires a lock for updating .dotzsdb file
+ */
+int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
+{
+        size_t mfsize;
+        struct dotzsdb *dothdr;
+        int ret = 1;
+
+        if (!priv->open) {
+                zslog(LOGDEBUG, "DB not opened. Please open the db before updating\n");
+                return 0;
+        }
+
+        if (dblock.active) {
+                zslog(LOGDEBUG, "DB update already in progress");
+                return 1;
+        }
+
+        /* Open .zsdb file in RO mode */
+        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD,
+                            &zsdbfile) != 0) {
+                zslog(LOGDEBUG, "Could not open %s!\n", priv->dotzsdbfname.buf);
+                ret = 0;
+                goto fail1;
+
+        }
+
+        /* Read .dotzsdb file and update priv->dotzsdb */
+        mappedfile_size(&zsdbfile, &mfsize);
+        if (mfsize < DOTZSDB_SIZE) {
+                /* XXX: This should *never* happen here, since the db must have
+                 * been successfully opened by the time we've got here.
+                 */
+                zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
+                        mfsize);
+                ret = 0;
+                goto fail1;
+        }
+
+        dothdr = (struct dotzsdb *)zsdbfile->ptr;
+        if (dothdr->signature == ZS_SIGNATURE) {
+                /* Signature */
+                priv->dotzsdb.signature = dothdr->signature;
+
+                /* Index */
+                priv->dotzsdb.curidx = ntoh32(dothdr->curidx);
+
+                /* UUID str */
+                memcpy(&priv->dotzsdb.uuidstr,
+                       zsdbfile->ptr + sizeof(priv->dotzsdb.signature) +
+                       sizeof(priv->dotzsdb.curidx),
+                       sizeof(priv->dotzsdb.uuidstr));
+        } else {
+                /* XXX: This should *never* happen here, since the db must have
+                 * been successfully opened by the time we've got here.
+                 */
+                zslog(LOGDEBUG, "Invalid zeroskip DB %s.\n",
+                        priv->dotzsdbfname.buf);
+                ret = 0;
+                goto fail1;
+        }
+
+        /* Open .zsdb.lock file in RW and EXCL mode */
+        file_lock_acquire(&dblock, priv->dbdir.buf, DOTZSDB_FNAME, 0);
+
+        register_signal_handlers(cleanup_lockfile_on_signal);
+        atexit(cleanup_lockfile_on_exit);
+        goto done;
+
+fail1:
+        mappedfile_close(&zsdbfile);
+        file_lock_release(&dblock);
+done:
+        return ret;
+}
+
+/*
+ * zs_dotzsdb_update_end():
+ * Releases the .dotzsdb file (locked)
+ */
+int zs_dotzsdb_update_end(struct zsdb_priv *priv)
+{
+        int ret = 1;
+        unsigned char stackbuf[DOTZSDB_SIZE];
+        unsigned char *sptr;
+        ssize_t nr;
+
+        if (!priv->open) {
+                zslog(LOGDEBUG, "DB not opened. Please open the db before updating\n");
+                return 0;
+        }
+
+        if (!dblock.active) {
+                zslog(LOGDEBUG, "No active update to .zsdb\n");
+                return 0;
+        }
+
+        /* Write data from priv->dotzsdb to .zsdb.lock file */
+        memset(&stackbuf, 0, DOTZSDB_SIZE);
+        sptr = stackbuf;
+
+        /* Header */
+        memcpy(sptr, &priv->dotzsdb.signature, sizeof(uint64_t));
+        sptr += sizeof(uint64_t);
+
+        /* Index */
+        *((uint32_t *)sptr) = hton32(priv->dotzsdb.curidx);
+        sptr += sizeof(uint32_t);
+
+        /* UUID */
+        memcpy(sptr, &priv->dotzsdb.uuidstr, UUID_STRLEN);
+        sptr += UUID_STRLEN;
+
+        while (1) {
+                nr = write(dblock.fd, sptr, DOTZSDB_SIZE);
+                if (nr < 0) {
+                        if (errno == EINTR)
+                                continue;
+                }
+
+                fsync(dblock.fd);
+                break;
+        }
+
+        /* rename */
+        if (file_lock_rename(&dblock, priv->dotzsdbfname.buf)) {
+                zslog(LOGDEBUG, "Failed renaming %s to %s",
+                      dblock.fname.buf, priv->dotzsdbfname.buf);
+                ret = 0;
+                goto done;
+        }
+
+done:
+        /* close both .zsdb and .zsdb.lock files */
+        cleanup_lockfile();
+
+        return ret;
+}
+
+

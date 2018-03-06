@@ -317,6 +317,7 @@ void zsdb_final(struct zsdb **pdb)
                 priv = db->priv;
 
                 cstring_release(&priv->dbdir);
+                cstring_release(&priv->dotzsdbfname);
 
                 xfree(priv);
                 xfree(db);
@@ -385,6 +386,11 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         priv->dbfiles.afcount = 0;
         priv->dbfiles.ffcount = 0;
         priv->dbfiles.pfcount = 0;
+
+        /* .zsdb filename */
+        cstring_dup(&priv->dbdir, &priv->dotzsdbfname);
+        cstring_addch(&priv->dotzsdbfname, '/');
+        cstring_addstr(&priv->dotzsdbfname, DOTZSDB_FNAME);
 
         /* stat() the dbdir */
         if (stat(priv->dbdir.buf, &sb) == -1) {
@@ -502,6 +508,10 @@ int zsdb_close(struct zsdb *db)
 
         if (priv->dbfiles.factive.is_open)
                 zsdb_write_lock_release(db);
+
+        /* release locks */
+        file_lock_release(&priv->plk);
+        file_lock_release(&priv->wlk);
 
         zs_active_file_close(priv);
 
@@ -883,6 +893,7 @@ int zsdb_info(struct zsdb *db)
         return ret;
 }
 
+/* Lock file names */
 #define WRITE_LOCK_FNAME "zsdbw"
 #define PACK_LOCK_FNAME "zsdbp"
 
