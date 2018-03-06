@@ -13,17 +13,21 @@
 
 #include "cstring.h"
 
+#include <signal.h>
+
 struct file_lock {
         cstring fname;
-        int locked;
-        int fd;
+        volatile sig_atomic_t locked;
+        volatile int active;
+        volatile int fd;
 };
 
-#define FILE_LOCK_INIT  { CSTRING_INIT, 0 }
+#define FILE_LOCK_INIT  { CSTRING_INIT, 0, 0, 0 }
 
 int file_lock_acquire(struct file_lock *lk, const char *path,
                       const char *fname, long timeout_ms);
 int file_lock_release(struct file_lock *lk);
+int file_lock_rename(struct file_lock *lk, const char *path);
 
 static inline int file_lock_is_locked(struct file_lock *lk)
 {

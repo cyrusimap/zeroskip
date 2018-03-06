@@ -64,8 +64,10 @@ static int flock_lock(struct file_lock *lk, const char *path,
               lk->fname.buf);
 
         lk->fd = create_lock_file(lk->fname.buf);
-        if (lk->fd != -1)
+        if (lk->fd != -1) {
                 lk->locked = 1;
+                lk->active = 1;
+        }
 
         return lk->fd;
 }
@@ -150,4 +152,25 @@ int file_lock_release(struct file_lock *lk)
         lk->locked = 0;
 
         return ret ? -1 : 0;
+}
+
+/* file_lock_rename():
+ * Rename the lock file to dest.
+ */
+int file_lock_rename(struct file_lock *lk, const char *dest)
+{
+        if (!lk || !dest)
+                return -1;
+
+        if (lk->fd < 0 || !lk->locked)
+                return 0;
+
+        if (rename(lk->fname.buf, dest)) {
+                int err = errno;
+                remove_lock_file(lk->fname.buf);
+                errno = err;
+                return -1;
+        }
+
+        return 0;
 }
