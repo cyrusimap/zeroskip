@@ -78,6 +78,24 @@ done:
         return ret;
 }
 
+int zs_packed_file_close(struct zsdb_file **fptr)
+{
+        int ret = ZS_OK;
+        struct zsdb_file *f;
+
+        if (fptr == NULL || *fptr == NULL)
+                return ret;
+
+        f = *fptr;
+        fptr = NULL;
+
+        mappedfile_close(&f->mf);
+        cstring_release(&f->fname);
+        xfree(f);
+
+        return ret;
+}
+
 /* zs_packed_file_new():
  * Open a new file to be used as a packed file for writing.
  */
@@ -93,21 +111,12 @@ int zs_packed_file_new(const char *path _unused_,
         return ret;
 }
 
-
-int zs_packed_file_close(struct zsdb_file **fptr)
+int zs_packed_file_new_from_memtree(const char * path _unused_,
+                                    uint32_t startidx _unused_,
+                                    uint32_t endidx _unused_,
+                                    struct btree *memtree _unused_)
 {
         int ret = ZS_OK;
-        struct zsdb_file *f;
-
-        if (fptr == NULL || *fptr == NULL)
-                return ret;
-
-        f = *fptr;
-        fptr = NULL;
-
-        mappedfile_close(&f->mf);
-        cstring_release(&f->fname);
-        xfree(f);
 
         return ret;
 }

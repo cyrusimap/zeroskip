@@ -255,7 +255,7 @@ int zs_active_file_close(struct zsdb_priv *priv)
         return ret;
 }
 
-int zs_active_file_finalise(struct zsdb_priv *priv _unused_)
+int zs_active_file_finalise(struct zsdb_priv *priv)
 {
         int ret = ZS_OK;
         cstring newfname = CSTRING_INIT;

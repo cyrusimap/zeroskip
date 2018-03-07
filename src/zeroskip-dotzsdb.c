@@ -30,8 +30,7 @@ static void cleanup_lockfile(void)
 {
         if (dblock.fd)
                 close(dblock.fd);
-        if (zsdbfile->fd)
-                mappedfile_close(&zsdbfile);
+        mappedfile_close(&zsdbfile);
 
         file_lock_release(&dblock);
 }
@@ -380,6 +379,7 @@ int zs_dotzsdb_update_end(struct zsdb_priv *priv)
         memcpy(sptr, &priv->dotzsdb.uuidstr, UUID_STRLEN);
         sptr += UUID_STRLEN;
 
+        sptr = stackbuf;
         while (1) {
                 nr = write(dblock.fd, sptr, DOTZSDB_SIZE);
                 if (nr < 0) {

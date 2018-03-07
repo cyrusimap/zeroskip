@@ -30,3 +30,28 @@ void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname)
         cstring_addch(fname, '-');
         cstring_addstr(fname, index);
 }
+
+/* zs_filename_generate_packed():
+ * Generates a new filename for a packed file
+ */
+void zs_filename_generate_packed(struct zsdb_priv *priv, cstring *fname,
+                                 uint32_t startidx, uint32_t endidx)
+{
+        char sidx[11] = { 0 };
+        char eidx[11] = { 0 };
+
+        snprintf(sidx, 20, "%d", startidx);
+        snprintf(eidx, 20, "%d", endidx);
+
+        cstring_release(fname);
+
+        cstring_dup(&priv->dbdir, fname);
+        cstring_addch(fname, '/');
+        cstring_addstr(fname, ZS_FNAME_PREFIX);
+        cstring_add(fname, priv->dotzsdb.uuidstr, UUID_STRLEN - 1);
+        cstring_addch(fname, '-');
+        cstring_addstr(fname, sidx);
+        cstring_addch(fname, '-');
+        cstring_addstr(fname, eidx);
+
+}

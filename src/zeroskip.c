@@ -806,6 +806,48 @@ int zsdb_consistent(struct zsdb *db)
         return ret;
 }
 
+int zsdb_reload_db(struct zsdb_priv *priv _unused_)
+{
+        return ZS_OK;
+}
+
+void zs_find_index_range_for_files(struct list_head *flist,
+                                   uint32_t *startidx, uint32_t *endidx)
+{
+        uint32_t s = 0, e = 0;
+        struct list_head *pos;
+
+        *startidx = 0;
+        *endidx = 0;
+
+        list_for_each_forward(pos, flist) {
+                struct zsdb_file *f;
+                const char *p, *idx;
+                f = list_entry(pos, struct zsdb_file, list);
+
+                p = memmem(f->fname.buf, strlen(f->fname.buf),
+                           ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN);
+                if (!p)
+                        break;
+
+                idx = p + ZS_FNAME_PREFIX_LEN + (UUID_STRLEN - 1);
+
+                if (*idx++ == '-') {
+                        s = strtoul(idx, (char **)&idx, 10);
+                }
+
+                if (*idx && *idx++ == '-') {
+                        e = strtoul(idx, (char **)&idx, 10);
+                }
+
+                if (s != 0 && s < *startidx)
+                        *startidx = s;
+
+                if (e != 0 && e > *endidx)
+                        *endidx = e;
+        }
+}
+
 /*
  * zsdb_repack(): Repack a DB
  * When the DB is being packed, records can be still be written to the
@@ -820,6 +862,9 @@ int zsdb_repack(struct zsdb *db)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
+        ino_t inonum;
+        uint32_t startidx, endidx;
+        cstring fname = CSTRING_INIT;
 
         assert_zsdb(db);
 
@@ -836,9 +881,44 @@ int zsdb_repack(struct zsdb *db)
                 ret = ZS_ERROR;
                 goto done;
         }
-        /* TODO: Ensure that the inode number of .zsdb is still the same */
+
+        inonum = zs_dotzsdb_get_ino(priv);
+        if (inonum != priv->dotzsdb_ino) {
+                /* If the inode numbers differ, the db has changed, since the
+                   time it has been opened. We need to reload the DB */
+                zsdb_reload_db(priv);
+        }
+
+        if (!zs_dotzsdb_update_begin(priv)) {
+                zslog(LOGDEBUG, "Failed acquiring lock to repack!\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
+
+        /* Find the index range */
+        zs_find_index_range_for_files(&priv->dbfiles.fflist,
+                                      &startidx, &endidx);
+
+        zs_filename_generate_packed(priv, &fname, startidx, endidx);
+        zslog(LOGDEBUG, "Packing into file %s...\n", fname.buf);
+        /* Pack the records from the in-memory tree*/
+        ret = zs_packed_file_new_from_memtree(fname.buf,
+                                              startidx, endidx,
+                                              priv->memtree);
+
+        if (ret != ZS_OK) {
+                /* ERROR! */
+        }
+
+        /* TODO: Close and Unlink the finalised files from the DB */
 
 done:
+        cstring_release(&fname);
+        if (!zs_dotzsdb_update_end(priv)) {
+                zslog(LOGDEBUG, "Failed release acquired lock for packing!\n");
+                ret = ZS_ERROR;
+        }
+
         return ret;
 }
 
@@ -937,13 +1017,15 @@ int zsdb_write_lock_is_locked(struct zsdb *db)
 int zsdb_pack_lock_acquire(struct zsdb *db, long timeout_ms)
 {
         struct zsdb_priv *priv;
+        int ret;
 
         assert(db);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
-        return file_lock_acquire(&priv->plk, priv->dbdir.buf,
-                                 PACK_LOCK_FNAME, timeout_ms);
+        ret = file_lock_acquire(&priv->plk, priv->dbdir.buf,
+                                PACK_LOCK_FNAME, timeout_ms);
+        return ret ? ZS_OK : ZS_ERROR;
 }
 
 int zsdb_pack_lock_release(struct zsdb *db)
@@ -955,7 +1037,7 @@ int zsdb_pack_lock_release(struct zsdb *db)
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
 
-        return file_lock_release(&priv->plk);
+        return ((file_lock_release(&priv->plk) == 0) ? ZS_OK : ZS_ERROR);
 }
 
 int zsdb_pack_lock_is_locked(struct zsdb *db)
