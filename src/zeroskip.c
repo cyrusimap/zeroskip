@@ -149,7 +149,8 @@ done:
         return ret;
 }
 
-static enum db_ftype_t interpret_db_filename(const char *str, size_t len)
+static enum db_ftype_t interpret_db_filename(const char *str, size_t len,
+                                             uint32_t *sidx, uint32_t *eidx)
 {
         const char *p;
         const char *idx;
@@ -165,11 +166,13 @@ static enum db_ftype_t interpret_db_filename(const char *str, size_t len)
         /* We should have atleast 1 index or a max of 2 */
         if (*idx++ == '-') {
                 startidx = strtoul(idx, (char **)&idx, 10);
+                if (sidx) *sidx = startidx;
                 type = DB_FTYPE_ACTIVE;
         }
 
         if (*idx && *idx++ == '-') {
                 endidx = strtoul(idx, (char **)&idx, 10);
+                if (eidx) *eidx = endidx;
 
                 type = (endidx == startidx) ?
                         DB_FTYPE_FINALISED : DB_FTYPE_PACKED;
@@ -230,7 +233,8 @@ static int for_each_db_file_in_dbdir(char *const path[],
                         snprintf(sbuf, PATH_MAX, "%s/%s", *path ? *path : buf, bname);
 
                 if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
-                        switch(interpret_db_filename(sbuf, strlen(sbuf))) {
+                        switch(interpret_db_filename(sbuf, strlen(sbuf),
+                                                     NULL, NULL)) {
                         case DB_FTYPE_ACTIVE:
                                 /* XXX: Shouldn't have more than one active file */
                                 ret = process_active_file(sbuf, data);
@@ -814,7 +818,6 @@ int zsdb_reload_db(struct zsdb_priv *priv _unused_)
 void zs_find_index_range_for_files(struct list_head *flist,
                                    uint32_t *startidx, uint32_t *endidx)
 {
-        uint32_t s = 0, e = 0;
         struct list_head *pos;
 
         *startidx = 0;
@@ -822,29 +825,18 @@ void zs_find_index_range_for_files(struct list_head *flist,
 
         list_for_each_forward(pos, flist) {
                 struct zsdb_file *f;
-                const char *p, *idx;
+                uint32_t sidx = 0, eidx = 0;
+
                 f = list_entry(pos, struct zsdb_file, list);
 
-                p = memmem(f->fname.buf, strlen(f->fname.buf),
-                           ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN);
-                if (!p)
-                        break;
+                interpret_db_filename(f->fname.buf, strlen(f->fname.buf),
+                                      &sidx, &eidx);
 
-                idx = p + ZS_FNAME_PREFIX_LEN + (UUID_STRLEN - 1);
+                if (sidx != 0 && sidx < *startidx)
+                        *startidx = sidx;
 
-                if (*idx++ == '-') {
-                        s = strtoul(idx, (char **)&idx, 10);
-                }
-
-                if (*idx && *idx++ == '-') {
-                        e = strtoul(idx, (char **)&idx, 10);
-                }
-
-                if (s != 0 && s < *startidx)
-                        *startidx = s;
-
-                if (e != 0 && e > *endidx)
-                        *endidx = e;
+                if (eidx != 0 && eidx > *endidx)
+                        *endidx = eidx;
         }
 }
 
