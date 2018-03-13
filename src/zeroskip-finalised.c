@@ -89,13 +89,13 @@ int zs_finalised_file_close(struct zsdb_file **fptr)
         return ret;
 }
 
-int zs_finalised_file_record_foreach(struct zsdb_file *fptr,
+int zs_finalised_file_record_foreach(struct zsdb_file *f,
                                      foreach_cb *cb, void *cbdata)
 {
         int ret = ZS_OK;
         size_t mfsize = 0, offset = ZS_HDR_SIZE;
 
-        mappedfile_size(&fptr->mf, &mfsize);
+        mappedfile_size(&f->mf, &mfsize);
         if (mfsize == 0 || mfsize < ZS_HDR_SIZE) {
                 zslog(LOGDEBUG, "Not a valid finalised DB file.\n");
                 return ZS_INVALID_DB;
@@ -105,7 +105,7 @@ int zs_finalised_file_record_foreach(struct zsdb_file *fptr,
         }
 
         while (offset < mfsize) {
-                ret = zs_record_read_from_file(fptr, &offset,
+                ret = zs_record_read_from_file(f, &offset,
                                                cb, cbdata);
         }
 

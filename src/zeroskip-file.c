@@ -185,3 +185,52 @@ int zs_file_write_commit_record(struct zsdb_file *f)
 done:
         return ret;
 }
+
+int zs_file_write_delete_record(struct zsdb_file *f,
+                                unsigned char *key, size_t keylen)
+{
+        int ret = ZS_OK;
+        unsigned char *dbuf;
+        size_t dbuflen, mfsize, nbytes;
+
+        ret = zs_prepare_delete_key_buf(key, keylen, &dbuf, &dbuflen);
+        if (ret != ZS_OK) {
+                return ZS_IOERROR;
+        }
+
+        /* Get the current mappedfile size */
+        ret = mappedfile_size(&f->mf, &mfsize);
+        if (ret) {
+                zslog(LOGDEBUG, "delete: Could not get mappedfile size\n");
+                goto done;
+        }
+
+        /* write delete buffer */
+        ret = mappedfile_write(&f->mf, (void *)dbuf,
+                               dbuflen, &nbytes);
+        if (ret) {
+                zslog(LOGDEBUG, "Error writing delete key\n");
+                ret = ZS_IOERROR;
+                goto done;
+        }
+
+        /* assert(nbytes == keybuflen); */
+
+        /* If we failed writing the delete buffer, then restore the db file to
+         * the original size we had before updating */
+        if (ret != ZS_OK) {
+                mappedfile_truncate(&f->mf, mfsize);
+        }
+
+        /* Flush the change to disk */
+        ret = mappedfile_flush(&f->mf);
+        if (ret) {
+                zslog(LOGDEBUG, "delete: Error flushing data to disk.\n");
+                ret = ZS_IOERROR;
+                goto done;
+        }
+
+done:
+        xfree(dbuf);
+        return ret;
+}

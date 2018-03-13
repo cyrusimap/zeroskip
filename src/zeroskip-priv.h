@@ -249,6 +249,8 @@ extern int zs_file_write_keyval_record(struct zsdb_file *f,
                                        unsigned char *key, size_t keylen,
                                        unsigned char *val, size_t vallen);
 extern int zs_file_write_commit_record(struct zsdb_file *f);
+extern int zs_file_write_delete_record(struct zsdb_file *f,
+                                       unsigned char *key, size_t keylen);
 
 /* zeroskip-filename.c */
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);
@@ -258,7 +260,7 @@ extern void zs_filename_generate_packed(struct zsdb_priv *priv, cstring *fname,
 /* zeroskip-finalised.c */
 extern int zs_finalised_file_open(const char *path, struct zsdb_file **fptr);
 extern int zs_finalised_file_close(struct zsdb_file **fptr);
-extern int zs_finalised_file_record_foreach(struct zsdb_file *fptr,
+extern int zs_finalised_file_record_foreach(struct zsdb_file *f,
                                             foreach_cb *cb, void *cbdata);
 
 /* zeroskip-header.c */
