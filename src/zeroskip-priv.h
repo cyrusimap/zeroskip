@@ -244,6 +244,11 @@ extern ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_begin(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_end(struct zsdb_priv *priv);
 
+/* zeroskip-file.c */
+extern int zs_file_write_keyval_record(struct zsdb_file *f,
+                                       unsigned char *key, size_t keylen,
+                                       unsigned char *val, size_t vallen);
+extern int zs_file_write_commit_record(struct zsdb_file *f);
 
 /* zeroskip-filename.c */
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);
@@ -269,9 +274,20 @@ extern int zs_packed_file_new(const char *path,
 extern int zs_packed_file_new_from_memtree(const char *path,
                                            uint32_t startidx,
                                            uint32_t endidx,
-                                           struct btree *memtree);
+                                           struct zsdb_priv *priv,
+                                           struct btree *memtree,
+                                           struct zsdb_file **fptr);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                                     foreach_cb *cb, void *cbdata);
+
+/* zeroskip-utils.c */
+extern int zs_prepare_key_buf(unsigned char *key, size_t keylen,
+                              unsigned char **buf, size_t *buflen);
+extern int zs_prepare_val_buf(unsigned char *val, size_t vallen,
+                              unsigned char **buf, size_t *buflen);
+extern int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
+                                     unsigned char **buf, size_t *buflen);
+
 #endif  /* _ZEROSKIP_PRIV_H_ */
