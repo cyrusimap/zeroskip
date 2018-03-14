@@ -450,6 +450,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 
         /* In-memory tree */
         priv->memtree = btree_new(NULL, NULL);
+        priv->fmemtree = btree_new(NULL, NULL);
 
         if (newdb) {
                 if (zsdb_write_lock_acquire(db, 0 /*timeout*/) < 0) {
@@ -490,7 +491,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                                 zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
                                 zs_finalised_file_record_foreach(f,
                                                                  load_records_cb,
-                                                                 priv->memtree);
+                                                                 priv->fmemtree);
                         }
                 }
 
@@ -562,6 +563,9 @@ int zsdb_close(struct zsdb *db)
 
         if (priv->memtree)
                 btree_free(priv->memtree);
+
+        if (priv->fmemtree)
+                btree_free(priv->fmemtree);
 
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);
@@ -742,7 +746,7 @@ int zsdb_fetch(struct zsdb *db,
         if (!key)
                 return ZS_ERROR;
 
-        /* Look for the key in the in-memory btree */
+        /* Look for the key in the active in-memory btree */
         if (btree_find(priv->memtree, key, keylen, iter)) {
                 /* We found the key in-memory */
                 if (iter->record) {
@@ -755,12 +759,27 @@ int zsdb_fetch(struct zsdb *db,
 
                 ret = ZS_OK;
                 goto done;
-        } else {
-                /* TODO: Look for the key in the packed files */
-                ret = ZS_NOTFOUND;
+        }
+
+        /* Look for the key in the finalised records */
+        if (btree_find(priv->fmemtree, key, keylen, iter)) {
+                /* We found the key in-memory */
+                if (iter->record) {
+                        unsigned char *v;
+                        *vallen = iter->record->vallen;
+                        v = xmalloc(*vallen);
+                        memcpy(v, iter->record->val, *vallen);
+                        *value = v;
+                }
+
+                ret = ZS_OK;
                 goto done;
         }
 
+        /* The key was not found in either the active file or the finalised
+           files, look for it in the packed files */
+        /* TODO: look for the key in the packed files */
+        ret = ZS_NOTFOUND;
 
 done:
         return ret;

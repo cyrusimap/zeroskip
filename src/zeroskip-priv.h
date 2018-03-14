@@ -214,6 +214,7 @@ struct zsdb_priv {
         struct file_lock plk;     /* Lock when packing */
 
         struct btree *memtree;    /* in-memory B-Tree */
+        struct btree *fmemtree;   /* in-memory B-Tree of finalised records */
 
         int open;                 /* is the db open */
         int flags;                /* The flags passed during call to open */
