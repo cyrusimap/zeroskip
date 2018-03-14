@@ -8,13 +8,29 @@
  */
 
 
+#include "btree.h"
 #include "log.h"
+#include "macros.h"
 #include "util.h"
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
+/**
+ * Private functions
+ */
+static int zs_packed_write_record(struct record *record, void *data)
+{
+        struct zsdb_file *f = (struct zsdb_file *)data;
+        int ret = ZS_OK;
 
-/*
+        ret = zs_file_write_keyval_record(f, record->key, record->keylen,
+                                          record->val, record->vallen);
+
+        if (ret == ZS_OK) return 1;
+        else return 0;
+}
+
+/**
  * Public functions
  */
 
@@ -111,12 +127,63 @@ int zs_packed_file_new(const char *path _unused_,
         return ret;
 }
 
-int zs_packed_file_new_from_memtree(const char * path _unused_,
-                                    uint32_t startidx _unused_,
-                                    uint32_t endidx _unused_,
-                                    struct btree *memtree _unused_)
+/* zs_packed_file_new_from_memtree():
+ * Create a new pack file (with sorted records and an index at the end
+ * from all the finalised files(which are in memory).
+ */
+int zs_packed_file_new_from_memtree(const char * path,
+                                    uint32_t startidx,
+                                    uint32_t endidx,
+                                    struct zsdb_priv *priv,
+                                    struct btree *memtree,
+                                    struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
+        struct zsdb_file *f;
 
+        f = xcalloc(sizeof(struct zsdb_file), 1);
+        f->type = DB_FTYPE_FINALISED;
+        cstring_init(&f->fname, 0);
+        cstring_addstr(&f->fname, path);
+
+        /* Initialise header fields */
+        f->header.signature = ZS_SIGNATURE;
+        f->header.version = ZS_VERSION;
+        memcpy(f->header.uuid, priv->uuid, sizeof(uuid_t));
+        f->header.startidx = startidx;
+        f->header.endidx = endidx;
+        f->header.crc32 = 0;
+
+        ret = mappedfile_open(f->fname.buf, MAPPEDFILE_RW_CR, &f->mf);
+        if (ret) {
+                ret = ZS_IOERROR;
+                goto fail;
+        }
+
+        f->is_open = 1;
+
+        /* Create the header */
+        ret = zs_header_write(f);
+        if (ret) {
+                zslog(LOGDEBUG, "Could not write zeroskip header.\n");
+                goto fail;
+        }
+
+        /* Seek to location after header */
+        mappedfile_seek(&priv->dbfiles.factive.mf, ZS_HDR_SIZE, NULL);
+
+        btree_walk_forward(memtree, zs_packed_write_record, (void *)&f);
+
+        *fptr = f;
+
+        goto done;
+
+fail:
+        xunlink(f->fname.buf);
+        mappedfile_close(&f->mf);
+        cstring_release(&f->fname);
+        xfree(f);
+
+done:
         return ret;
 }

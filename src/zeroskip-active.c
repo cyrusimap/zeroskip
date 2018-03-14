@@ -38,6 +38,7 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
         priv->dbfiles.factive.header.startidx = idx;
         priv->dbfiles.factive.header.endidx = idx;
         priv->dbfiles.factive.header.crc32 = 0;
+        memcpy(priv->dbfiles.factive.header.uuid, priv->uuid, sizeof(uuid_t));
 
         if (create)
                 mappedfile_flags |= MAPPEDFILE_CREATE;

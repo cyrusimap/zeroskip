@@ -152,7 +152,8 @@ int btree_lookup(struct btree *tree, const void *key);
 int btree_find(struct btree *tree, unsigned char *key, size_t keylen,
                btree_iter_t iter);
 
-
+int btree_walk_forward(struct btree *btree, btree_action_cb_t action,
+                       void *data);
 int btree_prev(btree_iter_t iter);
 int btree_next(btree_iter_t iter);
 

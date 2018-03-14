@@ -266,6 +266,31 @@ static int for_each_db_file_in_dbdir(char *const path[],
 }
 
 
+static void zs_find_index_range_for_files(struct list_head *flist,
+                                          uint32_t *startidx, uint32_t *endidx)
+{
+        struct list_head *pos;
+
+        *startidx = 0;
+        *endidx = 0;
+
+        list_for_each_forward(pos, flist) {
+                struct zsdb_file *f;
+                uint32_t sidx = 0, eidx = 0;
+
+                f = list_entry(pos, struct zsdb_file, list);
+
+                interpret_db_filename(f->fname.buf, strlen(f->fname.buf),
+                                      &sidx, &eidx);
+
+                if (sidx != 0 && sidx < *startidx)
+                        *startidx = sidx;
+
+                if (eidx != 0 && eidx > *endidx)
+                        *endidx = eidx;
+        }
+}
+
 /**
  * Public functions
  */
@@ -815,31 +840,6 @@ int zsdb_reload_db(struct zsdb_priv *priv _unused_)
         return ZS_OK;
 }
 
-void zs_find_index_range_for_files(struct list_head *flist,
-                                   uint32_t *startidx, uint32_t *endidx)
-{
-        struct list_head *pos;
-
-        *startidx = 0;
-        *endidx = 0;
-
-        list_for_each_forward(pos, flist) {
-                struct zsdb_file *f;
-                uint32_t sidx = 0, eidx = 0;
-
-                f = list_entry(pos, struct zsdb_file, list);
-
-                interpret_db_filename(f->fname.buf, strlen(f->fname.buf),
-                                      &sidx, &eidx);
-
-                if (sidx != 0 && sidx < *startidx)
-                        *startidx = sidx;
-
-                if (eidx != 0 && eidx > *endidx)
-                        *endidx = eidx;
-        }
-}
-
 /*
  * zsdb_repack(): Repack a DB
  * When the DB is being packed, records can be still be written to the
@@ -857,6 +857,7 @@ int zsdb_repack(struct zsdb *db)
         ino_t inonum;
         uint32_t startidx, endidx;
         cstring fname = CSTRING_INIT;
+        struct zsdb_file *f;
 
         assert_zsdb(db);
 
@@ -896,7 +897,8 @@ int zsdb_repack(struct zsdb *db)
         /* Pack the records from the in-memory tree*/
         ret = zs_packed_file_new_from_memtree(fname.buf,
                                               startidx, endidx,
-                                              priv->memtree);
+                                              priv,
+                                              priv->memtree, &f);
 
         if (ret != ZS_OK) {
                 /* ERROR! */
