@@ -10,6 +10,7 @@ ZS_LIBOBJS =  			\
 	mappedfile.o		\
 	strarray.o		\
 	util.o			\
+	vecu64.o		\
 	zeroskip.o		\
 	zeroskip-active.o	\
 	zeroskip-dotzsdb.o	\
