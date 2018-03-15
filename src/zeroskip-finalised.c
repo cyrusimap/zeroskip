@@ -63,6 +63,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
         goto done;
 
 fail:                           /* Jump here on failure */
+        zslog(LOGDEBUG, "Failed opening finalised file %s\n", path);
         mappedfile_close(&f->mf);
         cstring_release(&f->fname);
         xfree(f);

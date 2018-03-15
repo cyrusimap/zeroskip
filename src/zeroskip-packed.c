@@ -18,21 +18,26 @@
 /**
  * Private functions
  */
-static int zs_packed_write_record(struct record *record, void *data)
+
+/**
+ * Public functions
+ */
+
+int zs_packed_file_write_record(struct record *record, void *data)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
 
         ret = zs_file_write_keyval_record(f, record->key, record->keylen,
                                           record->val, record->vallen);
-
         if (ret == ZS_OK) return 1;
         else return 0;
 }
 
-/**
- * Public functions
- */
+int zs_packed_file_write_commit_record(struct zsdb_file *f)
+{
+        return zs_file_write_commit_record(f);
+}
 
 /* zs_packed_file_open():
  * Open an existing packed file in read-only mode.
@@ -65,7 +70,7 @@ int zs_packed_file_open(const char *path,
         mappedfile_size(&f->mf, &mf_size);
         if (mf_size <= ZS_HDR_SIZE) {
                 ret = ZS_INVALID_FILE;
-                zslog(LOGDEBUG, "%s is not a valid finalised file.\n",
+                zslog(LOGDEBUG, "%s is not a valid packed file.\n",
                         f->fname.buf);
                 goto fail;
         }
@@ -135,7 +140,6 @@ int zs_packed_file_new_from_memtree(const char * path,
                                     uint32_t startidx,
                                     uint32_t endidx,
                                     struct zsdb_priv *priv,
-                                    struct btree *memtree,
                                     struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
@@ -169,10 +173,15 @@ int zs_packed_file_new_from_memtree(const char * path,
                 goto fail;
         }
 
-        /* Seek to location after header */
-        mappedfile_seek(&priv->dbfiles.factive.mf, ZS_HDR_SIZE, NULL);
+        /* Start computing the crc32. Will end when the transaction is
+           committed */
+        crc32_begin(&f->mf);
 
-        btree_walk_forward(memtree, zs_packed_write_record, (void *)&f);
+        /* Seek to location after header */
+        mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
+
+        btree_walk_forward(priv->fmemtree, zs_packed_file_write_record,
+                           (void *)f);
 
         *fptr = f;
 

@@ -47,7 +47,7 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         /* Get the current mappedfile size */
         ret = mappedfile_size(&f->mf, &mfsize);
         if (ret) {
-                zslog(LOGDEBUG, "Could not get mappedfile size\n");
+                zslog(LOGDEBUG, "Could not get mappedfile size: %s\n", f->fname.buf);
                 goto done;
         }
 

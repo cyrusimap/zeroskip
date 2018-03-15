@@ -278,8 +278,9 @@ extern int zs_packed_file_new_from_memtree(const char *path,
                                            uint32_t startidx,
                                            uint32_t endidx,
                                            struct zsdb_priv *priv,
-                                           struct btree *memtree,
                                            struct zsdb_file **fptr);
+extern int zs_packed_file_write_record(struct record *record, void *data);
+extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,

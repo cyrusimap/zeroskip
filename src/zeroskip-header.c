@@ -109,8 +109,8 @@ int zs_header_validate(struct zsdb_file *f)
         /* Version */
         version = ntohl(phdr->version);
         if (version == 1) {
-                zslog(LOGDEBUG, "Valid zeroskip DB file. Version: %d\n",
-                        version);
+                zslog(LOGDEBUG, "Valid zeroskip DB file(%s). Version: %d\n",
+                      f->fname.buf, version);
         } else {
                 zslog(LOGDEBUG, "Invalid zeroskip DB version.\n");
         }

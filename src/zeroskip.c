@@ -916,11 +916,16 @@ int zsdb_repack(struct zsdb *db)
         /* Pack the records from the in-memory tree*/
         ret = zs_packed_file_new_from_memtree(fname.buf,
                                               startidx, endidx,
-                                              priv,
-                                              priv->memtree, &f);
-
+                                              priv, &f);
         if (ret != ZS_OK) {
+                crc32_end(&f->mf);
                 /* ERROR! */
+        }
+
+        if (zs_packed_file_write_commit_record(f) != ZS_OK) {
+                zslog(LOGDEBUG, "Could not commit.\n");
+                ret = EXIT_FAILURE;
+                goto done;
         }
 
         /* TODO: Close and Unlink the finalised files from the DB */
