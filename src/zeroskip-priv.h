@@ -17,6 +17,7 @@
 #include "list.h"
 #include "mappedfile.h"
 #include "util.h"
+#include "vecu64.h"
 
 #include <uuid/uuid.h>
 
@@ -173,6 +174,7 @@ struct zsdb_file {
         struct zs_header header;
         cstring fname;
         struct mappedfile *mf;
+        struct vecu64 *index;
         int is_open;
         int dirty;
 };

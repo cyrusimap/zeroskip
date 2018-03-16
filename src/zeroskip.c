@@ -922,12 +922,7 @@ int zsdb_repack(struct zsdb *db)
                 /* ERROR! */
         }
 
-        if (zs_packed_file_write_commit_record(f) != ZS_OK) {
-                zslog(LOGDEBUG, "Could not commit.\n");
-                ret = EXIT_FAILURE;
-                goto done;
-        }
-
+        zs_packed_file_close(&f);
         /* TODO: Close and Unlink the finalised files from the DB */
 
 done:

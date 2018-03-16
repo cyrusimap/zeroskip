@@ -11,6 +11,7 @@
 #include "btree.h"
 #include "log.h"
 #include "macros.h"
+#include "vecu64.h"
 #include "util.h"
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
@@ -18,6 +19,23 @@
 /**
  * Private functions
  */
+static int zs_packed_file_write_index(void *data _unused_, uint64_t offset)
+{
+        unsigned char buf[8];
+        struct zsdb_file *f = (struct zsdb_file *)data;
+        size_t nbytes;
+        int ret;
+
+        write_be64(buf, offset);
+
+        ret = mappedfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
+        if (ret) {
+                zslog(LOGDEBUG, "Error writing index\n");
+                ret = ZS_IOERROR;
+        }
+
+        return ret;
+}
 
 /**
  * Public functions
@@ -28,6 +46,7 @@ int zs_packed_file_write_record(struct record *record, void *data)
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
 
+        vecu64_append(f->index, f->mf->offset);
         ret = zs_file_write_keyval_record(f, record->key, record->keylen,
                                           record->val, record->vallen);
         if (ret == ZS_OK) return 1;
@@ -112,6 +131,7 @@ int zs_packed_file_close(struct zsdb_file **fptr)
 
         mappedfile_close(&f->mf);
         cstring_release(&f->fname);
+        vecu64_free(&f->index);
         xfree(f);
 
         return ret;
@@ -149,6 +169,7 @@ int zs_packed_file_new_from_memtree(const char * path,
         f->type = DB_FTYPE_FINALISED;
         cstring_init(&f->fname, 0);
         cstring_addstr(&f->fname, path);
+        f->index = vecu64_new();
 
         /* Initialise header fields */
         f->header.signature = ZS_SIGNATURE;
@@ -180,13 +201,39 @@ int zs_packed_file_new_from_memtree(const char * path,
         /* Seek to location after header */
         mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
+        /* Write records into packed files */
         btree_walk_forward(priv->fmemtree, zs_packed_file_write_record,
                            (void *)f);
+
+        ret = mappedfile_flush(&f->mf);
+        if (ret) {
+                zslog(LOGDEBUG, "Error flushing data to disk.\n");
+                ret = ZS_IOERROR;
+                goto fail;
+        }
+
+        /* The commit record marking the end of records */
+        if (zs_packed_file_write_commit_record(f) != ZS_OK) {
+                zslog(LOGDEBUG, "Could not commit.\n");
+                ret = EXIT_FAILURE;
+                goto fail;
+        }
+
+        /* Write the pointer/index section */
+        crc32_begin(&f->mf);    /* The crc32 for index of the file */
+
+        vecu64_foreach(f->index, zs_packed_file_write_index, f);
+
+        /* The commit record for pointer section */
+        if (zs_packed_file_write_commit_record(f) != ZS_OK) {
+                zslog(LOGDEBUG, "Could not commit.\n");
+                ret = EXIT_FAILURE;
+                goto fail;
+        }
 
         *fptr = f;
 
         goto done;
-
 fail:
         xunlink(f->fname.buf);
         mappedfile_close(&f->mf);
