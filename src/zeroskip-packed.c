@@ -105,6 +105,23 @@ int zs_packed_file_open(const char *path,
         mf_size = ZS_HDR_SIZE;
         mappedfile_seek(&f->mf, mf_size, NULL);
 
+        /* TODO:
+         *  Initialise f->index;
+         *  Seek to the end of file
+         *   - go back 8 bytes, and check if there is a commit record,
+         *     if there is one, then it is a short commit
+         *   - if not a short commit go back 24 bytes from the end of file
+         *     and check if there is a commit record, if there is one,
+         *     then it is a long commit
+         *   - else fail
+         *
+         *   If there is a valid commit (short or long):
+         *          + verify commit
+         *          + read commit record and get length of commit
+         *          + go back to 'length' bytes to get the beginning of index
+         *          + Read index into f->index
+         */
+
         *fptr = f;
 
         goto done;

@@ -20,7 +20,6 @@ ZS_LIBOBJS =  			\
 	zeroskip-header.o	\
 	zeroskip-packed.o	\
 	zeroskip-record.o	\
-	zeroskip-utils.o	\
 	$(NULL)
 
 # Headers

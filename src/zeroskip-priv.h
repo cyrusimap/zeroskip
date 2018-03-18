@@ -287,13 +287,4 @@ extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                                     foreach_cb *cb, void *cbdata);
-
-/* zeroskip-utils.c */
-extern int zs_prepare_key_buf(unsigned char *key, size_t keylen,
-                              unsigned char **buf, size_t *buflen);
-extern int zs_prepare_val_buf(unsigned char *val, size_t vallen,
-                              unsigned char **buf, size_t *buflen);
-extern int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
-                                     unsigned char **buf, size_t *buflen);
-
 #endif  /* _ZEROSKIP_PRIV_H_ */
