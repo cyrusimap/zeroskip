@@ -19,7 +19,24 @@
 /**
  * Private functions
  */
-static int zs_packed_file_write_index(void *data _unused_, uint64_t offset)
+static int zs_packed_file_write_index_count(struct zsdb_file *f,
+                                            uint64_t count)
+{
+        unsigned char buf[8];
+        size_t nbytes;
+        int ret;
+
+        write_be64(buf, count);
+        ret = mappedfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
+        if (ret) {
+                zslog(LOGDEBUG, "Error writing index count\n");
+                ret = ZS_IOERROR;
+        }
+
+        return ret;
+}
+
+static int zs_packed_file_write_index(void *data, uint64_t offset)
 {
         unsigned char buf[8];
         struct zsdb_file *f = (struct zsdb_file *)data;
@@ -35,6 +52,61 @@ static int zs_packed_file_write_index(void *data _unused_, uint64_t offset)
         }
 
         return ret;
+}
+
+/* get_offset_to_pointers():
+ * Given a struct zsdb_file pointer and an offset to the final commit
+ * record, this function returns the offset to the beginning of the pointers
+ * section.
+ * Returns error otherwise.
+ */
+static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset)
+{
+        /* TODO: Verify CRC32 */
+        unsigned char *bptr, *fptr;
+        uint64_t data;
+        enum record_t rectype;
+
+        if (!f->is_open)
+                return ZS_IOERROR;
+
+        bptr = f->mf->ptr;
+        fptr = bptr + *offset;
+
+        data = read_be64(fptr);
+        rectype = data >> 56;
+
+        if (rectype == REC_TYPE_FINAL) {
+                /* TODO: just read length not the whole record */
+                struct zs_short_commit zshort;
+                zshort.type = data;
+                zshort.length = data & (1UL >> 32);
+                zshort.crc32 = data & ((1UL >> 32) - 1);
+
+                *offset = *offset - zshort.length;
+                return ZS_OK;
+        } else if (rectype == REC_TYPE_2ND_HALF_COMMIT) {
+                /* This is a long commit */
+                *offset = *offset - (ZS_LONG_COMMIT_REC_SIZE -
+                                     ZS_SHORT_COMMIT_REC_SIZE);
+                return get_offset_to_pointers(f, offset);
+        } else if (rectype == REC_TYPE_LONG_FINAL) {
+                uint64_t len;
+                fptr = fptr + sizeof(uint64_t);
+                len = read_be64(fptr);
+
+                *offset = *offset - len;
+                return ZS_OK;
+        } else {
+                zslog(LOGDEBUG, "Not a valid final commit record\n");
+                return ZS_ERROR;
+        }
+}
+
+static int read_pointers(struct zsdb_file *f _unused_, size_t offset _unused_)
+{
+        uint64_t count _unused_;
+        return ZS_OK;
 }
 
 /**
@@ -72,6 +144,7 @@ int zs_packed_file_open(const char *path,
         int ret = ZS_OK;
         struct zsdb_file *f;
         size_t mf_size;
+        size_t offset;
         int mappedfile_flags = MAPPEDFILE_RD;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
@@ -106,10 +179,6 @@ int zs_packed_file_open(const char *path,
                 goto fail;
         }
 
-       /* Seek to location after header */
-        mf_size = ZS_HDR_SIZE;
-        mappedfile_seek(&f->mf, mf_size, NULL);
-
         /* TODO:
          *  Initialise f->index;
          *  Seek to the end of file
@@ -126,16 +195,29 @@ int zs_packed_file_open(const char *path,
          *          + go back to 'length' bytes to get the beginning of index
          *          + Read index into f->index
          */
+        f->index = vecu64_new();
+
+        /* Read the commit record and get to the pointers */
+        offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
+        ret = get_offset_to_pointers(f, &offset);
+        if (ret != ZS_OK) {
+                zslog(LOGDEBUG, "Could not get pointer block.");
+                goto fail;
+        }
+
+        /* Read the pointers section and get all the offsets */
+        ret = read_pointers(f, offset);
+        if (ret != ZS_OK) {
+                zslog(LOGDEBUG, "Could not get pointers from pointer block.");
+                goto fail;
+        }
 
         *fptr = f;
 
         goto done;
 
 fail:                           /* Jump here on failure */
-        mappedfile_close(&f->mf);
-        cstring_release(&f->fname);
-        xfree(f);
-
+        zs_packed_file_close(&f);
 done:
         return ret;
 }
@@ -243,6 +325,8 @@ int zs_packed_file_new_from_memtree(const char * path,
 
         /* Write the pointer/index section */
         crc32_begin(&f->mf);    /* The crc32 for index of the file */
+
+        zs_packed_file_write_index_count(f, f->index->count); /* count */
 
         vecu64_foreach(f->index, zs_packed_file_write_index, f);
 
