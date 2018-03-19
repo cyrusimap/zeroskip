@@ -55,7 +55,12 @@ int zs_packed_file_write_record(struct record *record, void *data)
 
 int zs_packed_file_write_commit_record(struct zsdb_file *f)
 {
-        return zs_file_write_commit_record(f);
+        return zs_file_write_commit_record(f, 0);
+}
+
+int zs_packed_file_write_final_commit_record(struct zsdb_file *f)
+{
+        return zs_file_write_commit_record(f, 1);
 }
 
 /* zs_packed_file_open():

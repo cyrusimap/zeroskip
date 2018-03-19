@@ -249,7 +249,11 @@ done:
         return ret;
 }
 
-int zs_file_write_commit_record(struct zsdb_file *f)
+/* zs_file_write_commit_record()
+ * Writes a commit record to a file. If `final`, then this is final commit
+ * in a packed file
+ */
+int zs_file_write_commit_record(struct zsdb_file *f, int final)
 {
         int ret = ZS_OK;
         size_t buflen, nbytes, pos = 0;
@@ -268,9 +272,9 @@ int zs_file_write_commit_record(struct zsdb_file *f)
                 uint64_t val = 0;
                 struct zs_long_commit lc;
 
-                lc.type1 = REC_TYPE_LONG_COMMIT;
+                lc.type1 = final ? REC_TYPE_LONG_FINAL : REC_TYPE_LONG_COMMIT;
                 lc.length = f->mf->crc32_data_len;
-                lc.type2 = REC_TYPE_LONG_COMMIT;
+                lc.type2 = REC_TYPE_2ND_HALF_COMMIT;
 
                 /* Compute CRC32 */
                 lccrc = crc32(0L, Z_NULL, 0);
@@ -300,7 +304,7 @@ int zs_file_write_commit_record(struct zsdb_file *f)
                 uint32_t sccrc;
                 struct zs_short_commit sc;
 
-                sc.type = REC_TYPE_COMMIT;
+                sc.type = final ? REC_TYPE_FINAL : REC_TYPE_COMMIT;
                 sc.length = f->mf->crc32_data_len;
 
                 /* Compute CRC32 */

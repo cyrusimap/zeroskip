@@ -201,7 +201,7 @@ int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
 
 int zs_active_file_write_commit_record(struct zsdb_priv *priv)
 {
-        return zs_file_write_commit_record(&priv->dbfiles.factive);
+        return zs_file_write_commit_record(&priv->dbfiles.factive, 0);
 }
 
 int zs_active_file_write_delete_record(struct zsdb_priv *priv,

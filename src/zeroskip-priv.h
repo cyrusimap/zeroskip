@@ -251,7 +251,7 @@ extern int zs_dotzsdb_update_end(struct zsdb_priv *priv);
 extern int zs_file_write_keyval_record(struct zsdb_file *f,
                                        unsigned char *key, size_t keylen,
                                        unsigned char *val, size_t vallen);
-extern int zs_file_write_commit_record(struct zsdb_file *f);
+extern int zs_file_write_commit_record(struct zsdb_file *f, int final);
 extern int zs_file_write_delete_record(struct zsdb_file *f,
                                        unsigned char *key, size_t keylen);
 
