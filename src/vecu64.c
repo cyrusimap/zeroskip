@@ -15,7 +15,7 @@
 /**
  * Private functions
  */
-#define SLICE 32
+#define SLICE 64
 static void ensure_alloc(struct vecu64 *v, int newsize)
 {
         if (newsize <= v->alloc)
