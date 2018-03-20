@@ -22,7 +22,7 @@
 static int zs_packed_file_write_index_count(struct zsdb_file *f,
                                             uint64_t count)
 {
-        unsigned char buf[8];
+        unsigned char buf[8] = { 0 };
         size_t nbytes;
         int ret;
 
@@ -79,8 +79,8 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset)
         if (rectype == REC_TYPE_FINAL) {
                 /* TODO: just read length not the whole record */
                 struct zs_short_commit zshort;
-                zshort.type = data;
-                zshort.length = data & (1UL >> 32);
+                zshort.type = rectype;
+                zshort.length = (data >> 32) & 0xFFF;
                 zshort.crc32 = data & ((1UL >> 32) - 1);
 
                 *offset = *offset - zshort.length;
@@ -103,9 +103,29 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset)
         }
 }
 
-static int read_pointers(struct zsdb_file *f _unused_, size_t offset _unused_)
+static int read_pointers(struct zsdb_file *f, size_t offset)
 {
-        uint64_t count _unused_;
+        uint64_t count, i;
+        unsigned char *bptr, *fptr;
+
+        if (!f->is_open)
+                return ZS_IOERROR;
+
+        bptr = f->mf->ptr;
+        fptr = bptr + offset;
+
+        /* Get the number of records */
+        count = read_be64(fptr);
+        fptr += sizeof(uint64_t);
+
+        for (i = 0; i < count; i++) {
+                uint64_t n;
+                n = read_be64(fptr);
+                vecu64_append(f->index, n);
+
+                fptr += sizeof(uint64_t);
+        }
+
         return ZS_OK;
 }
 
@@ -199,16 +219,19 @@ int zs_packed_file_open(const char *path,
 
         /* Read the commit record and get to the pointers */
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
+        zslog(LOGDEBUG, "file size: %zu\n", mf_size);
+        zslog(LOGDEBUG, "offset of commit record: %zu\n", offset);
         ret = get_offset_to_pointers(f, &offset);
         if (ret != ZS_OK) {
-                zslog(LOGDEBUG, "Could not get pointer block.");
+                zslog(LOGDEBUG, "Could not get pointer block.\n");
                 goto fail;
         }
 
+        zslog(LOGDEBUG, "offset to pointers section: %zu\n", offset);
         /* Read the pointers section and get all the offsets */
         ret = read_pointers(f, offset);
         if (ret != ZS_OK) {
-                zslog(LOGDEBUG, "Could not get pointers from pointer block.");
+                zslog(LOGDEBUG, "Could not get pointers from pointer block.\n");
                 goto fail;
         }
 
@@ -331,7 +354,7 @@ int zs_packed_file_new_from_memtree(const char * path,
         vecu64_foreach(f->index, zs_packed_file_write_index, f);
 
         /* The commit record for pointer section */
-        if (zs_packed_file_write_commit_record(f) != ZS_OK) {
+        if (zs_packed_file_write_final_commit_record(f) != ZS_OK) {
                 zslog(LOGDEBUG, "Could not commit.\n");
                 ret = EXIT_FAILURE;
                 goto fail;
