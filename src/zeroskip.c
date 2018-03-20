@@ -877,6 +877,7 @@ int zsdb_repack(struct zsdb *db)
         uint32_t startidx, endidx;
         cstring fname = CSTRING_INIT;
         struct zsdb_file *f;
+        struct list_head *pos, *p;
 
         assert_zsdb(db);
 
@@ -924,6 +925,15 @@ int zsdb_repack(struct zsdb *db)
 
         zs_packed_file_close(&f);
         /* TODO: Close and Unlink the finalised files from the DB */
+        /* Close finalised files and unlink them */
+        list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
+                struct zsdb_file *f;
+                list_del(pos);
+                f = list_entry(pos, struct zsdb_file, list);
+                xunlink(f->fname.buf);
+                zs_finalised_file_close(&f);
+                priv->dbfiles.ffcount--;
+        }
 
 done:
         cstring_release(&fname);
