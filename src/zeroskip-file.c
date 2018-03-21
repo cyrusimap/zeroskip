@@ -14,13 +14,19 @@
 #include "zeroskip-priv.h"
 
 #include <zlib.h>
+
+/* static buffers for preparing records, this saves a lot malloc()'s */
+#define SCRATCHBUFSIZ 65536
+static unsigned char skeybuf[SCRATCHBUFSIZ];
+static unsigned char svalbuf[SCRATCHBUFSIZ];
 /**
  * Private functions
  */
 /* Caller should free buf
  */
 static int zs_prepare_key_buf(unsigned char *key, size_t keylen,
-                              unsigned char **buf, size_t *buflen)
+                              unsigned char **buf, size_t *buflen,
+                              int *alloced)
 {
         int ret = ZS_OK;
         unsigned char *kbuf;
@@ -37,7 +43,14 @@ static int zs_prepare_key_buf(unsigned char *key, size_t keylen,
         finalkeylen = roundup64bits(keylen);
         kbuflen += finalkeylen;
 
-        kbuf = xcalloc(1, kbuflen);
+        if (kbuflen <= SCRATCHBUFSIZ) {
+                memset(skeybuf, 0, SCRATCHBUFSIZ);
+                kbuf = skeybuf;
+                *alloced = 0;
+        } else {
+                kbuf = xcalloc(1, kbuflen);
+                *alloced = 1;
+        }
 
         if (type == REC_TYPE_KEY) {
                 /* If it is a short key, the first 3 fields make up 64 bits */
@@ -77,7 +90,8 @@ static int zs_prepare_key_buf(unsigned char *key, size_t keylen,
 /* Caller should free buf
  */
 static int zs_prepare_val_buf(unsigned char *val, size_t vallen,
-                              unsigned char **buf, size_t *buflen)
+                              unsigned char **buf, size_t *buflen,
+                              int *alloced)
 {
         int ret = ZS_OK;
         unsigned char *vbuf;
@@ -95,7 +109,14 @@ static int zs_prepare_val_buf(unsigned char *val, size_t vallen,
 
         vbuflen += finalvallen;
 
-        vbuf = xcalloc(1, vbuflen);
+        if (vbuflen <= SCRATCHBUFSIZ) {
+                memset(svalbuf, 0, SCRATCHBUFSIZ);
+                vbuf = svalbuf;
+                *alloced = 0;
+        } else {
+                vbuf = xcalloc(1, vbuflen);
+                *alloced = 1;
+        }
 
         if (type == REC_TYPE_VALUE) {
                 /* The first 3 fields in a short key make up 64 bits */
@@ -128,7 +149,8 @@ static int zs_prepare_val_buf(unsigned char *val, size_t vallen,
 /* Caller should free buf
  */
 static int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
-                                     unsigned char **buf, size_t *buflen)
+                                     unsigned char **buf, size_t *buflen,
+                                     int *alloced)
 {
         int ret = ZS_OK;
         unsigned char *kbuf;
@@ -142,7 +164,14 @@ static int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
         finalkeylen = roundup64bits(keylen);
         kbuflen += finalkeylen;
 
-        kbuf = xcalloc(1, kbuflen);
+        if (kbuflen <= SCRATCHBUFSIZ) {
+                memset(skeybuf, 0, SCRATCHBUFSIZ);
+                kbuf = skeybuf;
+                *alloced = 0;
+        } else {
+                kbuf = xcalloc(1, kbuflen);
+                *alloced = 1;
+        }
 
         if (keylen <= MAX_SHORT_KEY_LEN) {
                 val = ((uint64_t)0ULL & ((1ULL << 40) - 1));
@@ -185,16 +214,17 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         size_t keybuflen, valbuflen;
         unsigned char *keybuf, *valbuf;
         size_t mfsize, nbytes;
+        int kalloced = 0, valloced = 0;
 
         if (!f->is_open)
                 return ZS_NOT_OPEN;
 
-        ret = zs_prepare_key_buf(key, keylen, &keybuf, &keybuflen);
+        ret = zs_prepare_key_buf(key, keylen, &keybuf, &keybuflen, &kalloced);
         if (ret != ZS_OK) {
                 return ZS_IOERROR;
         }
 
-        ret = zs_prepare_val_buf(val, vallen, &valbuf, &valbuflen);
+        ret = zs_prepare_val_buf(val, vallen, &valbuf, &valbuflen, &valloced);
         if (ret != ZS_OK) {
                 return ZS_IOERROR;
         }
@@ -243,8 +273,8 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         }
 
 done:
-        xfree(keybuf);
-        xfree(valbuf);
+        if (kalloced) xfree(keybuf);
+        if (valloced) xfree(valbuf);
 
         return ret;
 }
@@ -351,8 +381,9 @@ int zs_file_write_delete_record(struct zsdb_file *f,
         int ret = ZS_OK;
         unsigned char *dbuf;
         size_t dbuflen, mfsize, nbytes;
+        int alloced = 0;
 
-        ret = zs_prepare_delete_key_buf(key, keylen, &dbuf, &dbuflen);
+        ret = zs_prepare_delete_key_buf(key, keylen, &dbuf, &dbuflen, &alloced);
         if (ret != ZS_OK) {
                 return ZS_IOERROR;
         }
@@ -390,6 +421,7 @@ int zs_file_write_delete_record(struct zsdb_file *f,
         }
 
 done:
-        xfree(dbuf);
+        if (alloced)
+                xfree(dbuf);
         return ret;
 }
