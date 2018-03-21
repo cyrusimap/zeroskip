@@ -908,35 +908,54 @@ int zsdb_repack(struct zsdb *db)
                 goto done;
         }
 
-        /* Find the index range */
-        zs_find_index_range_for_files(&priv->dbfiles.fflist,
-                                      &startidx, &endidx);
+        /* We prefer to pack finalised files first.
+         */
+        if (!list_empty(&priv->dbfiles.fflist)) {
+                /* There are finalised files, which need to be packed, we do
+                   that first */
 
-        zs_filename_generate_packed(priv, &fname, startidx, endidx);
-        zslog(LOGDEBUG, "Packing into file %s...\n", fname.buf);
-        /* Pack the records from the in-memory tree*/
-        ret = zs_packed_file_new_from_memtree(fname.buf,
-                                              startidx, endidx,
-                                              priv, &f);
-        if (ret != ZS_OK) {
-                crc32_end(&f->mf);
-                /* ERROR! */
+                /* Find the index range */
+                zs_find_index_range_for_files(&priv->dbfiles.fflist,
+                                              &startidx, &endidx);
+
+                zs_filename_generate_packed(priv, &fname, startidx, endidx);
+                zslog(LOGDEBUG, "Packing into file %s...\n", fname.buf);
+                /* Pack the records from the in-memory tree*/
+                ret = zs_packed_file_new_from_memtree(fname.buf,
+                                                      startidx, endidx,
+                                                      priv, &f);
+                if (ret != ZS_OK) {
+                        crc32_end(&f->mf);
+                        zslog(LOGDEBUG,
+                              "Internal error when packing finalised files\n");
+                        /* ERROR! */
+                }
+
+                zs_packed_file_close(&f);
+                /* Close finalised files and unlink them */
+                list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
+                        struct zsdb_file *f;
+                        list_del(pos);
+                        f = list_entry(pos, struct zsdb_file, list);
+                        xunlink(f->fname.buf);
+                        zs_finalised_file_close(&f);
+                        priv->dbfiles.ffcount--;
+                }
+
+                cstring_release(&fname);
+
+                /* Done, for now. */
+                goto done;
         }
 
-        zs_packed_file_close(&f);
-        /* TODO: Close and Unlink the finalised files from the DB */
-        /* Close finalised files and unlink them */
-        list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
-                struct zsdb_file *f;
-                list_del(pos);
-                f = list_entry(pos, struct zsdb_file, list);
-                xunlink(f->fname.buf);
-                zs_finalised_file_close(&f);
-                priv->dbfiles.ffcount--;
+        /* If there are no finalised files to be packed and we have more than
+           1 packed files, we repack the packed files.
+         */
+        if (!list_empty(&priv->dbfiles.pflist)) {
         }
 
+        zslog(LOGDEBUG, "Nothing to be packed for now!\n");
 done:
-        cstring_release(&fname);
         if (!zs_dotzsdb_update_end(priv)) {
                 zslog(LOGDEBUG, "Failed release acquired lock for packing!\n");
                 ret = ZS_ERROR;
