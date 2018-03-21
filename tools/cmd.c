@@ -31,8 +31,10 @@ DBDumpLevel parse_dump_level_string(const char *dblevel)
                 return DB_DUMP_ACTIVE;
         else if (strcmp(dblevel, "all") == 0)
                 return DB_DUMP_ALL;
-        else
-                cmd_die_usage("...", "--dump=active|all");
+        else {
+                fprintf(stderr, "Invalid dump level, should be `active or `all`\n");
+                exit(EXIT_FAILURE);
+        }
 
         return DB_DUMP_ALL;           /* Default to dump all */
 }

@@ -18,7 +18,7 @@ int cmd_dump(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
                 {"config", required_argument, NULL, 'c'},
-                {"dump", required_argument, NULL, 'd'},
+                {"recs", required_argument, NULL, 'r'},
                 {"help", no_argument, NULL, 'h'},
                 {NULL, 0, NULL, 0}
         };
@@ -30,9 +30,9 @@ int cmd_dump(int argc, char **argv, const char *progname)
         int ret;
         DBDumpLevel level = DB_DUMP_ACTIVE;
 
-        while((option = getopt_long(argc, argv, "d", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "r", long_options, &option_index)) != -1) {
                 switch (option) {
-                case 'd':       /* level of detail */
+                case 'r':       /* level of detail */
                         level = parse_dump_level_string(optarg);
                         break;
                 case 'c':       /* config file */

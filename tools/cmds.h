@@ -24,7 +24,7 @@ int cmd_delete(int argc, char **argv, const char *progname);
 #define cmd_delete_usage "delete [--config CONFIGFILE] DB <key>"
 
 int cmd_dump(int argc, char **argv, const char *progname);
-#define cmd_dump_usage "dump [--config CONFIGFILE] [--dump=active|all] DB"
+#define cmd_dump_usage "dump [--config CONFIGFILE] [--recs=active|all] DB"
 
 int cmd_consistent(int argc, char **argv, const char *progname);
 #define cmd_consistent_usage "consistent "
