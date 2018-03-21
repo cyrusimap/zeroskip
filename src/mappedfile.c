@@ -175,7 +175,7 @@ int mappedfile_close(struct mappedfile **mfp)
                 }
 
                 xfree(mf);
-                mf = &mf_init;
+                *mfp = &mf_init;
         }
 
         return 0;
