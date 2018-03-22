@@ -53,6 +53,9 @@ void pqueue_put(struct pqueue *pq, void *data)
         }
 }
 
+/* pqueue_get():
+ * returns the top of the queue. User needs to free data returned.
+ */
 void *pqueue_get(struct pqueue *pq)
 {
         void *data;
@@ -80,6 +83,17 @@ void *pqueue_get(struct pqueue *pq)
         }
 
         return data;
+}
+
+/* pqueue_peek():
+ * Get a peek of the top of the queue, doesn't change the PQ.
+ */
+void *pqueue_peek(struct pqueue *pq)
+{
+        if (!pq->count)
+                return NULL;
+
+        return pq->arr[0].data;
 }
 
 void pqueue_free(struct pqueue *pq)

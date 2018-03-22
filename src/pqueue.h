@@ -34,6 +34,7 @@ struct pqueue {
 
 void pqueue_put(struct pqueue *pq, void *data);
 void *pqueue_get(struct pqueue *pq);
+void *pqueue_peek(struct pqueue *pq);
 void pqueue_free(struct pqueue *pq);
 
 CPP_GUARD_END
