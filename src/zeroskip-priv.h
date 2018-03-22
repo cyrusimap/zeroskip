@@ -17,6 +17,7 @@
 #include "list.h"
 #include "macros.h"
 #include "mappedfile.h"
+#include "pqueue.h"
 #include "util.h"
 #include "vecu64.h"
 
