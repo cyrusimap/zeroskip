@@ -15,6 +15,8 @@
 #include <stdbool.h>            /* for `bool` */
 #include <stddef.h>             /* for offsetof() */
 
+#include "macros.h"
+
 CPP_GUARD_START
 /*
  * struct list_head : the root node of the double linked list
