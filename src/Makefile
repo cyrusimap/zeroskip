@@ -8,6 +8,7 @@ ZS_LIBOBJS =  			\
 	file-lock.o		\
 	log.o			\
 	mappedfile.o		\
+	pqueue.o		\
 	strarray.o		\
 	util.o			\
 	vecu64.o		\
