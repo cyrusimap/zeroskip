@@ -100,7 +100,7 @@ static int process_finalised_file(const char *path, void *data)
         else {
                 int r = 0;
                 struct zsdb_file *cur;
-
+                /* Append newest first */
                 cur = list_first(&priv->dbfiles.fflist, struct zsdb_file, list);
                 r = strcmp(cur->fname.buf, f->fname.buf);
                 if (r <= 0) list_add_head(&f->list, &priv->dbfiles.fflist);
@@ -139,7 +139,7 @@ static int process_packed_file(const char *path, void *data)
         else {
                 int r = 0;
                 struct zsdb_file *cur;
-
+                /* Append newest first */
                 cur = list_first(&priv->dbfiles.pflist, struct zsdb_file, list);
                 r = strcmp(cur->fname.buf, f->fname.buf);
                 if (r <= 0) list_add_head(&f->list, &priv->dbfiles.pflist);
@@ -477,6 +477,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                  */
                 size_t mfsize;
                 struct list_head *pos;
+                uint64_t priority;
+
                 ret = for_each_db_file_in_dbdir(&priv->dbdir.buf,
                                                 DB_ABS_PATH, priv);
                 if (ret != ZS_OK)
@@ -484,6 +486,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 
                 /* Load data from finalised files */
                 if (priv->dbfiles.ffcount) {
+                        priority = 0;
                         zslog(LOGDEBUG, "Loading data from finalised files\n");
                         list_for_each_reverse(pos, &priv->dbfiles.fflist) {
                                 struct zsdb_file *f;
@@ -492,12 +495,20 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                                 zs_finalised_file_record_foreach(f,
                                                                  load_records_cb,
                                                                  priv->fmemtree);
+                                f->priority = ++priority;
                         }
                 }
 
                 /* Load records from active file to in-memory tree */
                 zs_active_file_record_foreach(priv, load_records_cb,
                                               priv->memtree);
+                /* Set priority of packed files */
+                priority = 0;
+                list_for_each_forward(pos, &priv->dbfiles.pflist) {
+                        struct zsdb_file *f;
+                        f = list_entry(pos, struct zsdb_file, list);
+                        f->priority = ++priority;
+                }
 
                 /* Seek to the end of the file, that's where the
                    records need to appended to.
@@ -999,7 +1010,8 @@ int zsdb_info(struct zsdb *db)
                 list_for_each_forward(pos, &priv->dbfiles.fflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
-                        fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+                        fprintf(stderr, "\t * %s [%3lu]\n",
+                                basename(f->fname.buf), f->priority);
                 }
         }
 
@@ -1008,7 +1020,8 @@ int zsdb_info(struct zsdb *db)
                 list_for_each_forward(pos, &priv->dbfiles.pflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
-                        fprintf(stderr, "\t * %s\n", basename(f->fname.buf));
+                        fprintf(stderr, "\t * %s [%3lu]\n",
+                                basename(f->fname.buf), f->priority);
                 }
         }
 

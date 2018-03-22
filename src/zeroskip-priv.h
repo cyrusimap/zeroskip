@@ -178,7 +178,9 @@ struct zsdb_file {
         cstring fname;
         struct mappedfile *mf;
         struct vecu64 *index;
+        int indexpos;           /* Position in the index vec */
         int is_open;
+        uint64_t priority;      /* Higher the number, higher the priority */
         int dirty;
 };
 
@@ -213,6 +215,8 @@ struct zsdb_priv {
         cstring dbdir;            /* The directory path */
 
         struct zsdb_files dbfiles;
+
+        struct pqueue pq;         /* Priority Q holding the next item */
 
         /* Locks */
         struct file_lock wlk;     /* Lock when writing */
