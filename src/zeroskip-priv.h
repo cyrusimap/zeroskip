@@ -15,11 +15,14 @@
 #include "cstring.h"
 #include "file-lock.h"
 #include "list.h"
+#include "macros.h"
 #include "mappedfile.h"
 #include "util.h"
 #include "vecu64.h"
 
 #include <uuid/uuid.h>
+
+CPP_GUARD_START
 
 /* Sizes */
 #define MB       (1 << 20)
@@ -283,8 +286,13 @@ extern int zs_packed_file_new_from_memtree(const char *path,
                                            struct zsdb_file **fptr);
 extern int zs_packed_file_write_record(struct record *record, void *data);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
+extern int zs_packed_file_record_foreach(struct zsdb_file *f,
+                                         foreach_cb *cb, void *cbdata);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                                     foreach_cb *cb, void *cbdata);
+
+
+CPP_GUARD_END
 #endif  /* _ZEROSKIP_PRIV_H_ */

@@ -15,6 +15,10 @@
 
 #include <stdio.h>
 
+#include "macros.h"
+
+CPP_GUARD_START
+
 struct str_array {
     const char **datav;
     int count;
@@ -36,5 +40,7 @@ void str_array_from_strsplit(struct str_array *arr, const char *str,
                              size_t slen, char delim);
 
 const char **str_array_detach(struct str_array *arr);
+
+CPP_GUARD_END
 
 #endif  /* _STRARRAY_H_ */

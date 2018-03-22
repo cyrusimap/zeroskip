@@ -16,6 +16,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "macros.h"
+
+CPP_GUARD_START
+
 #define BTREE_MAX_ELEMENTS 10
 #define BTREE_MIN_ELEMENTS (BTREE_MAX_ELEMENTS >> 1)
 
@@ -175,5 +179,7 @@ int btree_print_node_data(struct btree *btree, void *data);
 struct record * record_new(unsigned char *key, size_t keylen,
                            unsigned char *val, size_t vallen);
 void record_free(struct record *record);
+
+CPP_GUARD_END
 
 #endif  /* _BTREE_H_ */

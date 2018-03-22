@@ -12,8 +12,11 @@
 #define _LOG_H_
 
 #include "cstring.h"
+#include "macros.h"
 
 #include <stdio.h>
+
+CPP_GUARD_START
 
 enum {
         LOGDEBUG   = 0,
@@ -27,5 +30,7 @@ extern int zs_log_to_syslog;   /* Set to 1 to enable logging to syslog */
 extern cstring zs_log_file;
 
 void zslog(int level, const char *fmt, ...);
+
+CPP_GUARD_END
 
 #endif  /* _LOG_H_ */
