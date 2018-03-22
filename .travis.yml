@@ -1,0 +1,34 @@
+language: c
+dist: trusty
+group: edge
+addons:
+  apt:
+    packages:
+      - pkg-config
+
+env:
+  global:
+    - USE_CCACHE=1
+
+cache:
+  apt: true
+  ccache: true
+
+os: linux
+compiler: gcc
+
+install:
+  # Install required stuff
+
+before_script:
+  - ccache --version
+  - ccache --zero-stats
+  - make clean
+  - make
+
+script:
+  - make test
+
+branches:
+  only:
+    - master
