@@ -5,6 +5,8 @@ addons:
   apt:
     packages:
       - pkg-config
+      - uuid-dev
+      - zlib1g-dev
 
 env:
   global:
