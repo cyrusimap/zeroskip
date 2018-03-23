@@ -14,7 +14,11 @@
 
 #include <errno.h>
 #include <fcntl.h>
+
+#if defined(LINUX) || defined(DARWIN) || defined(BSD)
 #include <fts.h>
+#endif
+
 #include <libgen.h>             /* For basename() */
 #include <poll.h>
 #include <string.h>
@@ -168,6 +172,7 @@ int xunlink(const char *path)
         return ret;
 }
 
+#if defined(LINUX) || defined(DARWIN) || defined(BSD)
 /* get_filenames_with_matching_prefix()
  * get files(only) in a given path, matching a prefix.
  * if `prefix` is NULL, get all files.
@@ -240,6 +245,15 @@ int get_filenames_with_matching_prefix(char *const path[], const char *prefix,
 
         return err;
 }
+#else
+int get_filenames_with_matching_prefix(char *const path[]  _unused_,
+                                       const char *prefix _unused_,
+                                       struct str_array *arr _unused_,
+                                       int full_path _unused_)
+{
+        return 0;
+}
+#endif  /* #if defined(LINUX) || defined(DARWIN) || defined(BSD) */
 
 /**
  ** Time functions

@@ -105,7 +105,7 @@ char *xstrdup(const char *s);
         } while (0)
 
 
-inline size_t off_to_size_t(off_t len)
+static inline size_t off_to_size_t(off_t len)
 {
         size_t size = (size_t) len;
 

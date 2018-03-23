@@ -51,10 +51,10 @@ ZS_MKDIR=$(QMKDIR)mkdir -p
 ZS_AR=$(QAR)ar
 
 ## Platform
-UNAME := $(shell $(CC) -dumpmachine 2>&1 | grep -E -o "linux|darwin")
+UNAME := $(shell $(CC) -dumpmachine 2>&1 | grep -E -o "linux|darwin|solaris")
 
 ifeq ($(UNAME), linux)
-OSFLAGS = -DLINUX -D_GNU_SOURCE
+OSFLAGS = -DLINUX -D_GNU_SOURCE -std=c99
 DEBUG = -ggdb
 else ifeq ($(UNAME), darwin)
 OSFLAGS = -DMACOSX -D_BSD_SOURCE
@@ -66,7 +66,7 @@ endif
 
 ## Compiler options
 ZS_EXTRA_CFLAGS = -mtune=native -O3 -pedantic
-ZS_CFLAGS=-std=c99 -Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS) -DZS_DEBUG
+ZS_CFLAGS=-Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS) -DZS_DEBUG
 ZS_LDFLAGS=$(LDFLAGS) $(DEBUG) -lz -luuid
 ZS_LIBS=
 ARFLAGS=rcs

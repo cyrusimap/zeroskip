@@ -14,7 +14,11 @@
 #include "zeroskip-priv.h"
 
 #include <errno.h>
+
+#if defined(LINUX) || defined(DARWIN) || defined(BSD)
 #include <fts.h>
+#endif
+
 #include <libgen.h>
 #include <stdlib.h>
 #ifndef _GNU_SOURCE
@@ -187,6 +191,7 @@ enum {
         DB_ABS_PATH = 1,
 };
 
+#if defined(LINUX) || defined(DARWIN) || defined(BSD)
 static int for_each_db_file_in_dbdir(char *const path[],
                                      int full_path,
                                      void *data)
@@ -264,6 +269,14 @@ static int for_each_db_file_in_dbdir(char *const path[],
 
         return err;
 }
+#else  /* SOLARIS */
+static int for_each_db_file_in_dbdir(char *const path[] _unused_,
+                                     int full_path _unused_,
+                                     void *data _unused_)
+{
+        return ZS_NOTIMPLEMENTED;
+}
+#endif  /* if defined(LINUX) || defined(DARWIN) || defined(BSD) */
 
 
 static void zs_find_index_range_for_files(struct list_head *flist,
