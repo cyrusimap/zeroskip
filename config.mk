@@ -66,16 +66,16 @@ DEBUG = -g
 endif
 
 ## Dependencies
-ZLIB_INCS != $(shall $(PKGCONFIG) --clfags zlib)
+ZLIB_INCS := $(shall $(PKGCONFIG) --cflags zlib)
 ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
 
-UUID_INCS != $(shall $(PKGCONFIG) --clfags uuid)
+UUID_INCS := $(shall $(PKGCONFIG) --cflags uuid)
 UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
 
 ## Compiler options
 ZS_EXTRA_CFLAGS = -mtune=native -O3 -pedantic
 ZS_CFLAGS=-Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS) -DZS_DEBUG $(ZLIB_INCS) $(UUID_INCS)
-ZS_LDFLAGS=$(LDFLAGS) $(DEBUG) $(ZLIB_LIBS) $(UUID_LIBS)
+ZS_LDFLAGS=$(LDFLAGS) $(DEBUG) -lm $(ZLIB_LIBS) $(UUID_LIBS)
 ZS_LIBS=
 ARFLAGS=rcs
 
