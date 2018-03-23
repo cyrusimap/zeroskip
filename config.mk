@@ -41,6 +41,7 @@ PREFIX?=/usr/local
 INSTALL_BIN=$(PREFIX)/bin
 INSTALL=install
 CC=gcc
+PKGCONFIG=pkg-config
 AR_LIB_FILE=libzeroskip.a
 SO_LIB_FILE=
 
@@ -64,10 +65,17 @@ OSFLAGS = -DSOLARIS
 DEBUG = -g
 endif
 
+## Dependencies
+ZLIB_INCS != $(shall $(PKGCONFIG) --clfags zlib)
+ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
+
+UUID_INCS != $(shall $(PKGCONFIG) --clfags uuid)
+UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
+
 ## Compiler options
 ZS_EXTRA_CFLAGS = -mtune=native -O3 -pedantic
-ZS_CFLAGS=-Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS) -DZS_DEBUG
-ZS_LDFLAGS=$(LDFLAGS) $(DEBUG) -lz -luuid
+ZS_CFLAGS=-Wextra -Wall -W -Wno-missing-field-initializers -O0 $(CFLAGS) $(DEBUG) $(ENDIAN) $(OSFLAGS) -DZS_DEBUG $(ZLIB_INCS) $(UUID_INCS)
+ZS_LDFLAGS=$(LDFLAGS) $(DEBUG) $(ZLIB_LIBS) $(UUID_LIBS)
 ZS_LIBS=
 ARFLAGS=rcs
 
