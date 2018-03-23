@@ -54,23 +54,35 @@ ZS_AR=$(QAR)ar
 ## Platform
 UNAME := $(shell $(CC) -dumpmachine 2>&1 | grep -E -o "linux|darwin|solaris")
 
+
 ifeq ($(UNAME), linux)
 OSFLAGS = -DLINUX -D_GNU_SOURCE -std=c99
 DEBUG = -ggdb
-else ifeq ($(UNAME), darwin)
-OSFLAGS = -DMACOSX -D_BSD_SOURCE
-DEBUG = -g
-else ifeq ($(UNAME), solaris)
-OSFLAGS = -DSOLARIS
-DEBUG = -g
-endif
-
-## Dependencies
 ZLIB_INCS := $(shell $(PKGCONFIG) --cflags zlib)
 ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
 
 UUID_INCS := $(shell $(PKGCONFIG) --cflags uuid)
 UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
+
+else ifeq ($(UNAME), darwin)
+OSFLAGS = -DMACOSX -D_BSD_SOURCE
+DEBUG = -g
+ZLIB_INCS := $(shell $(PKGCONFIG) --cflags zlib)
+ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
+
+UUID_INCS := $(shell $(PKGCONFIG) --cflags uuid)
+UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
+
+else ifeq ($(UNAME), solaris)
+OSFLAGS = -DSOLARIS
+DEBUG = -g
+ZLIB_INCS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --cflags zlib)
+ZLIB_LIBS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --libs zlib)
+
+UUID_INCS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --cflags uuid)
+UUID_LIBS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --libs uuid)
+
+endif
 
 ## Compiler options
 ZS_EXTRA_CFLAGS = -mtune=native -O3 -pedantic
