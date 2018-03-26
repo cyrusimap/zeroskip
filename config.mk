@@ -54,35 +54,43 @@ ZS_AR=$(QAR)ar
 ## Platform
 UNAME := $(shell $(CC) -dumpmachine 2>&1 | grep -E -o "linux|darwin|solaris")
 
-
 ifeq ($(UNAME), linux)
 OSFLAGS = -DLINUX -D_GNU_SOURCE -std=c99
 DEBUG = -ggdb
-ZLIB_INCS := $(shell $(PKGCONFIG) --cflags zlib)
-ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
-
-UUID_INCS := $(shell $(PKGCONFIG) --cflags uuid)
-UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
-
 else ifeq ($(UNAME), darwin)
 OSFLAGS = -DMACOSX -D_BSD_SOURCE
 DEBUG = -g
-ZLIB_INCS := $(shell $(PKGCONFIG) --cflags zlib)
-ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
-
-UUID_INCS := $(shell $(PKGCONFIG) --cflags uuid)
-UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
-
 else ifeq ($(UNAME), solaris)
 OSFLAGS = -DSOLARIS
 DEBUG = -g
+endif
+
+# Check for zlib
+ifeq ($(shell $(PKGCONFIG) --exists zlib && echo 1),1)
+ifeq ($(UNAME), solaris)
 ZLIB_INCS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --cflags zlib)
 ZLIB_LIBS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --libs zlib)
+else
+ZLIB_INCS := $(shell $(PKGCONFIG) --cflags zlib)
+ZLIB_LIBS := $(shell $(PKGCONFIG) --libs zlib)
+endif
+else
+$(error Cannot find libzlib)
+endif
 
+# Check for libuuid
+ifeq ($(shell $(PKGCONFIG) --exists uuid && echo 1),1)
+ifeq ($(UNAME), solaris)
 UUID_INCS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --cflags uuid)
 UUID_LIBS := $(shell PKG_CONFIG_PATH=/opt/local/lib/pkgconfig $(PKGCONFIG) --libs uuid)
-
+else
+UUID_INCS := $(shell $(PKGCONFIG) --cflags uuid)
+UUID_LIBS := $(shell $(PKGCONFIG) --libs uuid)
 endif
+else
+$(error Cannot find libuuid)
+endif
+
 
 ## Compiler options
 ZS_EXTRA_CFLAGS = -mtune=native -O3 -pedantic
