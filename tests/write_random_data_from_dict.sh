@@ -17,8 +17,14 @@ dbdir=$1
 nummsgs=$2
 
 if [ ! -f $DICTFILE ]; then
-    echo "$DICTFILE doesn't exist. This program only works if the file exists!"
-    exit 1
+    # Check if /usr/share/dict/cracklib-small is available
+    if [ ! -f "/usr/share/dict/cracklib-small" ]; then
+        echo "$DICTFILE doesn't exist. This program only works if the file exists!"
+        exit 1
+    else
+        DICTFILE="/usr/share/dict/cracklib-small"
+        echo "Using $DICTFILE for words!"
+    fi
 fi
 
 if [ ! -f $SHUF ]; then
