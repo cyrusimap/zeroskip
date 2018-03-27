@@ -10,7 +10,6 @@ fi
 dbdir=$1
 nummsgs=$2
 
-# Chec
 # Generates a number between 0 and 9999
 gen_length()
 {
