@@ -17,6 +17,8 @@
 
 #if defined(LINUX) || defined(DARWIN) || defined(BSD)
 #include <fts.h>
+#else
+#include <dirent.h>
 #endif
 
 #include <libgen.h>
@@ -270,11 +272,73 @@ static int for_each_db_file_in_dbdir(char *const path[],
         return err;
 }
 #else  /* SOLARIS */
-static int for_each_db_file_in_dbdir(char *const path[] _unused_,
-                                     int full_path _unused_,
-                                     void *data _unused_)
+static int for_each_db_file_in_dbdir(char *const path[],
+                                     int full_path,
+                                     void *data)
 {
-        return ZS_NOTIMPLEMENTED;
+        char buf[PATH_MAX];
+        int err = 0;
+        int ret = ZS_OK;
+        DIR *dir;
+        struct dirent *de;
+
+        if (getcwd(buf, sizeof(buf)) == NULL)
+                return errno;
+
+        dir = opendir((char *)path);
+        if (!dir)
+                return ZS_ERROR;
+
+        while ((de = readdir(dir)) != NULL) {
+                char *bname;
+                char sbuf[PATH_MAX];
+
+                if (is_dotdir(de->d_name))
+                        continue;
+
+                if (de->d_type != DT_REG)
+                        continue;
+
+                bname = basename(de->d_name);
+
+                if (full_path)
+                        snprintf(sbuf, PATH_MAX, "%s/%s/%s", buf,
+                                 *path ? *path : buf, bname);
+                else
+                        snprintf(sbuf, PATH_MAX, "%s/%s", *path ? *path : buf, bname);
+
+                if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
+                        switch(interpret_db_filename(sbuf, strlen(sbuf),
+                                                     NULL, NULL)) {
+                        case DB_FTYPE_ACTIVE:
+                                /* XXX: Shouldn't have more than one active file */
+                                ret = process_active_file(sbuf, data);
+                                break;
+                        case DB_FTYPE_FINALISED:
+                                ret = process_finalised_file(sbuf, data);
+                                break;
+                        case DB_FTYPE_PACKED:
+                                ret = process_packed_file(sbuf, data);
+                                break;
+                        default:
+                                break;
+
+                        } /* switch() */
+                } /* strncmp() */
+                if (ret != ZS_OK) {
+                        zslog(LOGDEBUG, "Failed processing DB %s\n", *path);
+                        break;
+                }
+        } /* readdir() */
+
+        closedir(dir);
+
+        if (err)
+                errno = err;
+
+        err = ret;
+
+        return err;
 }
 #endif  /* if defined(LINUX) || defined(DARWIN) || defined(BSD) */
 
