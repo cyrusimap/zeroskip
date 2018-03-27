@@ -292,11 +292,15 @@ static int for_each_db_file_in_dbdir(char *const path[],
         while ((de = readdir(dir)) != NULL) {
                 char *bname;
                 char sbuf[PATH_MAX];
+                struct stat sb;
 
                 if (is_dotdir(de->d_name))
                         continue;
 
-                if (de->d_type != DT_REG)
+                if (lstat(de->d_name, &sb)) {
+                        if (errno == ENOENT)
+                                continue;
+                } else if (S_ISDIR(sb.st_mode))
                         continue;
 
                 bname = basename(de->d_name);
