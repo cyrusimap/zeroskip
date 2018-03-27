@@ -285,7 +285,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
         if (getcwd(buf, sizeof(buf)) == NULL)
                 return errno;
 
-        dir = opendir((char *)path);
+        dir = opendir(*path ? *path : ".");
         if (!dir)
                 return ZS_ERROR;
 
@@ -297,12 +297,6 @@ static int for_each_db_file_in_dbdir(char *const path[],
                 if (is_dotdir(de->d_name))
                         continue;
 
-                if (lstat(de->d_name, &sb)) {
-                        if (errno == ENOENT)
-                                continue;
-                } else if (S_ISDIR(sb.st_mode))
-                        continue;
-
                 bname = basename(de->d_name);
 
                 if (full_path)
@@ -310,6 +304,13 @@ static int for_each_db_file_in_dbdir(char *const path[],
                                  *path ? *path : buf, bname);
                 else
                         snprintf(sbuf, PATH_MAX, "%s/%s", *path ? *path : buf, bname);
+
+                if (lstat(sbuf, &sb) != 0) {
+                        continue;
+                }
+
+                if (S_ISDIR(sb.st_mode))
+                        continue;
 
                 if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
                         switch(interpret_db_filename(sbuf, strlen(sbuf),
