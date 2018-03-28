@@ -16,6 +16,12 @@ fi
 dbdir=$1
 nummsgs=$2
 
+UNAME=`uname`
+if [[ $UNAME -eq "SunOS" ]]; then
+          DICTFILE="/usr/share/lib/dict/words"
+          SHUF="/opt/local/bin/shuf"
+fi
+
 if [ ! -f $DICTFILE ]; then
     # Check if /usr/share/dict/cracklib-small is available
     if [ ! -f "/usr/share/dict/cracklib-small" ]; then
