@@ -90,4 +90,4 @@ ZS_LIBS=
 ARFLAGS=rcs
 
 ZS_CC=$(QCC)$(CC) $(ZS_CFLAGS)
-ZS_LD=$(QLD)$(CC) $(ZS_LDFLAGS)
+ZS_LD=$(QLD)$(CC)
