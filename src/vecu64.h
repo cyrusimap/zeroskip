@@ -14,6 +14,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "macros.h"
+
+CPP_GUARD_START
+
 struct vecu64 {
         int count;
         int alloc;
@@ -34,5 +38,6 @@ typedef int (*vecu64_foreach_cb_t)(void *data, uint64_t offset);
 int vecu64_foreach(struct vecu64 *v, vecu64_foreach_cb_t cb,
                    void *cbdata);
 
+CPP_GUARD_END
 
 #endif  /* _VECU64_H_ */
