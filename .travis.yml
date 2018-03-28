@@ -11,6 +11,7 @@ addons:
 env:
   global:
     - USE_CCACHE=1
+    - LIBRARY_PATH=/lib/x86_64-linux-gnu/
 
 cache:
   apt: true
@@ -25,6 +26,7 @@ install:
 before_script:
   - ccache --version
   - ccache --zero-stats
+  - gcc -v
   - make clean
   - make V=1
 
