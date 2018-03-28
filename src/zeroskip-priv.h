@@ -171,6 +171,7 @@ extern void assert_zsdb(struct zsdb *db);
 #define zsdb_break(x) (x)
 #endif
 
+
 /* File Data */
 struct zsdb_file {
         struct list_head list;
@@ -291,12 +292,15 @@ extern int zs_packed_file_new_from_memtree(const char *path,
                                            struct zsdb_file **fptr);
 extern int zs_packed_file_write_record(struct record *record, void *data);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
-extern int zs_packed_file_record_foreach(struct zsdb_file *f,
-                                         foreach_cb *cb, void *cbdata);
+extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
+                                    void *cbdata);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                                     foreach_cb *cb, void *cbdata);
+extern int zs_record_read_key_from_file_offset(struct zsdb_file *f,
+                                               size_t offset,
+                                               struct zs_key *key);
 
 
 CPP_GUARD_END

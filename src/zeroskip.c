@@ -139,6 +139,9 @@ static int process_packed_file(const char *path, void *data)
                 goto done;
         }
 
+        /* Insert into PQ */
+        pqueue_put(&priv->pq, f);
+
         priv->dbfiles.pfcount++;
         if (list_empty(&priv->dbfiles.pflist))
                 list_add_tail(&f->list, &priv->dbfiles.pflist);
@@ -530,6 +533,9 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 goto done;
         }
 
+        /* Compare function for the PQ */
+        priv->pq.cmp = zs_pq_cmp_key_frm_offset;
+
         /* In-memory tree */
         priv->memtree = btree_new(NULL, NULL);
         priv->fmemtree = btree_new(NULL, NULL);
@@ -659,6 +665,9 @@ int zsdb_close(struct zsdb *db)
 
         if (priv->fmemtree)
                 btree_free(priv->fmemtree);
+
+        /* Clear entries in PQ */
+        pqueue_free(&priv->pq);
 
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);

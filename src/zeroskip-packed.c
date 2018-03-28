@@ -11,6 +11,7 @@
 #include "btree.h"
 #include "log.h"
 #include "macros.h"
+#include "pqueue.h"
 #include "vecu64.h"
 #include "util.h"
 #include "zeroskip.h"
@@ -235,6 +236,9 @@ int zs_packed_file_open(const char *path,
                 goto fail;
         }
 
+        f->indexpos = 0;
+        f->priority = -1;
+
         *fptr = f;
 
         goto done;
@@ -371,4 +375,50 @@ fail:
 
 done:
         return ret;
+}
+
+int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unused_)
+{
+        struct zsdb_file *f1, *f2;
+        uint64_t off1, off2;
+        struct zs_key key1, key2;
+        int ret;
+        uint64_t len1, len2;
+
+        f1 = (struct zsdb_file *)d1;
+        f2 = (struct zsdb_file *)d2;
+
+        assert(f1->indexpos <= f1->index->count);
+        assert(f2->indexpos <= f2->index->count);
+
+        off1 = f1->index->data[f1->indexpos];
+        off2 = f2->index->data[f2->indexpos];
+
+        /* asserts() should be ok here, since we should *not* have anything
+         * apart from:
+         * REC_TYPE_KEY|REC_TYPE_LONG_KEY|REC_TYPE_DELETED|REC_TYPE_LONG_DELE
+         *
+         * If the assertion fails, the DB is corrupted, and we have bigger
+         * problems.
+         */
+        ret = zs_record_read_key_from_file_offset(f1, off1, &key1);
+        assert(ret == ZS_OK);
+        ret = zs_record_read_key_from_file_offset(f2, off2, &key2);
+        assert(ret == ZS_OK);
+
+        if (key1.base.type == REC_TYPE_KEY ||
+            key1.base.type == REC_TYPE_DELETED)
+                len1 = key1.base.slen;
+        else if (key1.base.type == REC_TYPE_LONG_KEY ||
+                 key1.base.type == REC_TYPE_DELETED)
+                len1 = key1.base.llen;
+
+        if (key2.base.type == REC_TYPE_KEY ||
+            key2.base.type == REC_TYPE_DELETED)
+                len2 = key2.base.slen;
+        else if (key2.base.type == REC_TYPE_LONG_KEY ||
+                 key2.base.type == REC_TYPE_DELETED)
+                len2 = key2.base.llen;
+
+        return memcmp(key1.data, key2.data, len1 < len2 ? len1 : len2);
 }

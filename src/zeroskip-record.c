@@ -180,3 +180,39 @@ int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
 
         return ZS_OK;
 }
+
+/*
+ * zs_record_read_key_from_file_offset():
+ * Reads a key from a given struct zsdb_file offset. This is primarily used in
+ * the PQ comparison packed file records.
+ */
+int zs_record_read_key_from_file_offset(struct zsdb_file *f, size_t offset,
+                                        struct zs_key *key)
+{
+        unsigned char *bptr, *fptr;
+        uint64_t data;
+        enum record_t rectype;
+
+        if (!f->is_open)
+                return ZS_IOERROR;
+
+        bptr = f->mf->ptr;
+        fptr = bptr + offset;
+
+        data = read_be64(fptr);
+        rectype = data >> 56;
+
+        switch(rectype) {
+        case REC_TYPE_KEY:
+        case REC_TYPE_LONG_KEY:
+        case REC_TYPE_DELETED:
+        case REC_TYPE_LONG_DELETED:
+                zs_read_key_rec(f, &offset, key);
+                break;
+        default:
+                return ZS_ERROR;
+                break;
+        }
+
+        return ZS_OK;
+}
