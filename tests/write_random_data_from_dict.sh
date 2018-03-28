@@ -17,7 +17,7 @@ dbdir=$1
 nummsgs=$2
 
 UNAME=`uname`
-if [[ $UNAME -eq "SunOS" ]]; then
+if [[ $UNAME == "SunOS" ]]; then
           DICTFILE="/usr/share/lib/dict/words"
           SHUF="/opt/local/bin/shuf"
 fi
