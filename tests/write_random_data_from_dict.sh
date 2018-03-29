@@ -60,6 +60,32 @@ gen_length()
     echo "$length"
 }
 
+gen_key_val_with_progress_bar()
+{
+    local tcount=$nummsgs
+
+    already_done() { for ((done=0; done<elapsed; done=done+1)); do printf "▇"; done }
+    remaining() { for ((remain=elapsed; remain<tcount; remain=remain+1)); do printf " "; done }
+    percentage() { printf "| %s%%" $(( ((elapsed)*100)/(tcount)*100/100 )); }
+    clean_line() { printf "\r"; }
+
+    for (( elapsed=1; elapsed<=tcount; elapsed=elapsed+1 )); do
+        already_done; remaining; percentage
+        # Key from /usr/share/dict/words
+        KEY=$($SHUF -n1 -r $DICTFILE)
+
+        # Generate random value
+        local vlen=$(gen_length)
+        VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
+
+        RET=$(../tools/zeroskip set $dbdir "$KEY" "$VAL")
+
+        clean_line
+    done
+    clean_line
+    echo ""
+}
+
 gen_key_val()
 {
     for i in `seq 1 $nummsgs`
@@ -75,4 +101,4 @@ gen_key_val()
     done
 }
 
-gen_key_val
+gen_key_val_with_progress_bar
