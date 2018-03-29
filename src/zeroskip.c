@@ -582,7 +582,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 if (priv->dbfiles.ffcount) {
                         priority = 0;
                         zslog(LOGDEBUG, "Loading data from finalised files\n");
-                        list_for_each_forward(pos, &priv->dbfiles.fflist) {
+                        list_for_each_reverse(pos, &priv->dbfiles.fflist) {
                                 struct zsdb_file *f;
                                 f = list_entry(pos, struct zsdb_file, list);
                                 zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
