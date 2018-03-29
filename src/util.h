@@ -318,6 +318,9 @@ struct flockctx;
 int file_lock(int fd, struct flockctx **ctx);
 int file_unlock(int fd, struct flockctx **ctx);
 
+
+int natural_strcasecmp(const char *s1, const char *s2);
+
 CPP_GUARD_END
 
 #endif  /* _UTIL_H_ */

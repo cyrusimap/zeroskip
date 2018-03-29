@@ -9,6 +9,7 @@
 #include "cstring.h"
 #include "log.h"
 #include "macros.h"
+#include "pqueue.h"
 #include "util.h"
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
@@ -32,9 +33,23 @@
 #include <unistd.h>
 #include <zlib.h>
 
+/* PQ for storing packed and finalised file names temporarily when
+ * opening the DB
+ */
+static struct pqueue finalisedpq;
+static struct pqueue packedpq;
+
 /**
  * Private functions
  */
+static int dbfname_cmp(const void *d1, const void *d2, void *cbdata _unused_)
+{
+        struct zsdb_file *f1 = (struct zsdb_file *)d1;
+        struct zsdb_file *f2 = (struct zsdb_file *)d2;
+
+        return natural_strcasecmp(f1->fname.buf, f2->fname.buf);
+}
+
 static int load_records_cb(void *data,
                            unsigned char *key, size_t keylen,
                            unsigned char *value, size_t vallen)
@@ -78,9 +93,8 @@ done:
         return ret;
 }
 
-static int process_finalised_file(const char *path, void *data)
+static int process_finalised_file(const char *path, void *data _unused_)
 {
-        struct zsdb_priv *priv;
         int ret = ZS_OK;
         struct zsdb_file *f;
 
@@ -92,26 +106,13 @@ static int process_finalised_file(const char *path, void *data)
 
         zslog(LOGDEBUG, "processing finalised file: %s\n", path);
 
-        priv = (struct zsdb_priv *)data;
-
         ret = zs_finalised_file_open(path, &f);
         if (ret != ZS_OK) {
                 zslog(LOGDEBUG, "skipping file %s\n", path);
                 goto done;
         }
 
-        priv->dbfiles.ffcount++;
-        if (list_empty(&priv->dbfiles.fflist))
-                list_add_tail(&f->list, &priv->dbfiles.fflist);
-        else {
-                int r = 0;
-                struct zsdb_file *cur;
-                /* Append newest first */
-                cur = list_first(&priv->dbfiles.fflist, struct zsdb_file, list);
-                r = strcmp(cur->fname.buf, f->fname.buf);
-                if (r <= 0) list_add_head(&f->list, &priv->dbfiles.fflist);
-                else list_add_tail(&f->list, &priv->dbfiles.fflist);
-        }
+        pqueue_put(&finalisedpq, f);
 
 done:
         return ret;
@@ -142,18 +143,8 @@ static int process_packed_file(const char *path, void *data)
         /* Insert into PQ */
         pqueue_put(&priv->pq, f);
 
-        priv->dbfiles.pfcount++;
-        if (list_empty(&priv->dbfiles.pflist))
-                list_add_tail(&f->list, &priv->dbfiles.pflist);
-        else {
-                int r = 0;
-                struct zsdb_file *cur;
-                /* Append newest first */
-                cur = list_first(&priv->dbfiles.pflist, struct zsdb_file, list);
-                r = strcmp(cur->fname.buf, f->fname.buf);
-                if (r <= 0) list_add_head(&f->list, &priv->dbfiles.pflist);
-                else list_add_tail(&f->list, &priv->dbfiles.pflist);
-        }
+        pqueue_put(&packedpq, f);
+
 done:
         return ret;
 }
@@ -501,6 +492,10 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         priv->dbfiles.ffcount = 0;
         priv->dbfiles.pfcount = 0;
 
+        /* Compare functions for the pq for finalised and packed files */
+        finalisedpq.cmp = dbfname_cmp;
+        packedpq.cmp = dbfname_cmp;
+
         /* .zsdb filename */
         cstring_dup(&priv->dbdir, &priv->dotzsdbfname);
         cstring_addch(&priv->dotzsdbfname, '/');
@@ -572,11 +567,22 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 if (ret != ZS_OK)
                         goto done;
 
+                /* Load records from active file to in-memory tree */
+                zs_active_file_record_foreach(priv, load_records_cb,
+                                              priv->memtree);
+
                 /* Load data from finalised files */
+                while (finalisedpq.count) {
+                        struct zsdb_file *f = pqueue_get(&finalisedpq);
+                        list_add_head(&f->list, &priv->dbfiles.fflist);
+                        priv->dbfiles.ffcount++;
+                }
+                pqueue_free(&finalisedpq);
+
                 if (priv->dbfiles.ffcount) {
                         priority = 0;
                         zslog(LOGDEBUG, "Loading data from finalised files\n");
-                        list_for_each_reverse(pos, &priv->dbfiles.fflist) {
+                        list_for_each_forward(pos, &priv->dbfiles.fflist) {
                                 struct zsdb_file *f;
                                 f = list_entry(pos, struct zsdb_file, list);
                                 zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
@@ -587,9 +593,15 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         }
                 }
 
-                /* Load records from active file to in-memory tree */
-                zs_active_file_record_foreach(priv, load_records_cb,
-                                              priv->memtree);
+
+                while (packedpq.count) {
+                        struct zsdb_file *f = pqueue_get(&packedpq);
+                        list_add_head(&f->list, &priv->dbfiles.pflist);
+                        priv->dbfiles.pfcount++;
+                }
+                pqueue_free(&packedpq);
+
+
                 /* Set priority of packed files */
                 priority = 0;
                 list_for_each_forward(pos, &priv->dbfiles.pflist) {
@@ -724,9 +736,11 @@ int zsdb_add(struct zsdb *db,
                         priv->dbfiles.factive.fname.buf);
         }
 
-        /* Start computing the crc32. Will end when the transaction is
-           committed */
-        crc32_begin(&priv->dbfiles.factive.mf);
+        /* Start computing crc32, if we haven't already. The computation will
+           end when the transaction is committed.
+         */
+        if (!priv->dbfiles.factive.mf->compute_crc)
+                crc32_begin(&priv->dbfiles.factive.mf);
 
         /* Add the entry to the active file */
         ret = zs_active_file_write_keyval_record(priv, key, keylen, value,

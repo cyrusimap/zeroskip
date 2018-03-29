@@ -12,6 +12,7 @@
 
 #include "util.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 
@@ -391,3 +392,44 @@ done:
         return err;
 }
 
+
+int natural_strcasecmp(const char *s1, const char *s2)
+{
+        const char *a = s1;
+        const char *b = s2;
+
+        if (!a || !b) {
+                return a ? 1 : b ? -1 : 0;
+        }
+
+        if (isdigit(*a) && isdigit(*b)) {
+                char *remA;
+                char *remB;
+                long valA = strtol(a, &remA, 10);
+                long valB = strtol(b, &remB, 10);
+                if (valA != valB) {
+                        return valA - valB;
+                } else if ((remB - b) != (remA - a)) {  /* equal but varying lengths */
+                        return (remB - b) - (remA - a);
+                } else {
+                        return natural_strcasecmp(remA, remB);
+                }
+        }
+
+        if (isdigit(*a) || isdigit(*b)) {    /* Just one of the strings is a number */
+                return isdigit(*a) ? -1 : 1;
+        }
+
+        while (*a && *b) {  /* non-numeric characters */
+                if (isdigit(*a) || isdigit(*b))
+                        return natural_strcasecmp(a, b);
+
+                if (tolower(*a) != tolower(*b))
+                        return tolower(*a) - tolower(*b);
+
+                a++;
+                b++;
+        }
+
+        return *a ? 1 : *b ? -1 : 0;
+}
