@@ -60,30 +60,16 @@ gen_length()
     echo "$length"
 }
 
-gen_key_val_with_progress_bar()
+pgbar()
 {
-    local tcount=$nummsgs
+	let _progress=(${1}*100/${2}*100)/100
+	let _done=(${_progress}*4)/10
+	let _left=40-$_done
 
-    already_done() { for ((done=0; done<elapsed; done=done+1)); do printf "▇"; done }
-    remaining() { for ((remain=elapsed; remain<tcount; remain=remain+1)); do printf " "; done }
-    percentage() { printf "| %s%%" $(( ((elapsed)*100)/(tcount)*100/100 )); }
-    clean_line() { printf "\r"; }
+	_done=$(printf "%${_done}s")
+	_left=$(printf "%${_left}s")
 
-    for (( elapsed=1; elapsed<=tcount; elapsed=elapsed+1 )); do
-        already_done; remaining; percentage
-        # Key from /usr/share/dict/words
-        KEY=$($SHUF -n1 -r $DICTFILE)
-
-        # Generate random value
-        local vlen=$(gen_length)
-        VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
-
-        RET=$(../tools/zeroskip set $dbdir "$KEY" "$VAL")
-
-        clean_line
-    done
-    clean_line
-    echo ""
+        printf "\rAdding Records : [${_done// /▇}${_left// / }] ${_progress}%% Completed"
 }
 
 gen_key_val()
@@ -98,7 +84,9 @@ gen_key_val()
         VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
 
         RET=$(../tools/zeroskip set $dbdir "$KEY" "$VAL")
+        pgbar ${i} ${nummsgs}
     done
+    echo ""
 }
 
-gen_key_val_with_progress_bar
+gen_key_val
