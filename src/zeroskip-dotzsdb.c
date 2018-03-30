@@ -203,44 +203,24 @@ fail1:
  */
 int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
 {
-        struct mappedfile *mf;
-        size_t mfsize;
-        struct dotzsdb *dothdr;
-        int ret = 1;
+        int ret = 0;
 
-        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
-                zslog(LOGDEBUG, "Could not open %s!\n",
-                      priv->dotzsdbfname.buf);
-                ret = 0;
-                goto fail1;
+        if (!zs_dotzsdb_update_begin(priv)) {
+                zslog(LOGDEBUG, "Failed acquiring lock to update index!\n");
+                ret = 1;
+                goto done;
         }
 
-        mappedfile_size(&mf, &mfsize);
+        /* Update the index to the new value */
+        priv->dotzsdb.curidx = idx;
 
-        if (mfsize < DOTZSDB_SIZE) {
-                zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
-                        mfsize);
-                ret = 0;
-                goto fail2;
-       }
-
-        dothdr = (struct dotzsdb *)mf->ptr;
-        if (dothdr->signature == ZS_SIGNATURE) {
-                /* Update the index */
-                dothdr->curidx = hton32(idx);
-                priv->dotzsdb.curidx = idx;
-        } else {
-                zslog(LOGDEBUG, "Invalid zeroskip DB %s Failed updating index.\n",
-                        priv->dotzsdbfname.buf);
-                ret = 0;
-                goto fail2;
+        if (!zs_dotzsdb_update_end(priv)) {
+                zslog(LOGDEBUG, "Failed acquiring lock to update index!\n");
+                ret = 1;
+                goto done;
         }
 
-        mappedfile_flush(&mf);
-
-fail2:
-        mappedfile_close(&mf);
-fail1:
+done:
         return ret;
 }
 
