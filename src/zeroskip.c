@@ -367,6 +367,11 @@ static void zs_find_index_range_for_files(struct list_head *flist,
         }
 }
 
+static int zsdb_reload_db(struct zsdb_priv *priv _unused_)
+{
+        return ZS_OK;
+}
+
 /**
  * Public functions
  */
@@ -558,7 +563,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 /* If it is an existing DB, scan the directory for
                  * db files.
                  */
-                size_t mfsize;
+                size_t mfsize = 0;
                 struct list_head *pos;
                 uint64_t priority;
 
@@ -695,8 +700,9 @@ int zsdb_add(struct zsdb *db,
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
-        size_t mfsize;
+        size_t mfsize = 0;
         struct record *rec;
+        ino_t inonum;
 
         assert_zsdb(db);
         assert(key);
@@ -722,11 +728,33 @@ int zsdb_add(struct zsdb *db,
                 goto done;
         }
 
+        inonum = zs_dotzsdb_get_ino(priv);
+        if (inonum != priv->dotzsdb_ino) {
+                /* If the inode number differ, the db has changed since the
+                   time it has been opened. We need to reload the DB */
+                zsdb_reload_db(priv); /* TODO: check return value */
+                zslog(LOGWARNING, "DB updated!\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
+
         /* check file size and finalise if necessary */
-        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
+        zslog(LOGWARNING, ">> Getting size for %s\n",
+              priv->dbfiles.factive.fname.buf);
+        if (mappedfile_size(&priv->dbfiles.factive.mf, &mfsize) != 0) {
+                zslog(LOGWARNING, "Failed getting size for %s\n",
+                        priv->dbfiles.factive.fname.buf);
+                ret = ZS_ERROR;
+                goto done;
+        }
+        zslog(LOGWARNING, ">> Size for %s = %zu\n",
+              priv->dbfiles.factive.fname.buf, mfsize);
+
         if (mfsize >= TWOMB) {
                 zslog(LOGDEBUG, "File %s is > 2MB, finalising.\n",
                         priv->dbfiles.factive.fname.buf);
+                printf(">> File %s is > 2MB, finalising.\n",
+                       priv->dbfiles.factive.fname.buf);
                 ret = zs_active_file_finalise(priv);
                 if (ret != ZS_OK) goto done;
 
@@ -734,6 +762,8 @@ int zsdb_add(struct zsdb *db,
                                          priv->dotzsdb.curidx + 1);
                 zslog(LOGDEBUG, "New active log file %s created.\n",
                         priv->dbfiles.factive.fname.buf);
+                printf(">> New active log file %s created.\n",
+                       priv->dbfiles.factive.fname.buf);
         }
 
         /* Start computing crc32, if we haven't already. The computation will
@@ -757,7 +787,8 @@ int zsdb_add(struct zsdb *db,
         /* TODO: REMOVE THE PRINTING! */
         /* btree_print_node_data(priv->memtree, NULL); */
 
-        zslog(LOGDEBUG, "Inserted record into the DB.\n");
+        zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
+                priv->dbfiles.factive.fname.buf);
 
 done:
         return ret;
@@ -968,11 +999,6 @@ int zsdb_consistent(struct zsdb *db)
         assert_zsdb(db);
 
         return ret;
-}
-
-int zsdb_reload_db(struct zsdb_priv *priv _unused_)
-{
-        return ZS_OK;
 }
 
 /*

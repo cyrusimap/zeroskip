@@ -27,7 +27,7 @@
 int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
 {
         int ret = ZS_OK;
-        size_t mf_size;
+        size_t mf_size = 0;
         int mappedfile_flags = MAPPEDFILE_RW;
 
         zs_filename_generate_active(priv, &priv->dbfiles.factive.fname);
@@ -140,7 +140,7 @@ done:
 int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
 {
         int ret = ZS_OK;
-        size_t mfsize;
+        size_t mfsize = 0;
         int mappedfile_flags = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
 
         /* Update the index */

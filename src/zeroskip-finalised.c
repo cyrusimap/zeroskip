@@ -17,7 +17,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
         struct zsdb_file *f;
-        size_t mf_size;
+        size_t mf_size = 0;
         int mappedfile_flags = MAPPEDFILE_RD;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);

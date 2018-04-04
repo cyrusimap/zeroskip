@@ -213,7 +213,7 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         int ret = ZS_OK;
         size_t keybuflen, valbuflen;
         unsigned char *keybuf, *valbuf;
-        size_t mfsize, nbytes;
+        size_t mfsize = 0, nbytes;
         int kalloced = 0, valloced = 0;
 
         if (!f->is_open)
@@ -380,7 +380,7 @@ int zs_file_write_delete_record(struct zsdb_file *f,
 {
         int ret = ZS_OK;
         unsigned char *dbuf;
-        size_t dbuflen, mfsize, nbytes;
+        size_t dbuflen, mfsize = 0, nbytes;
         int alloced = 0;
 
         ret = zs_prepare_delete_key_buf(key, keylen, &dbuf, &dbuflen, &alloced);

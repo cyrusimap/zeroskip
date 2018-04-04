@@ -164,7 +164,7 @@ int zs_packed_file_open(const char *path,
 {
         int ret = ZS_OK;
         struct zsdb_file *f;
-        size_t mf_size;
+        size_t mf_size = 0;
         size_t offset;
         int mappedfile_flags = MAPPEDFILE_RD;
 
