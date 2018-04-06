@@ -96,7 +96,7 @@ done:
 static int process_finalised_file(const char *path, void *data _unused_)
 {
         int ret = ZS_OK;
-        struct zsdb_file *f;
+        struct zsdb_file *f = NULL;
 
         if (!data) {
                 zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
@@ -1175,7 +1175,7 @@ int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms)
         ret = file_lock_acquire(&priv->wlk, priv->dbdir.buf,
                                 WRITE_LOCK_FNAME, timeout_ms);
 
-        return ret ? ZS_OK : ZS_ERROR;
+        return (ret >= 0) ? ZS_OK : ZS_ERROR;
 }
 
 int zsdb_write_lock_release(struct zsdb *db)
@@ -1211,7 +1211,7 @@ int zsdb_pack_lock_acquire(struct zsdb *db, long timeout_ms)
         if (!priv) return ZS_INTERNAL;
         ret = file_lock_acquire(&priv->plk, priv->dbdir.buf,
                                 PACK_LOCK_FNAME, timeout_ms);
-        return ret ? ZS_OK : ZS_ERROR;
+        return (ret >= 0) ? ZS_OK : ZS_ERROR;
 }
 
 int zsdb_pack_lock_release(struct zsdb *db)

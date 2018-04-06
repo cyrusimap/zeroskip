@@ -44,7 +44,7 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
         int ret = 0;
 
         if (!fname) {
-                fprintf(stderr, "\n");
+                fprintf(stderr, "Need a valid filename\n");
                 return -1;
         }
 
@@ -52,16 +52,12 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
 
         mf->filename = xstrdup(fname);
         mf->flags = flags;
+        mf->fd = -1;
 
         if (mf->ptr != MAP_FAILED) {
                 if (mf->ptr)
                         munmap(mf->ptr, mf->size);
                 mf->ptr = MAP_FAILED;
-        }
-
-        if (mf->fd != -1) {
-                close(mf->fd);
-                mf->fd = -1;
         }
 
         /* Flags */

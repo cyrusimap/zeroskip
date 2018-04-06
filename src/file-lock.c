@@ -99,7 +99,7 @@ static int flock_with_timeout(struct file_lock *lk,
 
                 fd = flock_lock(lk, path, fname);
 
-                if (fd > 0)
+                if (fd >= 0)
                         return fd;
                 else if (errno != EEXIST)
                         return -1; /* some failure */
@@ -123,7 +123,7 @@ static int flock_with_timeout(struct file_lock *lk,
 
 /* file_lock_acquire():
  * Acquire a file lock.
- * returns -1 on failure and > 0 on success.
+ * returns -1 on failure and >= 0 on success.
  */
 int file_lock_acquire(struct file_lock *lk, const char *path,
                       const char *fname, long timeout_ms)

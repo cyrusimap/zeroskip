@@ -78,13 +78,19 @@ int zs_finalised_file_close(struct zsdb_file **fptr)
         struct zsdb_file *f;
 
         if (fptr == NULL || *fptr == NULL)
-                return ret;
+                return ZS_ERROR;
 
         f = *fptr;
         fptr = NULL;
 
+        if (!f->is_open)
+                return ZS_ERROR;
+
+        mappedfile_flush(&f->mf);
         mappedfile_close(&f->mf);
         cstring_release(&f->fname);
+        f->is_open = 0;
+
         xfree(f);
 
         return ret;
