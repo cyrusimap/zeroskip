@@ -364,10 +364,10 @@ static void zs_find_index_range_for_files(struct list_head *flist,
                 interpret_db_filename(f->fname.buf, strlen(f->fname.buf),
                                       &sidx, &eidx);
 
-                if (sidx != 0 && sidx < *startidx)
+                if (sidx < *startidx)
                         *startidx = sidx;
 
-                if (eidx != 0 && eidx > *endidx)
+                if (eidx > *endidx)
                         *endidx = eidx;
         }
 }
