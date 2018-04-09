@@ -346,9 +346,14 @@ static void zs_find_index_range_for_files(struct list_head *flist,
                                           uint32_t *startidx, uint32_t *endidx)
 {
         struct list_head *pos;
+        struct zsdb_file *first;
 
         *startidx = 0;
         *endidx = 0;
+
+        first = list_first(flist, struct zsdb_file, list);
+        interpret_db_filename(first->fname.buf, strlen(first->fname.buf),
+                              startidx, endidx);
 
         list_for_each_forward(pos, flist) {
                 struct zsdb_file *f;
@@ -1093,7 +1098,8 @@ int zsdb_repack(struct zsdb *db)
         /* If there are no finalised files to be packed and we have more than
            1 packed files, we repack the packed files.
          */
-        if (!list_empty(&priv->dbfiles.pflist)) {
+        if (!list_empty(&priv->dbfiles.pflist) && (priv->dbfiles.pfcount > 1)) {
+                zslog(LOGDEBUG, "Repacking packed files!\n");
         }
 
         zslog(LOGDEBUG, "Nothing to be packed for now!\n");
