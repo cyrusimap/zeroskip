@@ -220,15 +220,12 @@ int zs_packed_file_open(const char *path,
 
         /* Read the commit record and get to the pointers */
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
-        zslog(LOGDEBUG, "file size: %zu\n", mf_size);
-        zslog(LOGDEBUG, "offset of commit record: %zu\n", offset);
         ret = get_offset_to_pointers(f, &offset);
         if (ret != ZS_OK) {
                 zslog(LOGDEBUG, "Could not get pointer block.\n");
                 goto fail;
         }
 
-        zslog(LOGDEBUG, "offset to pointers section: %zu\n", offset);
         /* Read the pointers section and get all the offsets */
         ret = read_pointers(f, offset);
         if (ret != ZS_OK) {
