@@ -81,7 +81,7 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset)
                 /* TODO: just read length not the whole record */
                 struct zs_short_commit zshort;
                 zshort.type = rectype;
-                zshort.length = (data >> 32) & 0xFFF;
+                zshort.length = (data >> 32) & 0xFFFFFF;
                 zshort.crc32 = data & ((1UL >> 32) - 1);
 
                 *offset = *offset - zshort.length;
