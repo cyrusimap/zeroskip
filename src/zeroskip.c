@@ -351,6 +351,8 @@ static void zs_find_index_range_for_files(struct list_head *flist,
         *startidx = 0;
         *endidx = 0;
 
+        /* The first entry in the list is the file with the latest
+           (and the largest) index. */
         first = list_first(flist, struct zsdb_file, list);
         interpret_db_filename(first->fname.buf, strlen(first->fname.buf),
                               startidx, endidx);
@@ -937,21 +939,19 @@ done:
         return ret;
 }
 
-static int print_rec(void *data _unused_,
-                     unsigned char *key, size_t keylen,
-                     unsigned char *val, size_t vallen)
+static int print_btree_rec(struct record *record, void *data _unused_)
 {
         size_t i;
 
-        for (i = 0; i < keylen; i++) {
-                printf("%c", key[i]);
+        for (i = 0; i < record->keylen; i++) {
+                printf("%c", record->key[i]);
         }
-        if (keylen) printf("\n");
+        if (record->keylen) printf("\n");
 
-        for (i = 0; i < vallen; i++) {
-                printf("%c", val[i]);
+        for (i = 0; i < record->vallen; i++) {
+                printf("%c", record->val[i]);
         }
-        if (vallen) printf("\n");
+        if (record->vallen) printf("\n");
 
         printf("---\n");
 
@@ -974,12 +974,18 @@ int zsdb_dump(struct zsdb *db,
                 return ZS_NOT_OPEN;
         }
 
-        if (level == DB_DUMP_ACTIVE) {
-                ret = zs_active_file_record_foreach(priv, print_rec,
-                                                    NULL);
-        } else if (level == DB_DUMP_ALL) {
-                zslog(LOGDEBUG, "Not implemented");
-                return ZS_NOTIMPLEMENTED;
+        if (level == DB_DUMP_ACTIVE || level == DB_DUMP_ALL) {
+                if (level == DB_DUMP_ALL) {
+                        /* TODO:Dump all the active, finalised and packed file
+                           records. We need an iterator! */
+                } else {
+                        /* Dump active records only */
+                        btree_walk_forward(priv->memtree, print_btree_rec, NULL);
+#if 0
+                        ret = zs_active_file_record_foreach(priv, print_rec,
+                                                            NULL);
+#endif
+                }
         } else {
                 zslog(LOGDEBUG, "Invalid DB dump option\n");
                 return ZS_ERROR;
