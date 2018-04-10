@@ -66,8 +66,6 @@ struct zsdb_iter {
 };
 
 struct zsdb {
-        uint64_t rwlock;            /* Read-Write lock */
-        uint64_t lockdata;          /* current locks  */
         struct zsdb_iter *iter;     /* All open iterators */
         struct zsdb_operations *op; /* Operations */
         unsigned int numtrans;      /* Total number of open transactions */
