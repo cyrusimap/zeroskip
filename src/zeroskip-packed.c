@@ -374,6 +374,32 @@ done:
         return ret;
 }
 
+int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
+                                       unsigned char **key, uint64_t *len)
+{
+        uint64_t off;
+        int ret;
+        struct zs_key k;
+
+        assert(f->indexpos <= f->index->count);
+
+        off = f->index->data[f->indexpos];
+
+        ret = zs_record_read_key_from_file_offset(f, off, &k);
+        assert(ret == ZS_OK);   /* This should not be anything otherwise */
+
+        if (k.base.type == REC_TYPE_KEY ||
+            k.base.type == REC_TYPE_DELETED)
+                *len = k.base.slen;
+        else if (k.base.type == REC_TYPE_LONG_KEY ||
+                 k.base.type == REC_TYPE_DELETED)
+                *len = k.base.llen;
+
+        *key = k.data;
+
+        return ZS_OK;
+}
+
 int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unused_)
 {
         struct zsdb_file *f1, *f2;

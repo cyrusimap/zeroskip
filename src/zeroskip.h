@@ -43,6 +43,9 @@ enum {
         ZS_INVALID_FILE   = -13,
 };
 
+/* Transactions */
+struct txn;
+
 /*
  * Operations structure for Zeroskip DB
  */
@@ -75,6 +78,10 @@ struct zsdb {
 /*
  * Callbacks
  */
+typedef int foreach_p(void *data,
+                       unsigned char *key, size_t keylen,
+                       unsigned char *value, size_t vallen);
+
 typedef int foreach_cb(void *data,
                        unsigned char *key, size_t keylen,
                        unsigned char *value, size_t vallen);
@@ -92,6 +99,8 @@ extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen);
 extern int zsdb_commit(struct zsdb *db);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
                       unsigned char **value, size_t *vallen);
+extern int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
+                       foreach_p *p, foreach_cb *cb, struct txn **txn);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
 extern int zsdb_abort(struct zsdb *db);
 extern int zsdb_consistent(struct zsdb *db);

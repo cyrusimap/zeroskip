@@ -63,6 +63,27 @@ static int load_records_cb(void *data,
         return 0;
 }
 
+static int print_record_cb(void *data _unused_,
+                           unsigned char *key, size_t keylen,
+                           unsigned char *value, size_t vallen)
+{
+        size_t i;
+
+        for (i = 0; i < keylen; i++) {
+                printf("%c", key[i]);
+        }
+        if (keylen) printf("\n");
+
+        for (i = 0; i < vallen; i++) {
+                printf("%c", value[i]);
+        }
+        if (vallen) printf("\n");
+
+        printf("---\n");
+
+        return 0;
+}
+
 static int process_active_file(const char *path, void *data)
 {
         struct zsdb_priv *priv;
@@ -120,7 +141,6 @@ done:
 
 static int process_packed_file(const char *path, void *data)
 {
-        struct zsdb_priv *priv;
         int ret = ZS_OK;
         struct zsdb_file *f _unused_;
 
@@ -132,16 +152,11 @@ static int process_packed_file(const char *path, void *data)
 
         zslog(LOGDEBUG, "processing packed file: %s\n", path);
 
-        priv = (struct zsdb_priv *)data;
-
         ret = zs_packed_file_open(path, &f);
         if (ret != ZS_OK) {
                 zslog(LOGDEBUG, "skipping file %s\n", path);
                 goto done;
         }
-
-        /* Insert into PQ */
-        pqueue_put(&priv->pq, f);
 
         pqueue_put(&packedpq, f);
 
@@ -379,6 +394,197 @@ static int zsdb_reload_db(struct zsdb_priv *priv _unused_)
         return ZS_OK;
 }
 
+static int zs_iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
+{
+        struct txn_data *e1, *e2;
+        unsigned char *key1 = NULL, *key2 = NULL;
+        uint64_t len1 = 0, len2 = 0;
+
+        e1 = (struct txn_data *)d1;
+        e2 = (struct txn_data *)d2;
+
+        switch(e1->type) {
+        case ZSDB_BE_ACTIVE:
+        case ZSDB_BE_FINALISED:
+        {
+                struct btree_iter *iter = (struct btree_iter *)e1->data.iter;
+
+                key1 = iter->record->key;
+                len1 = iter->record->keylen;
+        }
+                break;
+        case ZSDB_BE_PACKED:
+                zs_packed_file_get_key_from_offset(e1->data.f, &key1, &len1);
+                break;
+        default:
+                abort();        /* Should not happen */
+                break;
+        }
+
+        switch(e2->type) {
+        case ZSDB_BE_ACTIVE:
+        case ZSDB_BE_FINALISED:
+        {
+                struct btree_iter *iter = (struct btree_iter *)e2->data.iter;
+
+                key2 = iter->record->key;
+                len2 = iter->record->keylen;
+        }
+                break;
+        case ZSDB_BE_PACKED:
+                zs_packed_file_get_key_from_offset(e2->data.f, &key1, &len1);
+                break;
+        default:
+                break;
+        }
+
+        /* TODO: If key1 and key2 are the same, then check priority */
+        return memcmp(key1, key2, len1 < len2 ? len1 : len2);
+}
+
+struct txn_data *zs_txn_data_new(zsdb_be_t type, int prio, void *data)
+{
+        struct txn_data *d;
+
+        d = xcalloc(1, sizeof(struct txn_data));
+
+        d->type = type;
+        d->priority = prio;
+        if (type == ZSDB_BE_PACKED)
+                d->data.f = data;
+        else {
+                struct btree *tree = data;
+                btree_begin(tree, d->data.iter);
+        }
+
+        return d;
+}
+
+void zs_txn_data_free(struct txn_data **txnd)
+{
+        if (txnd && *txnd) {
+                struct txn_data *data = *txnd;
+                *txnd = NULL;
+
+                xfree(data);
+        }
+}
+
+int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
+{
+        struct txn *t = NULL;
+        struct zsdb_priv *priv;
+        struct list_head *pos;
+        int prio;
+        struct txn_data *ftxnd, *atxnd;
+
+        assert_zsdb(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        t = xcalloc(1, sizeof(struct txn));
+
+        t->db = db;
+        t->pq.cmp = zs_iter_pq_cmp;
+
+        /* Add the packed files to the PQ */
+        list_for_each_forward(pos, &priv->dbfiles.pflist) {
+                struct txn_data *txnd;
+                struct zsdb_file *f;
+                f = list_entry(pos, struct zsdb_file, list);
+                txnd = zs_txn_data_new(ZSDB_BE_PACKED, f->priority, f);
+                prio = f->priority;
+                pqueue_put(&t->pq, txnd);
+        }
+        /* Add finalised record to the PQ */
+        if (priv->dbfiles.ffcount) {
+                prio++;
+                ftxnd = zs_txn_data_new(ZSDB_BE_FINALISED, prio, priv->fmemtree);
+                pqueue_put(&t->pq, ftxnd);
+        }
+
+        /* Add active record to the PQ */
+        prio++;
+        atxnd = zs_txn_data_new(ZSDB_BE_ACTIVE, prio, priv->memtree);
+        pqueue_put(&t->pq, atxnd);
+
+        *txn = t;
+        return ZS_OK;
+}
+
+struct txn_data *zsdb_transaction_get(struct txn *txn)
+{
+        if (!txn)
+                return NULL;
+
+        assert_zsdb(txn->db);
+
+        return pqueue_get(&txn->pq);
+}
+
+int zsdb_transaction_next(struct txn *txn, struct txn_data *data)
+{
+
+        if (!txn)
+                return 0;
+
+        assert_zsdb(txn->db);
+
+        switch (data->type) {
+        case ZSDB_BE_ACTIVE:
+        case ZSDB_BE_FINALISED:
+                if (!btree_next(data->data.iter)) {
+                        zs_txn_data_free(&data);
+                        return 0;
+                }
+
+                break;
+        case ZSDB_BE_PACKED:
+        {
+                struct zsdb_file *f = data->data.f;
+                f->indexpos++;
+                if (f->indexpos > f->index->count) {
+                        zs_txn_data_free(&data);
+                        return 0;
+                }
+        }
+                break;
+        default:
+                abort();        /* Should never reach here */
+                break;
+        }
+
+        pqueue_put(&txn->pq, data);
+
+        return 1;
+}
+
+void zsdb_transaction_end(struct txn **txn)
+{
+        struct txn *t;
+
+        if (txn && *txn) {
+                t = *txn;
+                struct txn_data *txnd;
+                *txn = NULL;
+
+                t->db = NULL;
+
+                while((txnd = pqueue_get(&t->pq))) {
+                        zs_txn_data_free(&txnd);
+                }
+
+                pqueue_free(&t->pq);
+                xfree(t);
+        }
+}
+
 /**
  * Public functions
  */
@@ -540,9 +746,6 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 goto done;
         }
 
-        /* Compare function for the PQ */
-        priv->pq.cmp = zs_pq_cmp_key_frm_offset;
-
         /* In-memory tree */
         priv->memtree = btree_new(NULL, NULL);
         priv->fmemtree = btree_new(NULL, NULL);
@@ -689,9 +892,6 @@ int zsdb_close(struct zsdb *db)
 
         if (priv->fmemtree)
                 btree_free(priv->fmemtree);
-
-        /* Clear entries in PQ */
-        pqueue_free(&priv->pq);
 
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);
@@ -976,8 +1176,34 @@ int zsdb_dump(struct zsdb *db,
 
         if (level == DB_DUMP_ACTIVE || level == DB_DUMP_ALL) {
                 if (level == DB_DUMP_ALL) {
-                        /* TODO:Dump all the active, finalised and packed file
-                           records. We need an iterator! */
+                        struct txn *txn;
+                        struct txn_data *data;
+
+                        zsdb_transaction_begin(db, &txn);
+
+                        data = zsdb_transaction_get(txn);
+                        while (zsdb_transaction_next(txn, data)) {
+                                switch (data->type) {
+                                case ZSDB_BE_ACTIVE:
+                                case ZSDB_BE_FINALISED:
+                                        print_btree_rec(data->data.iter->record, NULL);
+                                        break;
+                                case ZSDB_BE_PACKED:
+                                {
+                                        struct zsdb_file *f = data->data.f;
+                                        size_t offset = f->index->data[f->indexpos];
+                                        zs_record_read_from_file(f, &offset,
+                                                                 print_record_cb,
+                                                                 NULL);
+                                }
+                                break;
+                                default:
+                                        break; /* Should never reach here */
+                                }
+                                data = zsdb_transaction_get(txn);
+                        } /* while () */
+
+                        zsdb_transaction_end(&txn);
                 } else {
                         /* Dump active records only */
                         btree_walk_forward(priv->memtree, print_btree_rec, NULL);
@@ -1169,6 +1395,13 @@ int zsdb_info(struct zsdb *db)
         }
 
         return ret;
+}
+
+int zsdb_forone(struct zsdb *db _unused_, unsigned char *key _unused_,
+                size_t keylen _unused_, foreach_p *p _unused_,
+                foreach_cb *cb _unused_, struct txn **txn _unused_)
+{
+        return ZS_NOTIMPLEMENTED;
 }
 
 /* Lock file names */

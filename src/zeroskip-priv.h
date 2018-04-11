@@ -197,13 +197,28 @@ struct zsdb_files {
 
 /* Storage Backend */
 typedef enum _zsdb_be_t {
-        ZSDB_BE_MEM,
-        ZSDB_BE_LOG,
-        ZSDB_BE_PACK,
+        ZSDB_BE_ACTIVE,
+        ZSDB_BE_FINALISED,
+        ZSDB_BE_PACKED,
 } zsdb_be_t;
 
 struct zsdb_store {
         zsdb_be_t type;
+};
+
+/* Data for priority queue for lookup */
+struct txn_data {
+        zsdb_be_t type;
+        int priority;
+        union {
+                btree_iter_t iter;
+                struct zsdb_file *f;
+        } data;
+};
+/* Transaction structure */
+struct txn {
+        struct zsdb *db;
+        struct pqueue pq;
 };
 
 /* Private data structure */
@@ -217,8 +232,6 @@ struct zsdb_priv {
         cstring dbdir;            /* The directory path */
 
         struct zsdb_files dbfiles;
-
-        struct pqueue pq;         /* Priority Q holding the next item */
 
         /* Locks */
         struct file_lock wlk;     /* Lock when writing */
@@ -294,6 +307,9 @@ extern int zs_packed_file_write_record(struct record *record, void *data);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
 extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
                                     void *cbdata);
+extern int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
+                                              unsigned char **key,
+                                              uint64_t *len);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
