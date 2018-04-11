@@ -428,6 +428,24 @@ void btree_free(struct btree *btree)
         xfree(btree);
 }
 
+int btree_begin(const struct btree *btree, btree_iter_t iter)
+{
+        struct btree_node *node;
+
+        iter->tree = (struct btree *)btree;
+        iter->node = btree->root;
+        iter->pos = 0;
+        branch_begin(iter);
+
+        node = iter->node;
+        if (node->count) {
+                iter->record = node->recs[iter->pos];
+                return 1;
+        }
+
+        return 0;
+}
+
 int btree_prev(btree_iter_t iter)
 {
         if (iter->node->depth) {
