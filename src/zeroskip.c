@@ -439,7 +439,7 @@ static int zs_iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
         }
 
         /* TODO: If key1 and key2 are the same, then check priority */
-        return memcmp(key1, key2, len1 < len2 ? len1 : len2);
+        return memcmp_raw(key1, len1, key2, len2);
 }
 
 struct txn_data *zs_txn_data_new(zsdb_be_t type, int prio, void *data)

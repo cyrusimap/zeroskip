@@ -168,9 +168,19 @@ int btree_next(btree_iter_t iter);
 
 /* The B-Tree requires a binary search function for comparison.
  */
-unsigned int btree_memcmp(unsigned char *key, size_t keylen,
-                          struct record **recs,
-                          unsigned int count, int *found);
+
+/* btree_memcmp_natural():
+   Sorts on natural order
+ */
+unsigned int btree_memcmp_natural(unsigned char *key, size_t keylen,
+                                  struct record **recs,
+                                  unsigned int count, int *found);
+/* btree_memcmp_raw():
+   Sorts raw - data with common prefixes are grouped together.
+ */
+unsigned int btree_memcmp_raw(unsigned char *key, size_t keylen,
+                              struct record **recs,
+                              unsigned int count, int *found);
 
 int btree_destroy(struct record *record, void *data);
 

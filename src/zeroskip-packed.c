@@ -443,5 +443,5 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unuse
                  key2.base.type == REC_TYPE_DELETED)
                 len2 = key2.base.llen;
 
-        return memcmp(key1.data, key2.data, len1 < len2 ? len1 : len2);
+        return memcmp_raw(key1.data, len1, key2.data, len2);
 }

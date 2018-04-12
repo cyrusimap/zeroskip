@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/time.h>
 
@@ -319,7 +320,29 @@ int file_lock(int fd, struct flockctx **ctx);
 int file_unlock(int fd, struct flockctx **ctx);
 
 
+/* Comparison functions */
 int natural_strcasecmp(const char *s1, const char *s2);
+
+static inline int memcmp_raw(const void *s1, size_t l1, const void *s2, size_t l2)
+{
+        int ret;
+
+        ret = memcmp(s1, s2, l1 < l2 ? l1 : l2);
+
+        if (ret == 0) {
+                if (l1 > l2)
+                        ret = 1;
+                else if (l2 > l1)
+                        ret = -1;
+        }
+
+        return ret;
+}
+
+static inline int memcmp_natural(const void *s1, size_t l1, const void *s2, size_t l2)
+{
+        return memcmp(s1, s2, l1 < l2 ? l1 : l2);
+}
 
 CPP_GUARD_END
 
