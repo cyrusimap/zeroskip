@@ -435,7 +435,8 @@ int btree_begin(const struct btree *btree, btree_iter_t iter)
         iter->tree = (struct btree *)btree;
         iter->node = btree->root;
         iter->pos = 0;
-        branch_begin(iter);
+        if (iter->node->depth)
+                branch_begin(iter);
 
         node = iter->node;
         if (node->count) {
