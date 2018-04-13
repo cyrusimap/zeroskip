@@ -7,6 +7,7 @@ ZS_LIBOBJS =  			\
 	crc32c.o		\
 	cstring.o		\
 	file-lock.o		\
+	htable.o		\
 	log.o			\
 	mappedfile.o		\
 	pqueue.o		\
