@@ -169,7 +169,7 @@ int zs_packed_file_open(const char *path,
         int mappedfile_flags = MAPPEDFILE_RD;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
-        f->type = DB_FTYPE_FINALISED;
+        f->type = DB_FTYPE_PACKED;
         cstring_init(&f->fname, 0);
         cstring_addstr(&f->fname, path);
 
@@ -294,7 +294,7 @@ int zs_packed_file_new_from_memtree(const char * path,
         struct zsdb_file *f;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
-        f->type = DB_FTYPE_FINALISED;
+        f->type = DB_FTYPE_PACKED;
         cstring_init(&f->fname, 0);
         cstring_addstr(&f->fname, path);
         f->index = vecu64_new();
@@ -445,3 +445,4 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unuse
 
         return memcmp_raw(key1.data, len1, key2.data, len2);
 }
+
