@@ -16,7 +16,9 @@
 
 struct _hashEntry {
         void *key;
+        size_t keylen;
         void *val;
+        size_t vallen;
         struct _hashEntry *next;
 };
 
@@ -200,7 +202,7 @@ static HtStatus ht_resize_if_needed(HashTable *ht)
  * Function returns the index of key, if successfully found,
  * a (-1) otherwise.
  */
-static int ht_get_index(HashTable *ht, void *key)
+static int ht_get_index(HashTable *ht, void *key, size_t keylen)
 {
         unsigned int hash, index = -1, table;
         HashEntry *e;
@@ -215,7 +217,7 @@ static int ht_get_index(HashTable *ht, void *key)
                 index = hash & ht->table[table].sizemask;
                 e = ht->table[table].entries[index];
                 while (e) {
-                        if (HT_CMP_KEYS(ht, key, e->key))
+                        if (HT_CMP_KEYS(ht, key, keylen, e->key, e->keylen))
                                 return -1;
 
                         e = e->next;
@@ -230,7 +232,7 @@ static int ht_get_index(HashTable *ht, void *key)
         return index;
 }
 
-static HashEntry *ht_insert_key(HashTable *ht, void *key)
+static HashEntry *ht_insert_key(HashTable *ht, void *key, size_t keylen)
 {
         int index;
         HashEntry *e;
@@ -240,7 +242,7 @@ static HashEntry *ht_insert_key(HashTable *ht, void *key)
                 ht_rehash_if_possible(ht);
         }
 
-        index = ht_get_index(ht, key);
+        index = ht_get_index(ht, key, keylen);
         if (index == -1)
                 return NULL;
 
@@ -254,12 +256,12 @@ static HashEntry *ht_insert_key(HashTable *ht, void *key)
         t->entries[index] = e;
         t->used++;
 
-        HT_DUP_KEY(ht, e, key);
+        HT_DUP_KEY(ht, e, key, keylen);
 
         return e;
 }
 
-static HtStatus ht_delete_key(HashTable *ht, const void *key)
+static HtStatus ht_delete_key(HashTable *ht, const void *key, size_t keylen)
 {
         unsigned int index, hash;
         int table;
@@ -279,7 +281,7 @@ static HtStatus ht_delete_key(HashTable *ht, const void *key)
                 prev = NULL;
 
                 while (e) {
-                        if (HT_CMP_KEYS(ht, key, e->key)) {
+                        if (HT_CMP_KEYS(ht, key, keylen, e->key, e->keylen)) {
                                 if (prev)
                                         prev->next = e->next;
                                 else
@@ -308,7 +310,7 @@ static HtStatus ht_delete_key(HashTable *ht, const void *key)
         return HT_ERROR;
 }
 
-static HashEntry *ht_find_entry(HashTable *ht, void *key)
+static HashEntry *ht_find_entry(HashTable *ht, void *key, size_t keylen)
 {
         HashEntry *e;
         unsigned int hash, table, index;
@@ -326,7 +328,7 @@ static HashEntry *ht_find_entry(HashTable *ht, void *key)
                 e = ht->table[table].entries[index];
 
                 while (e) {
-                        if (HT_CMP_KEYS(ht, key, e->key)) {
+                        if (HT_CMP_KEYS(ht, key, keylen, e->key, e->keylen)) {
                                 return e;
                         }
 
@@ -349,7 +351,7 @@ static HashEntry *ht_find_entry(HashTable *ht, void *key)
  * This is an implementation of the mururmur3 hash by Austin Appleby:
  * https://github.com/aappleby/smhasher
  */
-unsigned int murmur3_hash_32(const void *key, int len)
+unsigned int murmur3_hash_32(const void *key, size_t len)
 {
         uint32_t hash = hash_func_seed;
         const int nblocks = len / 4;
@@ -445,29 +447,30 @@ void ht_free(HashTable *ht)
         xfree(ht);
 }
 
-HtStatus ht_insert(HashTable *ht, void *key, void *val)
+HtStatus ht_insert(HashTable *ht, void *key, size_t keylen,
+                   void *val, size_t vallen)
 {
         HashEntry *e;
 
-        e = ht_insert_key(ht, key);
+        e = ht_insert_key(ht, key, keylen);
         if (!e)
                 return HT_ERROR;
 
-        HT_DUP_VAL(ht, e, val);
+        HT_DUP_VAL(ht, e, val, vallen);
 
         return HT_SUCCESS;
 }
 
-HtStatus ht_delete(HashTable *ht, const void *key)
+HtStatus ht_delete(HashTable *ht, const void *key, size_t keylen)
 {
-        return ht_delete_key(ht, key);
+        return ht_delete_key(ht, key, keylen);
 }
 
-void *ht_find(HashTable *ht, void *key)
+void *ht_find(HashTable *ht, void *key, size_t keylen)
 {
         HashEntry *e;
 
-        e = ht_find_entry(ht, key);
+        e = ht_find_entry(ht, key, keylen);
 
         return e ? e->val : NULL;
 }
@@ -478,17 +481,18 @@ void *ht_find(HashTable *ht, void *key)
  * Returns a HT_SUCCESS if the value is replaced successfully, HT_ERROR
  * otherwise.
  */
-HtStatus ht_replace(HashTable *ht, void *key, void *newval)
+HtStatus ht_replace(HashTable *ht, void *key, size_t keylen,
+                    void *newval, size_t newvallen)
 {
         HashEntry *e, *tmp_e;
 
-        if (ht_insert(ht, key, newval) == HT_SUCCESS)
+        if (ht_insert(ht, key, keylen, newval, newvallen) == HT_SUCCESS)
                 return HT_INSERTED;
 
-        e = ht_find_entry(ht, key);
+        e = ht_find_entry(ht, key, keylen);
 
         tmp_e = e;
-        HT_DUP_VAL(ht, e, newval);
+        HT_DUP_VAL(ht, e, newval, newvallen);
         HT_FREE_VAL(ht, tmp_e);
 
         return HT_SUCCESS;
