@@ -39,6 +39,22 @@
 static struct pqueue finalisedpq;
 static struct pqueue packedpq;
 
+
+#ifdef ZS_DEBUG
+void assert_zsdb(struct zsdb *db)
+{
+        assert(db);
+        assert(db->priv);
+}
+
+int zsdb_break(int err)
+{
+        return err;
+}
+#else
+#define assert_zsdb(x)
+#endif
+
 /**
  * Private functions
  */
@@ -312,7 +328,8 @@ static int for_each_db_file_in_dbdir(char *const path[],
                         snprintf(sbuf, PATH_MAX, "%s/%s/%s", buf,
                                  *path ? *path : buf, bname);
                 else
-                        snprintf(sbuf, PATH_MAX, "%s/%s", *path ? *path : buf, bname);
+                        snprintf(sbuf, PATH_MAX, "%s/%s",
+                                 *path ? *path : buf, bname);
 
                 if (lstat(sbuf, &sb) != 0) {
                         continue;
@@ -389,9 +406,9 @@ static void zs_find_index_range_for_files(struct list_head *flist,
         }
 }
 
-static int zsdb_reload_db(struct zsdb_priv *priv _unused_)
+static int zsdb_reload(struct zsdb_priv *priv _unused_)
 {
-        return ZS_OK;
+        return ZS_NOTIMPLEMENTED;
 }
 
 static int zs_iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
@@ -442,7 +459,7 @@ static int zs_iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
         return memcmp_raw(key1, len1, key2, len2);
 }
 
-struct txn_data *zs_txn_data_new(zsdb_be_t type, int prio, void *data)
+static struct txn_data *zs_txn_data_new(zsdb_be_t type, int prio, void *data)
 {
         struct txn_data *d;
 
@@ -460,7 +477,7 @@ struct txn_data *zs_txn_data_new(zsdb_be_t type, int prio, void *data)
         return d;
 }
 
-void zs_txn_data_free(struct txn_data **txnd)
+static void zs_txn_data_free(struct txn_data **txnd)
 {
         if (txnd && *txnd) {
                 struct txn_data *data = *txnd;
@@ -470,7 +487,7 @@ void zs_txn_data_free(struct txn_data **txnd)
         }
 }
 
-int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
+static int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
 {
         struct txn *t = NULL;
         struct zsdb_priv *priv;
@@ -518,7 +535,7 @@ int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
         return ZS_OK;
 }
 
-struct txn_data *zsdb_transaction_get(struct txn *txn)
+static struct txn_data *zsdb_transaction_get(struct txn *txn)
 {
         if (!txn)
                 return NULL;
@@ -528,7 +545,7 @@ struct txn_data *zsdb_transaction_get(struct txn *txn)
         return pqueue_get(&txn->pq);
 }
 
-int zsdb_transaction_next(struct txn *txn, struct txn_data *data)
+static int zsdb_transaction_next(struct txn *txn, struct txn_data *data)
 {
 
         if (!txn)
@@ -565,7 +582,7 @@ int zsdb_transaction_next(struct txn *txn, struct txn_data *data)
         return 1;
 }
 
-void zsdb_transaction_end(struct txn **txn)
+static void zsdb_transaction_end(struct txn **txn)
 {
         struct txn *t;
 
@@ -588,21 +605,6 @@ void zsdb_transaction_end(struct txn **txn)
 /**
  * Public functions
  */
-#ifdef ZS_DEBUG
-void assert_zsdb(struct zsdb *db)
-{
-        assert(db);
-        assert(db->priv);
-}
-
-int zsdb_break(int err)
-{
-        return err;
-}
-#else
-#define assert_zsdb(x)
-#endif
-
 int zsdb_init(struct zsdb **pdb)
 {
         struct zsdb *db;
@@ -939,29 +941,22 @@ int zsdb_add(struct zsdb *db,
         if (inonum != priv->dotzsdb_ino) {
                 /* If the inode number differ, the db has changed since the
                    time it has been opened. We need to reload the DB */
-                zsdb_reload_db(priv); /* TODO: check return value */
-                zslog(LOGWARNING, "DB updated!\n");
+                zsdb_reload(priv); /* TODO: check return value */
                 ret = ZS_ERROR;
                 goto done;
         }
 
         /* check file size and finalise if necessary */
-        zslog(LOGWARNING, ">> Getting size for %s\n",
-              priv->dbfiles.factive.fname.buf);
         if (mappedfile_size(&priv->dbfiles.factive.mf, &mfsize) != 0) {
                 zslog(LOGWARNING, "Failed getting size for %s\n",
                         priv->dbfiles.factive.fname.buf);
                 ret = ZS_ERROR;
                 goto done;
         }
-        zslog(LOGWARNING, ">> Size for %s = %zu\n",
-              priv->dbfiles.factive.fname.buf, mfsize);
 
         if (mfsize >= TWOMB) {
                 zslog(LOGDEBUG, "File %s is > 2MB, finalising.\n",
                         priv->dbfiles.factive.fname.buf);
-                printf(">> File %s is > 2MB, finalising.\n",
-                       priv->dbfiles.factive.fname.buf);
                 ret = zs_active_file_finalise(priv);
                 if (ret != ZS_OK) goto done;
 
@@ -969,8 +964,6 @@ int zsdb_add(struct zsdb *db,
                                          priv->dotzsdb.curidx + 1);
                 zslog(LOGDEBUG, "New active log file %s created.\n",
                         priv->dbfiles.factive.fname.buf);
-                printf(">> New active log file %s created.\n",
-                       priv->dbfiles.factive.fname.buf);
         }
 
         /* Start computing crc32, if we haven't already. The computation will
@@ -990,9 +983,6 @@ int zsdb_add(struct zsdb *db,
 
         rec = record_new(key, keylen, value, vallen);
         btree_replace(priv->memtree, rec);
-
-        /* TODO: REMOVE THE PRINTING! */
-        /* btree_print_node_data(priv->memtree, NULL); */
 
         zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
                 priv->dbfiles.factive.fname.buf);
@@ -1048,9 +1038,6 @@ int zsdb_remove(struct zsdb *db,
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, NULL, 0);
         btree_replace(priv->memtree, rec);
-
-        /* TODO: REMOVE THE PRINTING! */
-        /* btree_print_node_data(priv->memtree, NULL); */
 
 done:
         return ret;
@@ -1278,7 +1265,7 @@ int zsdb_repack(struct zsdb *db)
         if (inonum != priv->dotzsdb_ino) {
                 /* If the inode numbers differ, the db has changed, since the
                    time it has been opened. We need to reload the DB */
-                zsdb_reload_db(priv);
+                zsdb_reload(priv);
         }
 
         if (!zs_dotzsdb_update_begin(priv)) {

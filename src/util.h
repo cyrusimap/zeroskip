@@ -323,7 +323,8 @@ int file_unlock(int fd, struct flockctx **ctx);
 /* Comparison functions */
 int natural_strcasecmp(const char *s1, const char *s2);
 
-static inline int memcmp_raw(const void *s1, size_t l1, const void *s2, size_t l2)
+static inline int memcmp_raw(const void *s1, size_t l1,
+                             const void *s2, size_t l2)
 {
         int ret;
 
@@ -339,7 +340,8 @@ static inline int memcmp_raw(const void *s1, size_t l1, const void *s2, size_t l
         return ret;
 }
 
-static inline int memcmp_natural(const void *s1, size_t l1, const void *s2, size_t l2)
+static inline int memcmp_natural(const void *s1, size_t l1,
+                                 const void *s2, size_t l2)
 {
         return memcmp(s1, s2, l1 < l2 ? l1 : l2);
 }
