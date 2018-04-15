@@ -583,13 +583,6 @@ unsigned int btree_memcmp_raw(unsigned char *key, size_t keylen,
 
                 min = keylen < recs[pos]->keylen ? keylen : recs[pos]->keylen;
 
-                #if 0
-                if (keylen < recs[pos]->keylen)
-                        goto lessthan;
-                if (keylen > recs[pos]->keylen)
-                        goto greaterthan;
-                #endif
-
                 c = memcmp(k, b, min);
                 if (c == 0) {
                         if (keylen > recs[pos]->keylen)

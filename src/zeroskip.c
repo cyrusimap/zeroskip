@@ -7,6 +7,7 @@
  */
 #include "btree.h"
 #include "cstring.h"
+#include "htable.h"
 #include "log.h"
 #include "macros.h"
 #include "pqueue.h"
@@ -38,7 +39,6 @@
  */
 static struct pqueue finalisedpq;
 static struct pqueue packedpq;
-
 
 #ifdef ZS_DEBUG
 void assert_zsdb(struct zsdb *db)
@@ -411,7 +411,7 @@ static int zsdb_reload(struct zsdb_priv *priv _unused_)
         return ZS_NOTIMPLEMENTED;
 }
 
-static int zs_iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
+static int zs_iter_pq_cmp_1(const void *d1, const void *d2, void *cbdata _unused_)
 {
         struct txn_data *e1, *e2;
         unsigned char *key1 = NULL, *key2 = NULL;
@@ -457,149 +457,6 @@ static int zs_iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
 
         /* TODO: If key1 and key2 are the same, then check priority */
         return memcmp_raw(key1, len1, key2, len2);
-}
-
-static struct txn_data *zs_txn_data_new(zsdb_be_t type, int prio, void *data)
-{
-        struct txn_data *d;
-
-        d = xcalloc(1, sizeof(struct txn_data));
-
-        d->type = type;
-        d->priority = prio;
-        if (type == ZSDB_BE_PACKED)
-                d->data.f = data;
-        else {
-                struct btree *tree = data;
-                btree_begin(tree, d->data.iter);
-        }
-
-        return d;
-}
-
-static void zs_txn_data_free(struct txn_data **txnd)
-{
-        if (txnd && *txnd) {
-                struct txn_data *data = *txnd;
-                *txnd = NULL;
-
-                xfree(data);
-        }
-}
-
-static int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
-{
-        struct txn *t = NULL;
-        struct zsdb_priv *priv;
-        struct list_head *pos;
-        int prio;
-        struct txn_data *ftxnd, *atxnd;
-
-        assert_zsdb(db);
-
-        priv = db->priv;
-        if (!priv) return ZS_INTERNAL;
-
-        if (!priv->open) {
-                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
-                return ZS_NOT_OPEN;
-        }
-
-        t = xcalloc(1, sizeof(struct txn));
-
-        t->db = db;
-        t->pq.cmp = zs_iter_pq_cmp;
-
-        /* Add the packed files to the PQ */
-        list_for_each_forward(pos, &priv->dbfiles.pflist) {
-                struct txn_data *txnd;
-                struct zsdb_file *f;
-                f = list_entry(pos, struct zsdb_file, list);
-                txnd = zs_txn_data_new(ZSDB_BE_PACKED, f->priority, f);
-                prio = f->priority;
-                pqueue_put(&t->pq, txnd);
-        }
-        /* Add finalised record to the PQ */
-        if (priv->dbfiles.ffcount) {
-                prio++;
-                ftxnd = zs_txn_data_new(ZSDB_BE_FINALISED, prio, priv->fmemtree);
-                pqueue_put(&t->pq, ftxnd);
-        }
-
-        /* Add active record to the PQ */
-        prio++;
-        atxnd = zs_txn_data_new(ZSDB_BE_ACTIVE, prio, priv->memtree);
-        pqueue_put(&t->pq, atxnd);
-
-        *txn = t;
-        return ZS_OK;
-}
-
-static struct txn_data *zsdb_transaction_get(struct txn *txn)
-{
-        if (!txn)
-                return NULL;
-
-        assert_zsdb(txn->db);
-
-        return pqueue_get(&txn->pq);
-}
-
-static int zsdb_transaction_next(struct txn *txn, struct txn_data *data)
-{
-
-        if (!txn)
-                return 0;
-
-        assert_zsdb(txn->db);
-
-        switch (data->type) {
-        case ZSDB_BE_ACTIVE:
-        case ZSDB_BE_FINALISED:
-                if (!btree_next(data->data.iter)) {
-                        zs_txn_data_free(&data);
-                        return 0;
-                }
-
-                break;
-        case ZSDB_BE_PACKED:
-        {
-                struct zsdb_file *f = data->data.f;
-                f->indexpos++;
-                if (f->indexpos > f->index->count) {
-                        zs_txn_data_free(&data);
-                        return 0;
-                }
-        }
-                break;
-        default:
-                abort();        /* Should never reach here */
-                break;
-        }
-
-        pqueue_put(&txn->pq, data);
-
-        return 1;
-}
-
-static void zsdb_transaction_end(struct txn **txn)
-{
-        struct txn *t;
-
-        if (txn && *txn) {
-                t = *txn;
-                struct txn_data *txnd;
-                *txn = NULL;
-
-                t->db = NULL;
-
-                while((txnd = pqueue_get(&t->pq))) {
-                        zs_txn_data_free(&txnd);
-                }
-
-                pqueue_free(&t->pq);
-                xfree(t);
-        }
 }
 
 /**
@@ -1150,6 +1007,7 @@ int zsdb_dump(struct zsdb *db,
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
+        int count = 0;
 
         assert_zsdb(db);
 
@@ -1166,10 +1024,10 @@ int zsdb_dump(struct zsdb *db,
                         struct txn *txn;
                         struct txn_data *data;
 
-                        zsdb_transaction_begin(db, &txn);
+                        zs_transaction_begin(db, &txn);
 
-                        data = zsdb_transaction_get(txn);
-                        while (zsdb_transaction_next(txn, data)) {
+                        do {
+                                data = zs_transaction_get(txn);
                                 switch (data->type) {
                                 case ZSDB_BE_ACTIVE:
                                 case ZSDB_BE_FINALISED:
@@ -1187,23 +1045,20 @@ int zsdb_dump(struct zsdb *db,
                                 default:
                                         break; /* Should never reach here */
                                 }
-                                data = zsdb_transaction_get(txn);
-                        } /* while () */
+                                count++;
+                        } while (zs_transaction_next(txn, data));
 
-                        zsdb_transaction_end(&txn);
+                        zs_transaction_end(&txn);
                 } else {
                         /* Dump active records only */
                         btree_walk_forward(priv->memtree, print_btree_rec, NULL);
-#if 0
-                        ret = zs_active_file_record_foreach(priv, print_rec,
-                                                            NULL);
-#endif
                 }
         } else {
                 zslog(LOGDEBUG, "Invalid DB dump option\n");
                 return ZS_ERROR;
         }
 
+        zslog(LOGDEBUG, ">> Total records: %d\n", count);
         return ret;
 }
 

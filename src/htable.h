@@ -72,10 +72,10 @@ extern void *htable_get(const struct htable *ht, const void *key,
  */
 extern void *htable_get_next(const struct htable *ht, const void *entry);
 
-/* htable_add():
+/* htable_put():
  *  adds a entry into the hash table. Allows duplicate entries.
  */
-extern void htable_add(struct htable *ht, void *entry);
+extern void htable_put(struct htable *ht, void *entry);
 
 /* htable_replace():
  *  replace an entry in the hash table, if it exists. If the entry doesn't

@@ -117,9 +117,9 @@ void htable_init(struct htable *ht, htable_cmp_fn cmp_fn,
         /* calculate initial size */
         size = size * 100 / HTABLE_RESIZE_THRESHOLD;
         while (size > init_size)
-                size <<= HTABLE_RESIZE_BITS;
+                init_size <<= HTABLE_RESIZE_BITS;
 
-        alloc_htable(ht, size);
+        alloc_htable(ht, init_size);
 }
 
 void htable_free(struct htable *ht, int free_entries)
@@ -155,7 +155,7 @@ void *htable_get_next(const struct htable *ht, const void *entry)
         return NULL;
 }
 
-void htable_add(struct htable *ht, void *entry)
+void htable_put(struct htable *ht, void *entry)
 {
         unsigned int b = bucket(ht, entry);
 
@@ -190,7 +190,7 @@ void *htable_remove(struct htable *ht, const void *key,
 void *htable_replace(struct htable *ht, void *entry)
 {
         struct htable_entry *old = htable_remove(ht, entry, NULL);
-        htable_add(ht, entry);
+        htable_put(ht, entry);
 
         return old;
 }

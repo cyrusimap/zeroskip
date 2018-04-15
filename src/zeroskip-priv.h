@@ -14,6 +14,7 @@
 #include "btree.h"
 #include "cstring.h"
 #include "file-lock.h"
+#include "htable.h"
 #include "list.h"
 #include "macros.h"
 #include "mappedfile.h"
@@ -206,19 +207,42 @@ struct zsdb_store {
         zsdb_be_t type;
 };
 
+struct iter_key_data {
+        unsigned char *key;
+        size_t len;
+};
+
 /* Data for priority queue for lookup */
 struct txn_data {
         zsdb_be_t type;
         int priority;
+        int done;
         union {
                 btree_iter_t iter;
                 struct zsdb_file *f;
         } data;
 };
+
 /* Transaction structure */
+struct txn_htable {
+        struct htable table;
+};
+
+struct txn_htable_entry {
+        struct htable_entry entry;
+        unsigned char *key;
+        size_t keylen;
+        void *value;
+};
+
 struct txn {
         struct zsdb *db;
         struct pqueue pq;
+        struct txn_htable ht;
+
+        struct txn_data **datav;
+        int txn_data_count;
+        int txn_data_alloc;
 };
 
 /* Private data structure */
@@ -318,6 +342,11 @@ extern int zs_record_read_key_from_file_offset(struct zsdb_file *f,
                                                size_t offset,
                                                struct zs_key *key);
 
-
+/* zeroskip-transaction.c */
+extern int zs_transaction_begin(struct zsdb *db, struct txn **txn);
+extern struct txn_data *zs_transaction_get(struct txn *txn);
+extern int zs_transaction_next(struct txn *txn,
+                               struct txn_data *data);
+extern void zs_transaction_end(struct txn **txn);
 CPP_GUARD_END
 #endif  /* _ZEROSKIP_PRIV_H_ */
