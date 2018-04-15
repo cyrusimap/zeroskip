@@ -16,79 +16,99 @@
 #include "macros.h"
 
 CPP_GUARD_START
-typedef struct _hashTable HashTable;
-typedef struct _hashEntry HashEntry;
-typedef struct _hashProps HashProps;
 
-typedef enum {
-        HT_SUCCESS = 0,
-        HT_INSERTED = -1,
-        HT_ERROR = -2,
-        HT_EXISTS = -3,
-        HT_INDEX_ERR = -4,
-        HT_EMPTY = -5
-} HtStatus;
+unsigned int bufhash(const void *buf, size_t len);
 
-struct _hashProps {
-        unsigned int (*hash_fn)(const void *key);
-        int (*key_cmp_fn)(const void *key1, size_t len1,
-                          const void *key2, size_t len2);
+/* Comparison function */
+typedef int (*htable_cmp_fn)(const void *data, const void *entry1,
+                             const void *entry2, const void *kdata);
 
-        void *(*key_dup_fn)(const void *key, size_t len);
-        void *(*val_dup_fn)(const void *val, size_t len);
-
-        void (*key_free_fn)(void *key);
-        void (*val_free_fn)(void *val);
+/* struct htable_entry represents an entry in the hash table
+ * and should be the first member in the user data structure for
+ * the entry.
+ */
+struct htable_entry {
+        struct htable_entry *next; /* next element in case of collision */
+        unsigned int hash;
 };
 
-#define HT_CMP_KEYS(h, key1, len1, key2, len2)                  \
-        (((h)->props->key_cmp_fn) ?                             \
-         (h)->props->key_cmp_fn(key1, len1, key2, len2) :       \
-         (key1) == (key2))
+struct htable {
+        struct htable_entry **table;
 
-#define HT_DUP_KEY(h, entry, k, len) do {                               \
-                if ((h)->props->key_dup_fn) {                           \
-                        entry->key = (h)->props->key_dup_fn(k, len);    \
-                } else {                                                \
-                        entry->key = k;                                 \
-                        entry->keylen = len;                            \
-                }                                                       \
-        } while(0)
+        htable_cmp_fn cmpfn;
+        const void *cmpfndata;
 
-#define HT_FREE_KEY(h, entry)                           \
-        if ((h)->props->key_free_fn)                    \
-                (h)->props->key_free_fn((entry)->key)
+        unsigned int count;      /* number of entries */
+        size_t size;             /* allocated size of the table */
 
-#define HT_DUP_VAL(h, entry, v, len) do {                               \
-                if ((h)->props->val_dup_fn) {                           \
-                        entry->val = (h)->props->val_dup_fn(v, len);    \
-                } else {                                                \
-                        entry->val = v;                                 \
-                        entry->vallen = len;                            \
-                }                                                       \
-        } while(0)
+        unsigned int grow_mark;
+        unsigned int shrink_mark;
+};
 
-#define HT_FREE_VAL(h, entry)                           \
-        if ((h)->props->val_free_fn)                    \
-                (h)->props->val_free_fn((entry)->val)
+extern void htable_init(struct htable *ht, htable_cmp_fn cmp_fn,
+                        const void *cmpfndata, size_t size);
+extern void htable_free(struct htable *ht, int free_entries);
 
+/* htable_entry_init():
+ *   initialise htable entry
+ */
+static inline void htable_entry_init(void *entry, unsigned int hash)
+{
+        struct htable_entry *e = entry;
+        e->hash = hash;
+        e->next = NULL;
+}
 
-HashTable *ht_new(HashProps *props);
-void ht_free(HashTable *ht);
+/* htable_get():
+ *  get the entry for a given key, NULL otherwise.
+ */
+extern void *htable_get(const struct htable *ht, const void *key,
+                        const void *keydata);
 
-HtStatus ht_insert(HashTable *ht, void *key, size_t keylen,
-                   void *val, size_t vallen);
-HtStatus ht_delete(HashTable *ht, const void *key, size_t keylen);
-void *ht_find(HashTable *ht, void *key, size_t keylen);
-HtStatus ht_replace(HashTable *ht, void *key, size_t keylen,
-                    void *newval, size_t newvallen);
+/* htable_get_next():
+ *  get the 'next' entry in the hash table, when there are duplicate entries
+ * becuase of collision, NULL if there are no duplicate entries. `entry` is
+ * where the lookup should start from.
+ */
+extern void *htable_get_next(const struct htable *ht, const void *entry);
 
-void ht_set_hash_function_seed(uint32_t seed);
-uint32_t ht_get_hash_function_seed(void);
-unsigned int murmur3_hash_32(const void *key, size_t len);
+/* htable_add():
+ *  adds a entry into the hash table. Allows duplicate entries.
+ */
+extern void htable_add(struct htable *ht, void *entry);
 
-unsigned long ht_get_capacity(HashTable *ht);
-unsigned long ht_get_size(HashTable *ht);
+/* htable_replace():
+ *  replace an entry in the hash table, if it exists. If the entry doesn't
+ * exist, it just adds a new entry(works like htable_add()).
+ * In case of replacement, it returns the current value of the entry.
+ */
+extern void *htable_replace(struct htable *ht, void *entry);
+
+/* htable_remove():
+ *  remove an entry in the hash table matching a specified key. If the key
+ * contains duplicate entries, only one will be removed. Returns the removed
+ * entry or NULL if no entry exists.
+ */
+extern void *htable_remove(struct htable *ht, const void *key,
+                           const void *keydata);
+
+/* hashtable iterator */
+struct htable_iter {
+        struct htable *ht;
+        struct htable_entry *next;
+        unsigned int pos;
+};
+
+extern void htable_iter_init(struct htable *ht, struct htable_iter *iter);
+
+extern void *htable_iter_next(struct htable_iter *iter);
+
+static inline void *htable_iter_first(struct htable *ht,
+                                      struct htable_iter *iter)
+{
+        htable_iter_init(ht, iter);
+        return htable_iter_next(iter);
+}
 
 CPP_GUARD_END
 #endif  /* _HTABLE_H_ */

@@ -14,496 +14,207 @@
 #include <string.h>
 #include <limits.h>
 
-struct _hashEntry {
-        void *key;
-        size_t keylen;
-        void *val;
-        size_t vallen;
-        struct _hashEntry *next;
-};
+#define FNV32_BASE  ((unsigned int) 0x811c9dc5)
+#define FNV32_PRIME ((unsigned int) 0x01000193)
 
-struct _ht {
-        unsigned long size;     /* unsigned long: 0 to 4,294,967,295 */
-        unsigned long used;
-        unsigned long sizemask;
-        struct _hashEntry **entries;
-};
+#define HTABLE_INIT_SIZE        64
+#define HTABLE_RESIZE_BITS       2
+#define HTABLE_RESIZE_THRESHOLD 80
 
-struct _hashTable {
-        long rehash_index;
-        unsigned long iters;
-        HashProps *props;
-        struct _ht table[2];
-};
-
-
-#define ROTL32(x, y) ((x << y) | (x >> (32 - y)))
-
-/* Globals */
-static uint32_t hash_func_seed = 5381;
-
-/*
- * Private Methods
- */
-
-/*
- * The hash table's size is based on the power of two. So given a size,
- * this function computes the nearest(ceiling), size that will be allocated
- * for a hash table.
- */
-static unsigned long compute_actual_size(unsigned long size)
+/* Private functions */
+static int default_cmp_fn(const void *data _unused_,
+                          const void *entry1 _unused_,
+                          const void *entry2 _unused_,
+                          const void *kdata _unused_)
 {
-        unsigned long i = 2;
-
-        if (size >= LONG_MAX)
-                return LONG_MAX;
-
-        while (1) {
-                if (i >= size)
-                        return i;
-                i *= 2;
-        }
+        return 0;
 }
 
-static void ht_reset(struct _ht *t)
+static void alloc_htable(struct htable *ht, size_t size)
 {
-        t->size = 0;
-        t->used = 0;
-        t->sizemask = 0;
-        t->entries = NULL;
-}
+        ht->size = size;
+        ht->table = xcalloc(size, sizeof(struct htable *));
 
-static void _ht_free(HashTable *ht, struct _ht *table)
-{
-        unsigned long i;
-
-        for (i = 0; i < table->size && table->used > 0; i++) {
-                HashEntry *e, *next;
-
-                e = table->entries[i];
-                if (e == NULL)
-                        continue;
-
-                while (e) {
-                        next = e->next;
-
-                        HT_FREE_KEY(ht, e);
-                        HT_FREE_VAL(ht, e);
-                        xfree(e);
-
-                        table->used--;
-                        e = next;
-                } /* while() */
-        } /* for() */
-
-        xfree(table->entries);
-        ht_reset(table);
-}
-
-/* Incremental rehash in 'steps'. */
-static HtStatus ht_rehash(HashTable *ht, int steps)
-{
-        if (ht->rehash_index != -1)
-                return HT_SUCCESS;
-
-        while (steps-- && ht->table[0].used != 0) {
-                HashEntry *e, *next;
-
-                /* Do nothing with empty entries */
-                while (ht->table[0].entries[ht->rehash_index] == NULL)
-                        ht->rehash_index++;
-
-                e = ht->table[0].entries[ht->rehash_index];
-
-                /* Move keys */
-                while (e) {
-                        unsigned int hash;
-
-                        next = e->next;
-
-                        /* Get index in the new hash table */
-                        hash = ht->props->hash_fn(e->key) & ht->table[1].sizemask;
-                        e->next = ht->table[1].entries[hash];
-                        ht->table[1].entries[hash] = e;
-                        ht->table[0].used--;
-                        ht->table[1].used++;
-                        e = next;
-                } /* while() */
-
-                ht->table[0].entries[ht->rehash_index] = NULL;
-                ht->rehash_index++;
-        } /* while() */
-
-        /* Are we done rehashing? */
-        if (ht->table[0].used == 0) {
-                xfree(ht->table[0].entries);
-                ht->table[0] = ht->table[1];
-                ht_reset(&ht->table[1]);
-                ht->rehash_index = -1;
-                return HT_SUCCESS;
-        }
-
-        return HT_ERROR;
-}
-
-static void ht_rehash_if_possible(HashTable *ht)
-{
-        if (ht->iters == 0)
-                ht_rehash(ht, 1);
-}
-
-static HtStatus ht_resize(HashTable *ht, unsigned long size)
-{
-        struct _ht t;
-        unsigned long newsize;
-
-        if (ht->rehash_index != -1 || ht->table[0].used > size)
-                return HT_ERROR;
-
-        newsize = compute_actual_size(size);
-        if (newsize == ht->table[0].size)
-                return HT_ERROR;
-
-        t.size = newsize;
-        t.sizemask = newsize - 1;
-        t.entries = xcalloc(newsize, sizeof(HashEntry));
-        t.used = 0;
-
-        /* A new table */
-        if (ht->table[0].entries == NULL) {
-                ht->table[0] = t;
-                return HT_SUCCESS;
-        }
-
-        /* Resizing an existing table */
-        ht->table[1] = t;
-        ht->rehash_index = 0;
-
-        return HT_SUCCESS;
-}
-
-static HtStatus ht_resize_if_needed(HashTable *ht)
-{
-
-        if (ht->rehash_index != -1) /* Rehashing, just return! */
-                return HT_SUCCESS;
-
-        if (ht->table[0].size == 0) /* A new hashtable. */
-                ht_resize(ht, 4);
-
-        if (ht->table[0].used >= ht->table[0].size) {
-                return ht_resize(ht, ht->table[0].size*2);
-        }
-
-        return HT_SUCCESS;
-}
-
-/*
- * Function returns the index of key, if successfully found,
- * a (-1) otherwise.
- */
-static int ht_get_index(HashTable *ht, void *key, size_t keylen)
-{
-        unsigned int hash, index = -1, table;
-        HashEntry *e;
-
-        if (ht_resize_if_needed(ht) != 0) {
-                return -1;
-        }
-
-        hash = ht->props->hash_fn(key);
-
-        for (table = 0; table <= 1; table++) {
-                index = hash & ht->table[table].sizemask;
-                e = ht->table[table].entries[index];
-                while (e) {
-                        if (HT_CMP_KEYS(ht, key, keylen, e->key, e->keylen))
-                                return -1;
-
-                        e = e->next;
-                }
-
-                /* the hash table isn't being rehashed, so there's no
-                 * need to look into the second table. */
-                if (ht->rehash_index == -1)
-                        break;
-        }
-
-        return index;
-}
-
-static HashEntry *ht_insert_key(HashTable *ht, void *key, size_t keylen)
-{
-        int index;
-        HashEntry *e;
-        struct _ht *t;
-
-        if (ht_resize_if_needed(ht) != 0) {
-                ht_rehash_if_possible(ht);
-        }
-
-        index = ht_get_index(ht, key, keylen);
-        if (index == -1)
-                return NULL;
-
-        if (ht->rehash_index != -1)
-                t = &ht->table[1];
+        ht->grow_mark = size * HTABLE_RESIZE_THRESHOLD / 100;
+        if (size <= HTABLE_INIT_SIZE)
+                ht->shrink_mark = 0;
         else
-                t = &ht->table[0];
+                ht->shrink_mark = ht->grow_mark / ((1 << HTABLE_RESIZE_BITS) + 1);
+}
 
-        e = xmalloc(sizeof(HashEntry));
-        e->next = t->entries[index];
-        t->entries[index] = e;
-        t->used++;
+static inline int entries_equal(const struct htable *ht,
+                                const struct htable_entry *e1,
+                                const struct htable_entry *e2,
+                                const void *kdata)
+{
+        return (e1 == e2) ||
+                (e1->hash == e2->hash &&
+                 !ht->cmpfn(ht->cmpfndata, e1, e2, kdata));
+}
 
-        HT_DUP_KEY(ht, e, key, keylen);
+static inline unsigned int bucket(const struct htable *ht,
+                                  const struct htable_entry *key)
+{
+        return key->hash & (ht->size - 1);
+}
+
+static inline struct htable_entry **find_entry(const struct htable *ht,
+                                               const struct htable_entry *key,
+        const void *keydata)
+{
+        struct htable_entry **e = &ht->table[bucket(ht, key)];
+
+        while (*e && !entries_equal(ht, *e, key, keydata))
+                e = &(*e)->next;
 
         return e;
 }
 
-static HtStatus ht_delete_key(HashTable *ht, const void *key, size_t keylen)
+static void rehash(struct htable *ht, unsigned int newsize)
 {
-        unsigned int index, hash;
-        int table;
-        HashEntry *e, *prev;
+        unsigned int i, oldsize = ht->size;
+        struct htable_entry **oldtable = ht->table;
 
-        if (ht->table[0].size == 0)
-                return HT_EMPTY;
-
-        if (ht->rehash_index != -1)
-                ht_rehash_if_possible(ht);
-
-        hash = ht->props->hash_fn(key);
-
-        for (table = 0; table <= 1; table++) {
-                index = hash & ht->table[1].sizemask;
-                e = ht->table[table].entries[index];
-                prev = NULL;
-
+        alloc_htable(ht, newsize);
+        for (i = 0; i < oldsize; i++) {
+                struct htable_entry *e = oldtable[i];
                 while (e) {
-                        if (HT_CMP_KEYS(ht, key, keylen, e->key, e->keylen)) {
-                                if (prev)
-                                        prev->next = e->next;
-                                else
-                                        ht->table[table].entries[index] = e->next;
-
-                                HT_FREE_KEY(ht, e);
-                                HT_FREE_VAL(ht, e);
-
-                                xfree(e);
-
-                                ht->table[table].used--;
-
-                                return HT_SUCCESS;
-                        }
-
-                        prev = e;
-                        e = e->next;
-                } /* while() */
-
-                /* the hash table isn't being rehashed, so there's no
-                 * need to look into the second table. */
-                if (ht->rehash_index == -1)
-                        break;
-        } /* for() */
-
-        return HT_ERROR;
-}
-
-static HashEntry *ht_find_entry(HashTable *ht, void *key, size_t keylen)
-{
-        HashEntry *e;
-        unsigned int hash, table, index;
-
-        if (ht->table[0].size == 0)
-                return NULL;
-
-        if (ht->rehash_index != -1)
-                ht_rehash_if_possible(ht);
-
-        hash = ht->props->hash_fn(key);
-
-        for (table = 0; table <=1; table++) {
-                index = hash & ht->table[table].sizemask;
-                e = ht->table[table].entries[index];
-
-                while (e) {
-                        if (HT_CMP_KEYS(ht, key, keylen, e->key, e->keylen)) {
-                                return e;
-                        }
-
-                        e = e->next;
+                        struct htable_entry *n = e->next;
+                        unsigned int b = bucket(ht, e);
+                        e->next = ht->table[b];
+                        ht->table[b] = e;
+                        e = n;
                 }
-
-                if (ht->rehash_index == -1)
-                        return NULL;
         }
 
-        return NULL;
+        free(oldtable);
 }
 
-
-/*
- * Public Methods
- */
-
-/*
- * This is an implementation of the mururmur3 hash by Austin Appleby:
- * https://github.com/aappleby/smhasher
- */
-unsigned int murmur3_hash_32(const void *key, size_t len)
+/* Public functions */
+unsigned int bufhash(const void *buf, size_t len)
 {
-        uint32_t hash = hash_func_seed;
-        const int nblocks = len / 4;
-        const uint32_t *blocks = (const uint32_t *)key;
-        const uint8_t *data = (const uint8_t *)key;
-        int i;
-        uint32_t k = 0;
-        const uint8_t *tail;
+        unsigned int hash = FNV32_BASE;
+        unsigned char *ptr = (unsigned char *) buf;
 
-        /* constants */
-        uint32_t c1 = 0xcc9e2d51;
-        uint32_t c2 = 0x1b873593;
-        uint32_t n = 0xe6546b64;
-        /* rotations */
-        uint32_t r1 = 15;
-        uint32_t r2 = 13;
-        /* multiplicant */
-        uint32_t m = 5;
-
-
-        /* Body */
-        for (i = 0; i < nblocks; i++) {
-                uint32_t k1 = blocks[i];
-                k1 *= c1;
-                k1 = ROTL32(k1, r1);
-                k1 *= c2;
-
-                hash ^= k1;
-                hash = ROTL32(hash, r2);
-                hash = hash*m+n;
+        while (len--) {
+                unsigned int c = *ptr++;
+                hash = (hash * FNV32_PRIME) ^ c;
         }
-
-        /* Tail */
-        tail = (const uint8_t *)(data + nblocks * 4);
-        switch (len & 3) {
-        case 3: k ^= tail[2] << 16;
-            _fallthrough_;
-        case 2: k ^= tail[1] << 8;
-            _fallthrough_;
-        case 1: k ^= tail[0];
-                k *= c1;
-                k = ROTL32(k, r1);
-                k *= c2;
-                hash ^= k;
-        }
-
-        /* Finalisation */
-        hash ^= len;
-        hash ^= (hash >> 16);
-        hash *= 0x85ebca6b;
-        hash ^= (hash >> 13);
-        hash *= 0xc2b2ae35;
-        hash ^= (hash >> 16);
 
         return hash;
 }
 
-void ht_set_hash_function_seed(uint32_t seed)
+void htable_init(struct htable *ht, htable_cmp_fn cmp_fn,
+                 const void *cmpfndata, size_t size)
 {
-        hash_func_seed = seed;
+        size_t init_size = HTABLE_INIT_SIZE;
+
+        memset(ht, 0, sizeof(struct htable));
+
+        ht->cmpfn = cmp_fn ? cmp_fn : default_cmp_fn;
+        ht->cmpfndata = cmpfndata;
+
+        /* calculate initial size */
+        size = size * 100 / HTABLE_RESIZE_THRESHOLD;
+        while (size > init_size)
+                size <<= HTABLE_RESIZE_BITS;
+
+        alloc_htable(ht, size);
 }
 
-uint32_t ht_get_hash_function_seed(void)
+void htable_free(struct htable *ht, int free_entries)
 {
-        return hash_func_seed;
+        if (!ht || !ht->table)
+                return;
+
+        if (free_entries) {
+                struct htable_iter iter;
+                struct htable_entry *e;
+
+                htable_iter_init(ht, &iter);
+                while((e = htable_iter_next(&iter)))
+                        free(e);
+        }
+
+        free(ht->table);
+        memset(ht, 0, sizeof(struct htable));
 }
 
-
-HashTable *ht_new(HashProps *props)
+void *htable_get(const struct htable *ht, const void *key, const void *keydata)
 {
-        HashTable *ht = NULL;
-
-        ht = xmalloc(sizeof(HashTable));
-
-        ht_reset(&ht->table[0]);
-        ht_reset(&ht->table[1]);
-
-        ht->props = props;
-        ht->rehash_index = -1;
-
-        return ht;
+        return *find_entry(ht, key, keydata);
 }
 
-
-void ht_free(HashTable *ht)
+void *htable_get_next(const struct htable *ht, const void *entry)
 {
-        _ht_free(ht, &ht->table[0]);
-        _ht_free(ht, &ht->table[1]);
+        struct htable_entry *e = ((struct htable_entry *) entry)->next;
+        for (; e; e = e->next)
+                if (entries_equal(ht, entry, e, NULL))
+                        return e;
 
-        ht->props = NULL;
-        ht->rehash_index = -1;
-
-        xfree(ht);
+        return NULL;
 }
 
-HtStatus ht_insert(HashTable *ht, void *key, size_t keylen,
-                   void *val, size_t vallen)
+void htable_add(struct htable *ht, void *entry)
 {
-        HashEntry *e;
+        unsigned int b = bucket(ht, entry);
 
-        e = ht_insert_key(ht, key, keylen);
-        if (!e)
-                return HT_ERROR;
+        ((struct htable_entry *) entry)->next = ht->table[b];
+        ht->table[b] = entry;
 
-        HT_DUP_VAL(ht, e, val, vallen);
-
-        return HT_SUCCESS;
+        ht->count++;
+        if (ht->count < ht->shrink_mark)
+                rehash(ht, ht->size << HTABLE_RESIZE_BITS);
 }
 
-HtStatus ht_delete(HashTable *ht, const void *key, size_t keylen)
+void *htable_remove(struct htable *ht, const void *key,
+                    const void *keydata)
 {
-        return ht_delete_key(ht, key, keylen);
+        struct htable_entry *old;
+        struct htable_entry **e = find_entry(ht, key, keydata);
+
+        if (!*e)
+                return NULL;
+
+        old = *e;
+        *e = old->next;
+        old->next = NULL;
+
+        ht->count--;
+        if (ht->count < ht->shrink_mark)
+                rehash(ht, ht->size >> HTABLE_RESIZE_BITS);
+
+        return old;
 }
 
-void *ht_find(HashTable *ht, void *key, size_t keylen)
+void *htable_replace(struct htable *ht, void *entry)
 {
-        HashEntry *e;
+        struct htable_entry *old = htable_remove(ht, entry, NULL);
+        htable_add(ht, entry);
 
-        e = ht_find_entry(ht, key, keylen);
-
-        return e ? e->val : NULL;
+        return old;
 }
 
-/*
- * This function replaces the value of a given `key` with `newval`.
- * If the key doesn't exist, it just adds it and returns a HT_ADDED.
- * Returns a HT_SUCCESS if the value is replaced successfully, HT_ERROR
- * otherwise.
- */
-HtStatus ht_replace(HashTable *ht, void *key, size_t keylen,
-                    void *newval, size_t newvallen)
+void htable_iter_init(struct htable *ht, struct htable_iter *iter)
 {
-        HashEntry *e, *tmp_e;
-
-        if (ht_insert(ht, key, keylen, newval, newvallen) == HT_SUCCESS)
-                return HT_INSERTED;
-
-        e = ht_find_entry(ht, key, keylen);
-
-        tmp_e = e;
-        HT_DUP_VAL(ht, e, newval, newvallen);
-        HT_FREE_VAL(ht, tmp_e);
-
-        return HT_SUCCESS;
+        iter->ht = ht;
+        iter->pos = 0;
+        iter->next = NULL;
 }
 
-unsigned long ht_get_capacity(HashTable *ht)
+void *htable_iter_next(struct htable_iter *iter)
 {
-        return (ht->table[0].size + ht->table[1].size);
-}
+        struct htable_entry *current = iter->next;
 
-unsigned long ht_get_size(HashTable *ht)
-{
-        return (ht->table[0].used + ht->table[1].used);
+        for (;;){
+                if (current) {
+                        iter->next = current->next;
+                        return current;
+                }
+
+                if (iter->pos >= iter->ht->size)
+                        return NULL;
+
+                current = iter->ht->table[iter->pos++];
+        }
 }
