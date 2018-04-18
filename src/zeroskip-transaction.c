@@ -229,7 +229,7 @@ static int txn_data_next(struct txn *txn, struct txn_data *txndata)
         {
                 struct zsdb_file *f = txndata->data.f;
                 f->indexpos++;
-                if (f->indexpos <= f->index->count)
+                if (f->indexpos < f->index->count)
                         zs_packed_file_get_key_from_offset(f, &key, &keylen);
 
                 break;
