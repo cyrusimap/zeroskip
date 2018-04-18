@@ -1004,6 +1004,7 @@ int zsdb_dump(struct zsdb *db,
                 } else {
                         /* Dump active records only */
                         btree_walk_forward(priv->memtree, print_btree_rec, NULL);
+                        count = priv->memtree->count;
                 }
         } else {
                 zslog(LOGDEBUG, "Invalid DB dump option\n");
