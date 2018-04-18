@@ -73,6 +73,7 @@ void vecu64_free(struct vecu64 **vptr)
         v = *vptr;
         *vptr = NULL;
 
+        xfree(v->data);
         xfree(v);
 }
 
