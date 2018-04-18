@@ -411,54 +411,6 @@ static int zsdb_reload(struct zsdb_priv *priv _unused_)
         return ZS_NOTIMPLEMENTED;
 }
 
-static int zs_iter_pq_cmp_1(const void *d1, const void *d2, void *cbdata _unused_)
-{
-        struct txn_data *e1, *e2;
-        unsigned char *key1 = NULL, *key2 = NULL;
-        uint64_t len1 = 0, len2 = 0;
-
-        e1 = (struct txn_data *)d1;
-        e2 = (struct txn_data *)d2;
-
-        switch(e1->type) {
-        case ZSDB_BE_ACTIVE:
-        case ZSDB_BE_FINALISED:
-        {
-                struct btree_iter *iter = (struct btree_iter *)e1->data.iter;
-
-                key1 = iter->record->key;
-                len1 = iter->record->keylen;
-        }
-                break;
-        case ZSDB_BE_PACKED:
-                zs_packed_file_get_key_from_offset(e1->data.f, &key1, &len1);
-                break;
-        default:
-                abort();        /* Should not happen */
-                break;
-        }
-
-        switch(e2->type) {
-        case ZSDB_BE_ACTIVE:
-        case ZSDB_BE_FINALISED:
-        {
-                struct btree_iter *iter = (struct btree_iter *)e2->data.iter;
-
-                key2 = iter->record->key;
-                len2 = iter->record->keylen;
-        }
-                break;
-        case ZSDB_BE_PACKED:
-                zs_packed_file_get_key_from_offset(e2->data.f, &key1, &len1);
-                break;
-        default:
-                break;
-        }
-
-        /* TODO: If key1 and key2 are the same, then check priority */
-        return memcmp_raw(key1, len1, key2, len2);
-}
-
 /**
  * Public functions
  */
