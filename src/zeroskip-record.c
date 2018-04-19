@@ -73,8 +73,8 @@ static int zs_read_val_rec(struct zsdb_file *f, size_t *offset,
         return ZS_OK;
 }
 
-static int zs_read_key_val_record(struct zsdb_file *f, size_t *offset,
-                                  foreach_cb *cb, void *cbdata)
+static int zs_read_key_val_record_cb(struct zsdb_file *f, size_t *offset,
+                                     foreach_cb *cb, void *cbdata)
 {
         int ret = ZS_OK;
         struct zs_key key;
@@ -84,12 +84,14 @@ static int zs_read_key_val_record(struct zsdb_file *f, size_t *offset,
 
         zs_read_key_rec(f, offset, &key);
 
-        *offset += (key.base.type == REC_TYPE_KEY) ?
+        *offset += (key.base.type == REC_TYPE_KEY ||
+                    key.base.type == REC_TYPE_DELETED) ?
                 key.base.sval_offset : key.base.lval_offset;
 
         zs_read_val_rec(f, offset, &val);
 
-        keylen = (key.base.type == REC_TYPE_KEY) ?
+        keylen = (key.base.type == REC_TYPE_KEY ||
+                  key.base.type == REC_TYPE_DELETED) ?
                 key.base.slen : key.base.llen;
         vallen = (val.base.type == REC_TYPE_VALUE) ?
                 val.base.slen : val.base.llen;
@@ -150,7 +152,7 @@ int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
         switch(rectype) {
         case REC_TYPE_KEY:
         case REC_TYPE_LONG_KEY:
-                zs_read_key_val_record(f, offset, cb, cbdata);
+                zs_read_key_val_record_cb(f, offset, cb, cbdata);
                 break;
         case REC_TYPE_VALUE:
         case REC_TYPE_LONG_VALUE:
@@ -213,6 +215,36 @@ int zs_record_read_key_from_file_offset(struct zsdb_file *f, size_t offset,
                 return ZS_ERROR;
                 break;
         }
+
+        return ZS_OK;
+}
+
+int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
+                                            size_t *offset,
+                                            struct zs_key *key,
+                                            struct zs_val *val)
+{
+        size_t vallen;
+
+        zs_read_key_rec(f, offset, key);
+
+        *offset += (key->base.type == REC_TYPE_KEY ||
+                    key->base.type == REC_TYPE_DELETED) ?
+                key->base.sval_offset : key->base.lval_offset;
+
+        zs_read_val_rec(f, offset, val);
+
+        #if 0
+        keylen = (key->base.type == REC_TYPE_KEY ||
+                  key->base.type == REC_TYPE_DELETED) ?
+                key->base.slen : key->base.llen;
+        #endif
+
+        vallen = (val->base.type == REC_TYPE_VALUE) ?
+                val->base.slen : val->base.llen;
+
+        *offset += ZS_VAL_BASE_REC_SIZE +
+                roundup64bits(vallen);
 
         return ZS_OK;
 }

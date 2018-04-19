@@ -181,6 +181,9 @@ struct zsdb_file {
         cstring fname;
         struct mappedfile *mf;
         struct vecu64 *index;
+        /* TODO: Fix the indexpos type int to uint64_t.
+           Here and in struct vecu64 (count)
+         */
         int indexpos;           /* Position in the index vec */
         int is_open;
         uint64_t priority;      /* Higher the number, higher the priority */
@@ -244,6 +247,13 @@ struct txn {
         int txn_data_count;
         int txn_data_alloc;
 };
+
+/* Transaction types */
+enum TxnType {
+        TXN_ALL,
+        TXN_PACKED_ONLY,
+};
+
 
 /* Private data structure */
 struct zsdb_priv {
@@ -341,9 +351,14 @@ extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
 extern int zs_record_read_key_from_file_offset(struct zsdb_file *f,
                                                size_t offset,
                                                struct zs_key *key);
+extern int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
+                                                   size_t *offset,
+                                                   struct zs_key *key,
+                                                   struct zs_val *val);
 
 /* zeroskip-transaction.c */
-extern int zs_transaction_begin(struct zsdb *db, struct txn **txn);
+extern int zs_transaction_begin(struct zsdb *db, struct txn **txn,
+                                enum TxnType type);
 extern struct txn_data *zs_transaction_get(struct txn *txn);
 extern int zs_transaction_next(struct txn *txn,
                                struct txn_data *data);

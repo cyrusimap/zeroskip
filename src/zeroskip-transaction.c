@@ -291,7 +291,8 @@ static void txn_data_process(struct txn *txn,
  * Public functions
  */
 int zs_transaction_begin(struct zsdb *db,
-                         struct txn **txn)
+                         struct txn **txn,
+                         enum TxnType type)
 {
         struct txn *t = NULL;
         struct zsdb_priv *priv;
@@ -336,6 +337,9 @@ int zs_transaction_begin(struct zsdb *db,
                 txn_data_process(t, key, keylen, ptxnd);
         }
 
+        if (type == TXN_PACKED_ONLY)
+                goto done;
+
         /* Add finalised files to the iterator*/
         if (priv->dbfiles.ffcount) {
                 prio++;
@@ -352,6 +356,7 @@ int zs_transaction_begin(struct zsdb *db,
         txn_data_process(t, atxnd->data.iter->record->key,
                          atxnd->data.iter->record->keylen, atxnd);
 
+done:
         *txn = t;
 
         return ZS_OK;

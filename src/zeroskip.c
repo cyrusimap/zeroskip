@@ -406,6 +406,77 @@ static void zs_find_index_range_for_files(struct list_head *flist,
         }
 }
 
+static int bsearch_pack_index(const unsigned char *key, const size_t keylen,
+                              struct zsdb_file *f, uint64_t *location,
+                              unsigned char **value, size_t *vallen)
+{
+        uint64_t hi, lo;
+
+        lo = 0;
+        hi = f->index->count;
+
+        while (lo < hi) {
+                uint64_t mi;
+                struct zs_key k;
+                struct zs_val v;
+                size_t klen = 0;
+                int res;
+                size_t offset = 0;
+
+                /* compute the mid */
+                mi = lo + (hi - lo) / 2;
+
+                /* Get key from file */
+                offset = f->index->data[mi];
+
+                res = zs_read_key_val_record_from_file_offset(f,
+                                                   &offset,
+                                                   &k, &v);
+                assert(res == ZS_OK);
+
+                /* Compare */
+                if (k.base.type == REC_TYPE_KEY ||
+                    k.base.type == REC_TYPE_DELETED) {
+                        klen = k.base.slen;
+                } else if (k.base.type == REC_TYPE_LONG_KEY ||
+                    k.base.type == REC_TYPE_LONG_DELETED) {
+                        klen = k.base.llen;
+                }
+
+                res = memcmp_raw(key, keylen, k.data, klen);
+                if (!res) {
+                        /* If found, `location` will contain the
+                           offset at which the element can be found.
+                         */
+                        if (location)
+                                *location = mi;
+                        if (value) {
+                                unsigned char *tempval;
+                                *vallen = (v.base.type == REC_TYPE_VALUE) ?
+                                        v.base.slen : v.base.llen;
+                                tempval = xmalloc(*vallen);
+                                memcpy(tempval, v.data, *vallen);
+                                *value = tempval;
+                        }
+                        return 1; /* FOUND */
+                }
+
+                if (res > 0)
+                        lo = mi + 1;
+                else
+                        hi = mi;
+        }
+
+        /* If the element isn't found, then we return the least
+         * entry that is closest(greater) than the `key` we are
+         * given
+         */
+        if (location)
+                *location = lo;
+
+        return 0;               /* NOT FOUND */
+}
+
 static int zsdb_reload(struct zsdb_priv *priv _unused_)
 {
         return ZS_NOTIMPLEMENTED;
@@ -881,6 +952,7 @@ int zsdb_fetch(struct zsdb *db,
         int ret = ZS_NOTFOUND;
         struct zsdb_priv *priv;
         btree_iter_t iter;
+        struct list_head *pos;
 
         assert_zsdb(db);
         assert(key);
@@ -897,6 +969,7 @@ int zsdb_fetch(struct zsdb *db,
                 return ZS_ERROR;
 
         /* Look for the key in the active in-memory btree */
+        zslog(LOGDEBUG, ">> Looking in active records\n");
         if (btree_find(priv->memtree, key, keylen, iter)) {
                 /* We found the key in-memory */
                 if (iter->record) {
@@ -912,6 +985,7 @@ int zsdb_fetch(struct zsdb *db,
         }
 
         /* Look for the key in the finalised records */
+        zslog(LOGDEBUG, ">> Looking in finalised files\n");
         if (btree_find(priv->fmemtree, key, keylen, iter)) {
                 /* We found the key in-memory */
                 if (iter->record) {
@@ -928,7 +1002,30 @@ int zsdb_fetch(struct zsdb *db,
 
         /* The key was not found in either the active file or the finalised
            files, look for it in the packed files */
-        /* TODO: look for the key in the packed files */
+        zslog(LOGDEBUG, "Look in the Packed files!\n");
+
+        list_for_each_forward(pos, &priv->dbfiles.pflist) {
+                struct zsdb_file *f;
+                uint64_t location = 0;
+                f = list_entry(pos, struct zsdb_file, list);
+
+                zslog(LOGDEBUG, ">> Looking in packed file %s\n",
+                      f->fname.buf);
+                zslog(LOGDEBUG, ">>   total records: %d\n",
+                      f->index->count);
+                zslog(LOGDEBUG, ">>   first record at offset: %d\n",
+                      f->index->data[0]);
+                zslog(LOGDEBUG, ">>   last record at offset: %d\n",
+                      f->index->data[f->index->count - 1]);
+
+                if (bsearch_pack_index(key, keylen, f, &location, value, vallen)) {
+                        zslog(LOGDEBUG, ">> Record found at location %ld\n",
+                              location);
+                        ret = ZS_OK;
+                        goto done;
+                }
+        }
+
         ret = ZS_NOTFOUND;
 
 done:
@@ -976,7 +1073,7 @@ int zsdb_dump(struct zsdb *db,
                         struct txn *txn;
                         struct txn_data *data;
 
-                        zs_transaction_begin(db, &txn);
+                        zs_transaction_begin(db, &txn, TXN_ALL);
 
                         do {
                                 data = zs_transaction_get(txn);
