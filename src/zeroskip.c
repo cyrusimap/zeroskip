@@ -1007,16 +1007,43 @@ int zsdb_fetch(struct zsdb *db,
         list_for_each_forward(pos, &priv->dbfiles.pflist) {
                 struct zsdb_file *f;
                 uint64_t location = 0;
+                int cmp_ret;
+                struct zs_key temp_key;
+
                 f = list_entry(pos, struct zsdb_file, list);
 
                 zslog(LOGDEBUG, ">> Looking in packed file %s\n",
                       f->fname.buf);
                 zslog(LOGDEBUG, ">>   total records: %d\n",
                       f->index->count);
+
+                /* If the given key is smaller than the smallest key in the
+                 * packedfile or bigger than the the biggest key, we continue
+                 * to the next file in the list instead of binary searching
+                 * in the current file.
+                 */
                 zslog(LOGDEBUG, ">>   first record at offset: %d\n",
                       f->index->data[0]);
+                zs_record_read_key_from_file_offset(f, f->index->data[0],
+                                                    &temp_key);
+                cmp_ret = memcmp_raw(key, keylen, temp_key.data,
+                                     (temp_key.base.type == REC_TYPE_KEY ||
+                                      temp_key.base.type == REC_TYPE_DELETED) ?
+                                     temp_key.base.slen : temp_key.base.slen);
+                if (cmp_ret < 0)
+                        continue;
+
                 zslog(LOGDEBUG, ">>   last record at offset: %d\n",
                       f->index->data[f->index->count - 1]);
+                zs_record_read_key_from_file_offset(f,
+                                                    f->index->data[f->index->count - 1],
+                                                    &temp_key);
+                cmp_ret = memcmp_raw(key, keylen, temp_key.data,
+                                     (temp_key.base.type == REC_TYPE_KEY ||
+                                      temp_key.base.type == REC_TYPE_DELETED) ?
+                                     temp_key.base.slen : temp_key.base.slen);
+                if (cmp_ret > 0)
+                        continue;
 
                 if (bsearch_pack_index(key, keylen, f, &location, value, vallen)) {
                         zslog(LOGDEBUG, ">> Record found at location %ld\n",
