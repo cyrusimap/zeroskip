@@ -969,7 +969,7 @@ int zsdb_fetch(struct zsdb *db,
                 return ZS_ERROR;
 
         /* Look for the key in the active in-memory btree */
-        zslog(LOGDEBUG, ">> Looking in active records\n");
+        zslog(LOGDEBUG, "Looking in active records\n");
         if (btree_find(priv->memtree, key, keylen, iter)) {
                 /* We found the key in-memory */
                 if (iter->record) {
@@ -985,7 +985,7 @@ int zsdb_fetch(struct zsdb *db,
         }
 
         /* Look for the key in the finalised records */
-        zslog(LOGDEBUG, ">> Looking in finalised files\n");
+        zslog(LOGDEBUG, "Looking in finalised file(s)\n");
         if (btree_find(priv->fmemtree, key, keylen, iter)) {
                 /* We found the key in-memory */
                 if (iter->record) {
@@ -1002,8 +1002,7 @@ int zsdb_fetch(struct zsdb *db,
 
         /* The key was not found in either the active file or the finalised
            files, look for it in the packed files */
-        zslog(LOGDEBUG, "Look in the Packed files!\n");
-
+        zslog(LOGDEBUG, "Looking in the Packed file(s)\n");
         list_for_each_forward(pos, &priv->dbfiles.pflist) {
                 struct zsdb_file *f;
                 uint64_t location = 0;
@@ -1012,9 +1011,9 @@ int zsdb_fetch(struct zsdb *db,
 
                 f = list_entry(pos, struct zsdb_file, list);
 
-                zslog(LOGDEBUG, ">> Looking in packed file %s\n",
+                zslog(LOGDEBUG, "Looking in packed file %s\n",
                       f->fname.buf);
-                zslog(LOGDEBUG, ">>   total records: %d\n",
+                zslog(LOGDEBUG, "\tTotal records: %d\n",
                       f->index->count);
 
                 /* If the given key is smaller than the smallest key in the
@@ -1022,7 +1021,7 @@ int zsdb_fetch(struct zsdb *db,
                  * to the next file in the list instead of binary searching
                  * in the current file.
                  */
-                zslog(LOGDEBUG, ">>   first record at offset: %d\n",
+                zslog(LOGDEBUG, "\tfirst record at offset: %d\n",
                       f->index->data[0]);
                 zs_record_read_key_from_file_offset(f, f->index->data[0],
                                                     &temp_key);
@@ -1033,7 +1032,7 @@ int zsdb_fetch(struct zsdb *db,
                 if (cmp_ret < 0)
                         continue;
 
-                zslog(LOGDEBUG, ">>   last record at offset: %d\n",
+                zslog(LOGDEBUG, "\tlast record at offset: %d\n",
                       f->index->data[f->index->count - 1]);
                 zs_record_read_key_from_file_offset(f,
                                                     f->index->data[f->index->count - 1],
@@ -1046,7 +1045,7 @@ int zsdb_fetch(struct zsdb *db,
                         continue;
 
                 if (bsearch_pack_index(key, keylen, f, &location, value, vallen)) {
-                        zslog(LOGDEBUG, ">> Record found at location %ld\n",
+                        zslog(LOGDEBUG, "Record found at location %ld\n",
                               location);
                         ret = ZS_OK;
                         goto done;
