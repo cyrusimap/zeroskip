@@ -1343,6 +1343,25 @@ int zsdb_forone(struct zsdb *db _unused_, unsigned char *key _unused_,
         return ZS_NOTIMPLEMENTED;
 }
 
+int zsdb_transaction_end(struct zsdb *db, struct txn **txn)
+{
+        struct zsdb_priv *priv;
+
+        assert_zsdb(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        zs_transaction_end(txn);
+
+        return ZS_OK;
+}
+
 /* Lock file names */
 #define WRITE_LOCK_FNAME "zsdbw"
 #define PACK_LOCK_FNAME "zsdbp"

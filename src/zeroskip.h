@@ -111,6 +111,8 @@ extern int zsdb_repack(struct zsdb *db);
 extern int zsdb_info(struct zsdb *db);
 extern int zsdb_finalise(struct zsdb *db);
 
+extern int zsdb_transaction_end(struct zsdb *db, struct txn **txn);
+
 /* locking routines */
 extern int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms);
 extern int zsdb_write_lock_release(struct zsdb *db);
