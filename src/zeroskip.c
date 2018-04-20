@@ -1328,12 +1328,77 @@ int cyrusdb_fetchnext(struct zsdb *db _unused_, const char *key _unused_,
         return ZS_NOTIMPLEMENTED;
 }
 
-int zsdb_foreach(struct zsdb *db _unused_, const char *prefix _unused_,
-                 size_t prefixlen _unused_, foreach_p *p _unused_,
-                 foreach_cb *cb _unused_, void *cbdata _unused_,
-                 struct txn **txn _unused_)
+int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
+                 foreach_p *p, foreach_cb *cb, void *cbdata,
+                 struct txn **txn)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        struct txn_data *data;
+
+        assert_zsdb(db);
+
+        if (db)
+                priv = db->priv;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        if (prefixlen) {
+                assert(prefix);
+                /* TODO: zs_transacation_begin() - from prefix */
+                return ZS_NOTIMPLEMENTED;
+        } else {
+                zs_transaction_begin(db, txn, TXN_ALL);
+        }
+
+        do {
+                unsigned char *key = NULL, *val = NULL;
+                size_t keylen = 0, vallen = 0;
+                struct zs_key krec;
+                struct zs_val vrec;
+
+                data = zs_transaction_get(*txn);
+                switch (data->type) {
+                case ZSDB_BE_ACTIVE:
+                case ZSDB_BE_FINALISED:
+                        key = data->data.iter->record->key;
+                        keylen = data->data.iter->record->keylen;
+                        val = data->data.iter->record->val;
+                        vallen = data->data.iter->record->vallen;
+                        break;
+                case ZSDB_BE_PACKED:
+                {
+                        struct zsdb_file *f = data->data.f;
+                        size_t offset = f->index->data[f->indexpos];
+
+                        zs_read_key_val_record_from_file_offset(f, &offset,
+                                                                &krec, &vrec);
+                        key = krec.data;
+                        keylen = (krec.base.type == REC_TYPE_KEY ||
+                                  krec.base.type == REC_TYPE_DELETED) ?
+                                krec.base.slen : krec.base.llen;
+                        val = vrec.data;
+                        vallen = vrec.base.type == REC_TYPE_VALUE ?
+                                vrec.base.slen : vrec.base.llen;
+                }
+                break;
+                default:
+                        abort(); /* Should never reach here */
+                }
+
+                if (!p || p(cbdata, key, keylen, val, vallen)) {
+                        if (cb(cbdata, key, keylen, val, vallen)) {
+                                ret = ZS_ERROR;
+                                goto done;
+                        }
+                }
+
+        } while (zs_transaction_next(*txn, data));
+done:
+        return ret;
 }
 
 int zsdb_forone(struct zsdb *db _unused_, unsigned char *key _unused_,
