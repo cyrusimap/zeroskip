@@ -1335,6 +1335,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         int ret = ZS_OK;
         struct zsdb_priv *priv;
         struct txn_data *data;
+        struct txn *ttxn;
 
         assert_zsdb(db);
 
@@ -1351,7 +1352,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 /* TODO: zs_transacation_begin() - from prefix */
                 return ZS_NOTIMPLEMENTED;
         } else {
-                zs_transaction_begin(db, txn, TXN_ALL);
+                zs_transaction_begin(db, &ttxn, TXN_ALL);
         }
 
         do {
@@ -1360,7 +1361,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 struct zs_key krec;
                 struct zs_val vrec;
 
-                data = zs_transaction_get(*txn);
+                data = zs_transaction_get(ttxn);
                 switch (data->type) {
                 case ZSDB_BE_ACTIVE:
                 case ZSDB_BE_FINALISED:
@@ -1396,8 +1397,14 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                         }
                 }
 
-        } while (zs_transaction_next(*txn, data));
+        } while (zs_transaction_next(ttxn, data));
 done:
+
+        if (!txn)
+                zs_transaction_end(&ttxn);
+        else
+                *txn = ttxn;
+
         return ret;
 }
 
