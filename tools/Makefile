@@ -8,6 +8,7 @@ TOOL_OBJS =			\
 	cmd-damage.o		\
 	cmd-delete.o		\
 	cmd-dump.o		\
+	cmd-finalise.o		\
 	cmd-get.o		\
 	cmd-repack.o		\
 	cmd-new.o		\

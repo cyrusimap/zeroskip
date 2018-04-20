@@ -44,6 +44,9 @@ int cmd_new(int argc, char **argv, const char *progname);
 int cmd_info(int argc, char **argv, const char *progname);
 #define cmd_info_usage "info DB"
 
+int cmd_finalise(int argc, char **argv, const char *progname);
+#define cmd_finalise_usage "finalise DB"
+
 void cmd_die_usage(const char *progname, const char *usage);
 
 int cmd_parse_config(const char *cfile);

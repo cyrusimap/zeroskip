@@ -1315,6 +1315,11 @@ int zsdb_info(struct zsdb *db)
         return ret;
 }
 
+int zsdb_finalise(struct zsdb *db _unused_)
+{
+        return ZS_NOTIMPLEMENTED;
+}
+
 int zsdb_forone(struct zsdb *db _unused_, unsigned char *key _unused_,
                 size_t keylen _unused_, foreach_p *p _unused_,
                 foreach_cb *cb _unused_, struct txn **txn _unused_)

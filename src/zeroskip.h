@@ -106,6 +106,7 @@ extern int zsdb_abort(struct zsdb *db);
 extern int zsdb_consistent(struct zsdb *db);
 extern int zsdb_repack(struct zsdb *db);
 extern int zsdb_info(struct zsdb *db);
+extern int zsdb_finalise(struct zsdb *db);
 
 /* locking routines */
 extern int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms);

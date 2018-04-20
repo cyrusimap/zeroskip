@@ -26,12 +26,13 @@ static struct {
         DBCMD(damage),
         DBCMD(delete),
         DBCMD(dump),
+        DBCMD(finalise),
         DBCMD(get),
+        DBCMD(info),
         DBCMD(new),
         DBCMD(repack),
         DBCMD(show),
         DBCMD(set),
-        DBCMD(info),
 };
 #undef DBCMD
 
