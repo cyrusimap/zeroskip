@@ -1320,6 +1320,22 @@ int zsdb_finalise(struct zsdb *db _unused_)
         return ZS_NOTIMPLEMENTED;
 }
 
+int cyrusdb_fetchnext(struct zsdb *db _unused_, const char *key _unused_,
+                      size_t keylen _unused_, const char **found _unused_,
+                      size_t *foundlen _unused_, const char **data _unused_,
+                      size_t *datalen _unused_, struct txn **txn _unused_)
+{
+        return ZS_NOTIMPLEMENTED;
+}
+
+int zsdb_foreach(struct zsdb *db _unused_, const char *prefix _unused_,
+                 size_t prefixlen _unused_, foreach_p *p _unused_,
+                 foreach_cb *cb _unused_, void *cbdata _unused_,
+                 struct txn **txn _unused_)
+{
+        return ZS_NOTIMPLEMENTED;
+}
+
 int zsdb_forone(struct zsdb *db _unused_, unsigned char *key _unused_,
                 size_t keylen _unused_, foreach_p *p _unused_,
                 foreach_cb *cb _unused_, struct txn **txn _unused_)
