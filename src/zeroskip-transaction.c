@@ -150,7 +150,8 @@ static int iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
 }
 
 /* struct txn_data handling */
-static struct txn_data *txn_data_alloc(zsdb_be_t type, int prio, void *data)
+static struct txn_data *txn_data_alloc(zsdb_be_t type, int prio,
+                                       void *data, btree_iter_t *iter)
 {
         struct txn_data *d;
 
@@ -165,8 +166,15 @@ static struct txn_data *txn_data_alloc(zsdb_be_t type, int prio, void *data)
         } else {
                 /* data is an in-memory btree for finalised and active */
                 struct btree *tree = data;
-                btree_begin(tree, d->data.iter);
-                btree_next(d->data.iter);
+                if (!iter) {
+                        btree_begin(tree, d->data.iter);
+                        btree_next(d->data.iter);
+                } else {
+                        d->data.iter->tree = (*iter)->tree;
+                        d->data.iter->node = (*iter)->node;
+                        d->data.iter->pos  = (*iter)->pos;
+                        d->data.iter->record = (*iter)->record;
+                }
         }
 
         return d;
@@ -290,15 +298,10 @@ static void txn_data_process(struct txn *txn,
 /**
  * Public functions
  */
-int zs_transaction_begin(struct zsdb *db,
-                         struct txn **txn,
-                         enum TxnType type)
+int zs_transaction_new(struct zsdb *db, struct txn **txn)
 {
         struct txn *t = NULL;
         struct zsdb_priv *priv;
-        struct list_head *pos;
-        int prio = 0;
-        struct txn_data *ftxnd, *atxnd;
 
         assert_zsdb(db);
 
@@ -318,6 +321,141 @@ int zs_transaction_begin(struct zsdb *db,
         t->datav = NULL;
         t->txn_data_count = 0;
         t->txn_data_alloc = 0;
+        t->forone_txn = 0;
+
+        *txn = t;
+
+        return ZS_OK;
+}
+
+/* zs_transaction_begin_at_key():
+ *  sets up the transaction to start from the 'key'.
+ *  If 'key' is not found, then the transaction is points to the 'next' closest
+ *  key in that iterator for that back-end.
+ */
+int zs_transaction_begin_at_key(struct txn **txn,
+                                unsigned char *key,
+                                size_t keylen,
+                                int *found,
+                                unsigned char **value,
+                                size_t *vallen)
+{
+        struct zsdb_priv *priv;
+        struct list_head *pos;
+        int prio = 0;
+        btree_iter_t aiter, fiter;
+        struct txn_data *ftxnd, *atxnd;
+
+        priv = (*txn)->db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        /* Look for the key in packed records and add to iterator */
+        list_for_each_forward(pos, &priv->dbfiles.pflist) {
+                struct txn_data *ptxnd;
+                struct zsdb_file *f;
+                uint64_t location = 0;
+                unsigned char *nextkey;
+                size_t nextkeylen;
+
+                f = list_entry(pos, struct zsdb_file, list);
+                prio = f->priority;
+
+                zslog(LOGDEBUG, "Looking in packed file %s\n",
+                      f->fname.buf);
+                zslog(LOGDEBUG, "\tTotal records: %d\n",
+                      f->index->count);
+
+                if (zs_packed_file_bsearch_index(key, keylen, f,
+                                                 &location,
+                                                 *value ? NULL : value,
+                                                 *vallen ? NULL : vallen)) {
+                        zslog(LOGDEBUG, "Record found at location %ld\n",
+                              location);
+                        *found = 1;
+                }
+
+                f->indexpos = location;
+
+                ptxnd = txn_data_alloc(ZSDB_BE_PACKED, f->priority, f, NULL);
+                txn_datav_add_txn(*txn, ptxnd);
+
+                zs_packed_file_get_key_from_offset(f, &nextkey,
+                                                   &nextkeylen);
+                txn_data_process(*txn, nextkey, nextkeylen, ptxnd);
+        }
+
+        /* Look for the key in the finalised records and add the iterator */
+        prio++;
+        if (btree_find(priv->fmemtree, key, keylen, fiter)) {
+                /* We found the key in finalised records */
+                *found = 1;
+                if (*value == NULL) {
+                        unsigned char *v;
+                        *vallen = fiter->record->vallen;
+                        v = xmalloc(*vallen);
+                        memcpy(v, fiter->record->val, *vallen);
+                        *value = v;
+                }
+        }
+
+        ftxnd = txn_data_alloc(ZSDB_BE_FINALISED, prio,
+                               priv->fmemtree, &fiter);
+        txn_datav_add_txn(*txn, ftxnd);
+        txn_data_process(*txn, ftxnd->data.iter->record->key,
+                         ftxnd->data.iter->record->keylen, ftxnd);
+
+        /* Look for the key in the active in-memory btree and add the iterator */
+        prio++;
+        if (btree_find(priv->memtree, key, keylen, aiter)) {
+                /* We found the key in active records */
+                *found = 1;
+                if (*value == NULL) {
+                        unsigned char *v;
+                        *vallen = aiter->record->vallen;
+                        v = xmalloc(*vallen);
+                        memcpy(v, aiter->record->val, *vallen);
+                        *value = v;
+                }
+        }
+
+        atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, &aiter);
+        txn_datav_add_txn(*txn, atxnd);
+        txn_data_process(*txn, atxnd->data.iter->record->key,
+                         atxnd->data.iter->record->keylen, atxnd);
+
+        return ZS_OK;
+}
+
+int zs_transaction_begin(struct txn **txn, enum TxnType type)
+{
+        struct zsdb *db = NULL;
+        struct zsdb_priv *priv;
+        struct list_head *pos;
+        int prio = 0;
+        struct txn_data *ftxnd, *atxnd;
+
+        if (!txn || !*txn) {
+                zslog(LOGWARNING, "Invalid transaction!\n");
+                return ZS_INTERNAL;
+        }
+
+        db = (*txn)->db;
+
+        assert_zsdb(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
 
         /* Add packed files to the iterator */
         list_for_each_forward(pos, &priv->dbfiles.pflist) {
@@ -327,14 +465,14 @@ int zs_transaction_begin(struct zsdb *db,
                 size_t keylen;
 
                 f = list_entry(pos, struct zsdb_file, list);
-                ptxnd = txn_data_alloc(ZSDB_BE_PACKED, f->priority, f);
-                txn_datav_add_txn(t, ptxnd);
+                ptxnd = txn_data_alloc(ZSDB_BE_PACKED, f->priority, f, NULL);
+                txn_datav_add_txn(*txn, ptxnd);
 
                 prio = f->priority;
 
                 zs_packed_file_get_key_from_offset(f, &key, &keylen);
 
-                txn_data_process(t, key, keylen, ptxnd);
+                txn_data_process(*txn, key, keylen, ptxnd);
         }
 
         if (type == TXN_PACKED_ONLY)
@@ -343,22 +481,21 @@ int zs_transaction_begin(struct zsdb *db,
         /* Add finalised files to the iterator*/
         if (priv->dbfiles.ffcount) {
                 prio++;
-                ftxnd = txn_data_alloc(ZSDB_BE_FINALISED, prio, priv->fmemtree);
-                txn_datav_add_txn(t, ftxnd);
-                txn_data_process(t, ftxnd->data.iter->record->key,
+                ftxnd = txn_data_alloc(ZSDB_BE_FINALISED, prio,
+                                       priv->fmemtree, NULL);
+                txn_datav_add_txn(*txn, ftxnd);
+                txn_data_process(*txn, ftxnd->data.iter->record->key,
                                  ftxnd->data.iter->record->keylen, ftxnd);
         }
 
         /* Add active file to the iterator */
         prio++;
-        atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree);
-        txn_datav_add_txn(t, atxnd);
-        txn_data_process(t, atxnd->data.iter->record->key,
+        atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, NULL);
+        txn_datav_add_txn(*txn, atxnd);
+        txn_data_process(*txn, atxnd->data.iter->record->key,
                          atxnd->data.iter->record->keylen, atxnd);
 
 done:
-        *txn = t;
-
         return ZS_OK;
 }
 
@@ -407,10 +544,21 @@ void zs_transaction_end(struct txn **txn)
 
         if (txn && *txn) {
                 struct iter_key_data *idata;
+                struct zsdb_priv *priv;
+                struct list_head *pos;
 
                 t = *txn;
                 *txn = NULL;
+                priv = t->db->priv;
+                /* Reset the index positions of all the packed files */
+                list_for_each_forward(pos, &priv->dbfiles.pflist) {
+                        struct zsdb_file *f;
+                        f = list_entry(pos, struct zsdb_file, list);
+
+                        f->indexpos = 0;
+                }
                 t->db = NULL;
+                priv = NULL;
 
                 while ((idata = pqueue_get(&t->pq)))
                         free_iter_key_data(&idata);

@@ -446,3 +446,73 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unuse
         return memcmp_raw(key1.data, len1, key2.data, len2);
 }
 
+int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
+                                 struct zsdb_file *f, uint64_t *location,
+                                 unsigned char **value, size_t *vallen)
+{
+        uint64_t hi, lo;
+
+        lo = 0;
+        hi = f->index->count;
+
+        while (lo < hi) {
+                uint64_t mi;
+                struct zs_key k;
+                struct zs_val v;
+                size_t klen = 0;
+                int res;
+                size_t offset = 0;
+
+                /* compute the mid */
+                mi = lo + (hi - lo) / 2;
+
+                /* Get key from file */
+                offset = f->index->data[mi];
+
+                res = zs_read_key_val_record_from_file_offset(f,
+                                                   &offset,
+                                                   &k, &v);
+                assert(res == ZS_OK);
+
+                /* Compare */
+                if (k.base.type == REC_TYPE_KEY ||
+                    k.base.type == REC_TYPE_DELETED) {
+                        klen = k.base.slen;
+                } else if (k.base.type == REC_TYPE_LONG_KEY ||
+                    k.base.type == REC_TYPE_LONG_DELETED) {
+                        klen = k.base.llen;
+                }
+
+                res = memcmp_raw(key, keylen, k.data, klen);
+                if (!res) {
+                        /* If found, `location` will contain the
+                           offset at which the element can be found.
+                         */
+                        if (location)
+                                *location = mi;
+                        if (value) {
+                                unsigned char *tempval;
+                                *vallen = (v.base.type == REC_TYPE_VALUE) ?
+                                        v.base.slen : v.base.llen;
+                                tempval = xmalloc(*vallen);
+                                memcpy(tempval, v.data, *vallen);
+                                *value = tempval;
+                        }
+                        return 1; /* FOUND */
+                }
+
+                if (res > 0)
+                        lo = mi + 1;
+                else
+                        hi = mi;
+        }
+
+        /* If the element isn't found, then we return the least
+         * entry that is closest(greater) than the `key` we are
+         * given
+         */
+        if (location)
+                *location = lo;
+
+        return 0;               /* NOT FOUND */
+}

@@ -98,12 +98,13 @@ extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
 extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen);
 extern int zsdb_commit(struct zsdb *db);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
-                      unsigned char **value, size_t *vallen);
+                      unsigned char **value, size_t *vallen, struct txn **txn);
 extern int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                         foreach_p *p, foreach_cb *cb, void *cbdata,
                         struct txn **txn);
 extern int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
-                       foreach_p *p, foreach_cb *cb, struct txn **txn);
+                       foreach_p *p, foreach_cb *cb, void *cbdata,
+                       struct txn **txn);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
 extern int zsdb_abort(struct zsdb *db);
 extern int zsdb_consistent(struct zsdb *db);

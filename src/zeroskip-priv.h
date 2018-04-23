@@ -246,6 +246,8 @@ struct txn {
         struct txn_data **datav;
         int txn_data_count;
         int txn_data_alloc;
+
+        int forone_txn;
 };
 
 /* Transaction types */
@@ -344,6 +346,10 @@ extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
 extern int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
                                               unsigned char **key,
                                               uint64_t *len);
+extern int zs_packed_file_bsearch_index(const unsigned char *key,
+                                        const size_t keylen,
+                                        struct zsdb_file *f, uint64_t *location,
+                                        unsigned char **value, size_t *vallen);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
@@ -357,8 +363,14 @@ extern int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
                                                    struct zs_val *val);
 
 /* zeroskip-transaction.c */
-extern int zs_transaction_begin(struct zsdb *db, struct txn **txn,
-                                enum TxnType type);
+extern int zs_transaction_new(struct zsdb *db, struct txn **txn);
+extern int zs_transaction_begin(struct txn **txn, enum TxnType type);
+extern int zs_transaction_begin_at_key(struct txn **txn,
+                                       unsigned char *key,
+                                       size_t keylen,
+                                       int *found,
+                                       unsigned char **value,
+                                       size_t *vallen);
 extern struct txn_data *zs_transaction_get(struct txn *txn);
 extern int zs_transaction_next(struct txn *txn,
                                struct txn_data *data);

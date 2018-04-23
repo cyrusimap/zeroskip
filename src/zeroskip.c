@@ -406,77 +406,6 @@ static void zs_find_index_range_for_files(struct list_head *flist,
         }
 }
 
-static int bsearch_pack_index(const unsigned char *key, const size_t keylen,
-                              struct zsdb_file *f, uint64_t *location,
-                              unsigned char **value, size_t *vallen)
-{
-        uint64_t hi, lo;
-
-        lo = 0;
-        hi = f->index->count;
-
-        while (lo < hi) {
-                uint64_t mi;
-                struct zs_key k;
-                struct zs_val v;
-                size_t klen = 0;
-                int res;
-                size_t offset = 0;
-
-                /* compute the mid */
-                mi = lo + (hi - lo) / 2;
-
-                /* Get key from file */
-                offset = f->index->data[mi];
-
-                res = zs_read_key_val_record_from_file_offset(f,
-                                                   &offset,
-                                                   &k, &v);
-                assert(res == ZS_OK);
-
-                /* Compare */
-                if (k.base.type == REC_TYPE_KEY ||
-                    k.base.type == REC_TYPE_DELETED) {
-                        klen = k.base.slen;
-                } else if (k.base.type == REC_TYPE_LONG_KEY ||
-                    k.base.type == REC_TYPE_LONG_DELETED) {
-                        klen = k.base.llen;
-                }
-
-                res = memcmp_raw(key, keylen, k.data, klen);
-                if (!res) {
-                        /* If found, `location` will contain the
-                           offset at which the element can be found.
-                         */
-                        if (location)
-                                *location = mi;
-                        if (value) {
-                                unsigned char *tempval;
-                                *vallen = (v.base.type == REC_TYPE_VALUE) ?
-                                        v.base.slen : v.base.llen;
-                                tempval = xmalloc(*vallen);
-                                memcpy(tempval, v.data, *vallen);
-                                *value = tempval;
-                        }
-                        return 1; /* FOUND */
-                }
-
-                if (res > 0)
-                        lo = mi + 1;
-                else
-                        hi = mi;
-        }
-
-        /* If the element isn't found, then we return the least
-         * entry that is closest(greater) than the `key` we are
-         * given
-         */
-        if (location)
-                *location = lo;
-
-        return 0;               /* NOT FOUND */
-}
-
 static int zsdb_reload(struct zsdb_priv *priv _unused_)
 {
         return ZS_NOTIMPLEMENTED;
@@ -947,7 +876,8 @@ int zsdb_fetch(struct zsdb *db,
                unsigned char *key,
                size_t keylen,
                unsigned char **value,
-               size_t *vallen)
+               size_t *vallen,
+               struct txn **txn _unused_)
 {
         int ret = ZS_NOTFOUND;
         struct zsdb_priv *priv;
@@ -971,7 +901,7 @@ int zsdb_fetch(struct zsdb *db,
         /* Look for the key in the active in-memory btree */
         zslog(LOGDEBUG, "Looking in active records\n");
         if (btree_find(priv->memtree, key, keylen, iter)) {
-                /* We found the key in-memory */
+                /* We found the key active records */
                 if (iter->record) {
                         unsigned char *v;
                         *vallen = iter->record->vallen;
@@ -987,7 +917,7 @@ int zsdb_fetch(struct zsdb *db,
         /* Look for the key in the finalised records */
         zslog(LOGDEBUG, "Looking in finalised file(s)\n");
         if (btree_find(priv->fmemtree, key, keylen, iter)) {
-                /* We found the key in-memory */
+                /* We found the key in finalised records */
                 if (iter->record) {
                         unsigned char *v;
                         *vallen = iter->record->vallen;
@@ -1044,7 +974,8 @@ int zsdb_fetch(struct zsdb *db,
                 if (cmp_ret > 0)
                         continue;
 
-                if (bsearch_pack_index(key, keylen, f, &location, value, vallen)) {
+                if (zs_packed_file_bsearch_index(key, keylen, f,
+                                                 &location, value, vallen)) {
                         zslog(LOGDEBUG, "Record found at location %ld\n",
                               location);
                         ret = ZS_OK;
@@ -1096,10 +1027,13 @@ int zsdb_dump(struct zsdb *db,
 
         if (level == DB_DUMP_ACTIVE || level == DB_DUMP_ALL) {
                 if (level == DB_DUMP_ALL) {
-                        struct txn *txn;
+                        struct txn *txn = NULL;
                         struct txn_data *data;
 
-                        zs_transaction_begin(db, &txn, TXN_ALL);
+                        zs_transaction_new(db, &txn);
+
+                        if (zs_transaction_begin(&txn, TXN_ALL) != ZS_OK)
+                                return ZS_INTERNAL;
 
                         do {
                                 data = zs_transaction_get(txn);
@@ -1335,7 +1269,8 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         int ret = ZS_OK;
         struct zsdb_priv *priv;
         struct txn_data *data;
-        struct txn *ttxn;
+        struct txn *temptxn = NULL;
+        int newtxn = 0;
 
         assert_zsdb(db);
 
@@ -1348,11 +1283,25 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         }
 
         if (prefixlen) {
+                zslog(LOGWARNING, "Need a prefix if prefix length is given.\n");
                 assert(prefix);
-                /* TODO: zs_transacation_begin() - from prefix */
+        }
+
+        if (txn && *txn) {      /* Existing transaction */
+                assert((*txn)->forone_txn); /* XXX: Should I assert here? */
+                temptxn = *txn;
+        } else {                /* New transaction */
+                zs_transaction_new(db, &temptxn);
+                zs_transaction_begin(&temptxn, TXN_ALL);
+                newtxn = 1;
+        }
+
+        if (prefixlen) {
+                assert(prefix);
+                /* TODO: zs_transaction_begin() - from prefix */
                 return ZS_NOTIMPLEMENTED;
         } else {
-                zs_transaction_begin(db, &ttxn, TXN_ALL);
+                zs_transaction_begin(&temptxn, TXN_ALL);
         }
 
         do {
@@ -1361,7 +1310,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 struct zs_key krec;
                 struct zs_val vrec;
 
-                data = zs_transaction_get(ttxn);
+                data = zs_transaction_get(temptxn);
                 switch (data->type) {
                 case ZSDB_BE_ACTIVE:
                 case ZSDB_BE_FINALISED:
@@ -1397,22 +1346,62 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                         }
                 }
 
-        } while (zs_transaction_next(ttxn, data));
+        } while (zs_transaction_next(temptxn, data));
 done:
 
-        if (!txn)
-                zs_transaction_end(&ttxn);
-        else
-                *txn = ttxn;
+        if (newtxn)
+                zs_transaction_end(&temptxn);
 
         return ret;
 }
 
-int zsdb_forone(struct zsdb *db _unused_, unsigned char *key _unused_,
-                size_t keylen _unused_, foreach_p *p _unused_,
-                foreach_cb *cb _unused_, struct txn **txn _unused_)
+int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
+                foreach_p *p, foreach_cb *cb, void *cbdata,
+                struct txn **txn)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        struct txn *temptxn = NULL;
+        unsigned char *value = NULL;
+        size_t vallen = 0;
+        int found = 0;
+
+        assert_zsdb(db);
+        assert(key);
+        assert(keylen);
+
+        if (db)
+                priv = db->priv;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        /* Create a new transaction */
+        zs_transaction_new(db, &temptxn);
+        temptxn->forone_txn = 1;
+
+        ret = zs_transaction_begin_at_key(&temptxn, key, keylen, &found,
+                                          &value, &vallen);
+        if (ret != ZS_OK) {
+                goto fail;
+        }
+
+        if (!found) {
+                goto fail;
+        } else {
+                *txn = temptxn;
+                if (!p || p(cbdata, key, keylen, value, vallen))
+                        ret = cb(cbdata, key, keylen, value, vallen);
+                goto done;
+        }
+
+fail:
+        ret = 0;
+        zs_transaction_end(&temptxn);
+done:
+        return ret;
 }
 
 int zsdb_transaction_end(struct zsdb *db, struct txn **txn)
