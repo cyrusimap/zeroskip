@@ -647,6 +647,8 @@ int btree_find(struct btree *btree, unsigned char *key, size_t keylen,
 
         iter->node = node;
         iter->pos = pos;
+        if (!found)
+                iter->record = iter->node->recs[iter->pos];
 
         return found;
 }
