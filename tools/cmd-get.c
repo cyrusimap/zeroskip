@@ -31,6 +31,7 @@ int cmd_get(int argc, char **argv, const char *progname)
         unsigned char *value = NULL;
         size_t vallen = 0, i;
         int ret;
+        struct txn *txn;
 
         while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
@@ -65,7 +66,8 @@ int cmd_get(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_fetch(db, (unsigned char *)key, strlen(key), &value, &vallen)) {
+        if (zsdb_fetch(db, (unsigned char *)key, strlen(key),
+                       &value, &vallen, &txn)) {
                 zslog(LOGDEBUG, "Cannot find record with key %s in %s\n",
                       key, dbname);
                 ret = EXIT_FAILURE;
@@ -76,6 +78,8 @@ int cmd_get(int argc, char **argv, const char *progname)
                 key, vallen);
         for (i = 0; i < vallen; i++)
                 fprintf(stderr, "%c", value[i]);
+        if (value) free(value);
+
         fprintf(stderr, "\n");
 
         ret = EXIT_SUCCESS;
