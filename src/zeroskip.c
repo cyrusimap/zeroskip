@@ -903,11 +903,9 @@ int zsdb_fetch(struct zsdb *db,
         if (btree_find(priv->memtree, key, keylen, iter)) {
                 /* We found the key active records */
                 if (iter->record) {
-                        unsigned char *v;
                         *vallen = iter->record->vallen;
-                        v = xmalloc(*vallen);
-                        memcpy(v, iter->record->val, *vallen);
-                        *value = v;
+                        *value = xmalloc(*vallen);
+                        memcpy(*value, iter->record->val, *vallen);
                 }
 
                 ret = ZS_OK;
@@ -919,11 +917,9 @@ int zsdb_fetch(struct zsdb *db,
         if (btree_find(priv->fmemtree, key, keylen, iter)) {
                 /* We found the key in finalised records */
                 if (iter->record) {
-                        unsigned char *v;
                         *vallen = iter->record->vallen;
-                        v = xmalloc(*vallen);
-                        memcpy(v, iter->record->val, *vallen);
-                        *value = v;
+                        *value = xmalloc(*vallen);
+                        memcpy(*value, iter->record->val, *vallen);
                 }
 
                 ret = ZS_OK;

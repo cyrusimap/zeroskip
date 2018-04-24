@@ -491,12 +491,10 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
                         if (location)
                                 *location = mi;
                         if (value) {
-                                unsigned char *tempval;
                                 *vallen = (v.base.type == REC_TYPE_VALUE) ?
                                         v.base.slen : v.base.llen;
-                                tempval = xmalloc(*vallen);
-                                memcpy(tempval, v.data, *vallen);
-                                *value = tempval;
+                                *value = xmalloc(*vallen);
+                                memcpy(*value, v.data, *vallen);
                         }
                         return 1; /* FOUND */
                 }
