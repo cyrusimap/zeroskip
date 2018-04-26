@@ -4,12 +4,13 @@ default: all
 	cd src && $(MAKE) $@
 	cd tools && $(MAKE) $@
 	cd examples && $(MAKE) $@
+	cd tests && $(MAKE) $@
 
 install:
 	cd src && $(MAKE)
 
 test:
-	cd tests && $(MAKE)
+	cd tests && $(MAKE) test-run
 
 example:
 	cd examples && $(MAKE)

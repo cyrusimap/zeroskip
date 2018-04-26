@@ -12,7 +12,10 @@
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
-void assert_zsdb(struct zsdb *db);
+#ifdef ZS_DEBUG
+extern void assert_zsdb(struct zsdb *db);
+#endif
+
 /**
  * Private functions
  */

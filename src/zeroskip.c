@@ -1292,14 +1292,6 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 newtxn = 1;
         }
 
-        if (prefixlen) {
-                assert(prefix);
-                /* TODO: zs_transaction_begin() - from prefix */
-                return ZS_NOTIMPLEMENTED;
-        } else {
-                zs_transaction_begin(&temptxn, TXN_ALL);
-        }
-
         do {
                 unsigned char *key = NULL, *val = NULL;
                 size_t keylen = 0, vallen = 0;
