@@ -1267,6 +1267,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         struct txn_data *data;
         struct txn *temptxn = NULL;
         int newtxn = 0;
+        int found = 0;
 
         assert_zsdb(db);
 
@@ -1288,7 +1289,15 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 temptxn = *txn;
         } else {                /* New transaction */
                 zs_transaction_new(db, &temptxn);
-                zs_transaction_begin(&temptxn, TXN_ALL);
+
+                if (prefix)
+                        ret = zs_transaction_begin_at_key(&temptxn,
+                                                          (unsigned char *)prefix,
+                                                          prefixlen, &found,
+                                                          NULL, NULL);
+                else
+                        zs_transaction_begin(&temptxn, TXN_ALL);
+
                 newtxn = 1;
         }
 
@@ -1328,14 +1337,13 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 }
 
                 if (!p || p(cbdata, key, keylen, val, vallen)) {
-                        if (cb(cbdata, key, keylen, val, vallen)) {
-                                ret = ZS_ERROR;
-                                goto done;
-                        }
+                        /* TODO: We should check the return of this statement? */
+                        ret = cb(cbdata, key, keylen, val, vallen);
+                        if (ret)
+                                break;
                 }
 
         } while (zs_transaction_next(temptxn, data));
-done:
 
         if (newtxn)
                 zs_transaction_end(&temptxn);

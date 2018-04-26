@@ -12,9 +12,7 @@
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
-#ifdef ZS_DEBUG
 extern void assert_zsdb(struct zsdb *db);
-#endif
 
 /**
  * Private functions
@@ -375,8 +373,7 @@ int zs_transaction_begin_at_key(struct txn **txn,
 
                 if (zs_packed_file_bsearch_index(key, keylen, f,
                                                  &location,
-                                                 *value ? NULL : value,
-                                                 *vallen ? NULL : vallen)) {
+                                                 value, vallen)) {
                         zslog(LOGDEBUG, "Record found at location %ld\n",
                               location);
                         *found = 1;
