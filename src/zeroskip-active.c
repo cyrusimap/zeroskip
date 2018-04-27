@@ -104,7 +104,9 @@ int zs_active_file_finalise(struct zsdb_priv *priv)
 {
         int ret = ZS_OK;
         cstring newfname = CSTRING_INIT;
-        char index[11] = { 0 };
+        char index[11];
+
+        memset(index, 0, sizeof(index));
 
         if (!file_lock_is_locked(&priv->wlk)) {
                 zslog(LOGDEBUG, "Need a write lock to finalise.\n");

@@ -23,9 +23,11 @@
 static int zs_packed_file_write_index_count(struct zsdb_file *f,
                                             uint64_t count)
 {
-        unsigned char buf[8] = { 0 };
+        unsigned char buf[8];
         size_t nbytes;
         int ret;
+
+        memset(buf, 0, sizeof(buf));
 
         write_be64(buf, count);
         ret = mappedfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
@@ -284,7 +286,7 @@ int zs_packed_file_new(const char *path _unused_,
  * Create a new pack file (with sorted records and an index at the end
  * from all the finalised files(which are in memory).
  */
-int zs_packed_file_new_from_memtree(const char * path,
+int zs_packed_file_new_from_memtree(const char *path,
                                     uint32_t startidx,
                                     uint32_t endidx,
                                     struct zsdb_priv *priv,

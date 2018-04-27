@@ -26,8 +26,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
         tree = btree_new(NULL, NULL);
 
         for (j = 0; j < NUMRECS; j++) {
-                char key[10] = { 0 };
-                char val[10] = { 0 };
+                char key[10];
+                char val[10];
                 sprintf(key, "key%d", j);
                 sprintf(val, "val%d", j);
                 recs[j] = record_new((unsigned char *)key, strlen(key),

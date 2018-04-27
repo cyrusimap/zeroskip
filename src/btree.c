@@ -480,9 +480,10 @@ int btree_next(btree_iter_t iter)
 
 int btree_insert_opt(struct btree *btree, struct record *record, int replace)
 {
-        btree_iter_t iter = { 0 };
+        btree_iter_t iter;
         int ret = BTREE_OK;
 
+        memset(iter, 0, sizeof(iter));
 
         if (btree_find(btree, record->key, record->keylen, iter)) {
                 if (replace) {
@@ -507,7 +508,9 @@ done:
 
 int btree_remove(struct btree *btree, unsigned char *key, size_t keylen)
 {
-        btree_iter_t iter = { 0 };
+        btree_iter_t iter;
+
+        memset(iter, 0, sizeof(iter));
 
         if (btree_find(btree, key, keylen, iter)) {
                 btree_remove_at(iter);
