@@ -339,7 +339,13 @@ extern int zs_packed_file_new_from_memtree(const char *path,
                                            uint32_t endidx,
                                            struct zsdb_priv *priv,
                                            struct zsdb_file **fptr);
-extern int zs_packed_file_write_record(struct record *record, void *data);
+extern int zs_packed_file_new_from_packed_files(const char *path,
+                                                uint32_t startidx,
+                                                uint32_t endidx,
+                                                struct zsdb_priv *priv,
+                                                struct list_head *flist,
+                                                struct zsdb_file **fptr);
+extern int zs_packed_file_write_btree_record(struct record *record, void *data);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
 extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
                                     void *cbdata);
@@ -364,13 +370,15 @@ extern int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
 
 /* zeroskip-transaction.c */
 extern int zs_transaction_new(struct zsdb *db, struct txn **txn);
-extern int zs_transaction_begin(struct txn **txn, enum TxnType type);
+extern int zs_transaction_begin(struct txn **txn);
 extern int zs_transaction_begin_at_key(struct txn **txn,
                                        unsigned char *key,
                                        size_t keylen,
                                        int *found,
                                        unsigned char **value,
                                        size_t *vallen);
+extern int zs_transaction_begin_for_packed_flist(struct txn **txn,
+                                                 struct list_head *pflist);
 extern struct txn_data *zs_transaction_get(struct txn *txn);
 extern int zs_transaction_next(struct txn *txn,
                                struct txn_data *data);

@@ -431,7 +431,7 @@ int zs_transaction_begin_at_key(struct txn **txn,
         return ZS_OK;
 }
 
-int zs_transaction_begin(struct txn **txn, enum TxnType type)
+int zs_transaction_begin(struct txn **txn)
 {
         struct zsdb *db = NULL;
         struct zsdb_priv *priv;
@@ -475,9 +475,6 @@ int zs_transaction_begin(struct txn **txn, enum TxnType type)
                 txn_data_process(*txn, key, keylen, ptxnd);
         }
 
-        if (type == TXN_PACKED_ONLY)
-                goto done;
-
         /* Add finalised files to the iterator*/
         if (priv->dbfiles.ffcount) {
                 prio++;
@@ -495,7 +492,50 @@ int zs_transaction_begin(struct txn **txn, enum TxnType type)
         txn_data_process(*txn, atxnd->data.iter->record->key,
                          atxnd->data.iter->record->keylen, atxnd);
 
-done:
+        return ZS_OK;
+}
+
+int zs_transaction_begin_for_packed_flist(struct txn **txn,
+                                          struct list_head *pflist)
+{
+        struct zsdb *db = NULL;
+        struct zsdb_priv *priv;
+        struct list_head *pos;
+
+        if (!txn || !*txn) {
+                zslog(LOGWARNING, "Invalid transaction!\n");
+                return ZS_INTERNAL;
+        }
+
+        db = (*txn)->db;
+
+        assert_zsdb(db);
+
+        priv = db->priv;
+        if (!priv) return ZS_INTERNAL;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+
+        /* Add packed files to the iterator */
+        list_for_each_forward(pos, pflist) {
+                struct txn_data *ptxnd;
+                struct zsdb_file *f;
+                unsigned char *key;
+                size_t keylen;
+
+                f = list_entry(pos, struct zsdb_file, list);
+                ptxnd = txn_data_alloc(ZSDB_BE_PACKED, f->priority, f, NULL);
+                txn_datav_add_txn(*txn, ptxnd);
+
+                zs_packed_file_get_key_from_offset(f, &key, &keylen);
+
+                txn_data_process(*txn, key, keylen, ptxnd);
+        }
+
         return ZS_OK;
 }
 

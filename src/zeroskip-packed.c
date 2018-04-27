@@ -136,7 +136,7 @@ static int read_pointers(struct zsdb_file *f, size_t offset)
  * Public functions
  */
 
-int zs_packed_file_write_record(struct record *record, void *data)
+int zs_packed_file_write_btree_record(struct record *record, void *data)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
@@ -144,6 +144,19 @@ int zs_packed_file_write_record(struct record *record, void *data)
         vecu64_append(f->index, f->mf->offset);
         ret = zs_file_write_keyval_record(f, record->key, record->keylen,
                                           record->val, record->vallen);
+        if (ret == ZS_OK) return 1;
+        else return 0;
+}
+
+int zs_packed_file_write_record(void *data,
+                                unsigned char *key, size_t keylen,
+                                unsigned char *value, size_t vallen)
+{
+        struct zsdb_file *f = (struct zsdb_file *)data;
+        int ret = ZS_OK;
+
+        vecu64_append(f->index, f->mf->offset);
+        ret = zs_file_write_keyval_record(f, key, keylen, value, vallen);
         if (ret == ZS_OK) return 1;
         else return 0;
 }
@@ -332,7 +345,8 @@ int zs_packed_file_new_from_memtree(const char *path,
         mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
         /* Write records into packed files */
-        btree_walk_forward(priv->fmemtree, zs_packed_file_write_record,
+        btree_walk_forward(priv->fmemtree,
+                           zs_packed_file_write_btree_record,
                            (void *)f);
 
         ret = mappedfile_flush(&f->mf);
@@ -515,4 +529,124 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
                 *location = lo;
 
         return 0;               /* NOT FOUND */
+}
+
+int zs_packed_file_new_from_packed_files(const char *path,
+                                                uint32_t startidx,
+                                                uint32_t endidx,
+                                                struct zsdb_priv *priv,
+                                                struct list_head *flist,
+                                                struct zsdb_file **fptr)
+{
+        int ret = ZS_OK;
+        struct zsdb_file *f;
+        struct txn *txn = NULL;
+        struct txn_data *data;
+        int count = 0;
+
+        f = xcalloc(sizeof(struct zsdb_file), 1);
+        f->type = DB_FTYPE_PACKED;
+        cstring_init(&f->fname, 0);
+        cstring_addstr(&f->fname, path);
+        f->index = vecu64_new();
+
+        /* Initialise header fields */
+        f->header.signature = ZS_SIGNATURE;
+        f->header.version = ZS_VERSION;
+        memcpy(f->header.uuid, priv->uuid, sizeof(uuid_t));
+        f->header.startidx = startidx;
+        f->header.endidx = endidx;
+        f->header.crc32 = 0;
+
+        ret = mappedfile_open(f->fname.buf, MAPPEDFILE_RW_CR, &f->mf);
+        if (ret) {
+                ret = ZS_IOERROR;
+                goto fail;
+        }
+
+        f->is_open = 1;
+
+        /* Create the header */
+        ret = zs_header_write(f);
+        if (ret) {
+                zslog(LOGDEBUG, "Could not write zeroskip header.\n");
+                goto fail;
+        }
+
+        /* Start computing the crc32. Will end when the transaction is
+           committed */
+        crc32_begin(&f->mf);
+
+        /* Seek to location after header */
+        mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
+
+        ret = zs_transaction_begin_for_packed_flist(&txn, flist);
+        if (ret != ZS_OK) {
+                zslog(LOGWARNING, "Failed to begin transaction!\n");
+                goto fail;
+        }
+
+        do {
+                data = zs_transaction_get(txn);
+                switch(data->type) {
+                case ZSDB_BE_PACKED:
+                {
+                        struct zsdb_file *tempf = data->data.f;
+                        size_t offset = tempf->index->data[tempf->indexpos];
+                        zs_record_read_from_file(tempf, &offset,
+                                                 zs_packed_file_write_record,
+                                                 (void *)f);
+                        break;
+                }
+                case ZSDB_BE_ACTIVE:
+                case ZSDB_BE_FINALISED:
+                default:
+                        abort();  /* Should never reach here */
+                        break;
+                }
+
+                count++;
+        } while (zs_transaction_next(txn, data));
+
+        zs_transaction_end(&txn);
+
+        ret = mappedfile_flush(&f->mf);
+        if (ret) {
+                zslog(LOGDEBUG, "Error flushing data to disk.\n");
+                ret = ZS_IOERROR;
+                goto fail;
+        }
+
+        /* The commit record marking the end of records */
+        if (zs_packed_file_write_commit_record(f) != ZS_OK) {
+                zslog(LOGDEBUG, "Could not commit.\n");
+                ret = EXIT_FAILURE;
+                goto fail;
+        }
+
+        /* Write the pointer/index section */
+        crc32_begin(&f->mf);    /* The crc32 for index of the file */
+
+        zs_packed_file_write_index_count(f, f->index->count); /* count */
+
+        vecu64_foreach(f->index, zs_packed_file_write_index, f);
+
+        /* The commit record for pointer section */
+        if (zs_packed_file_write_final_commit_record(f) != ZS_OK) {
+                zslog(LOGDEBUG, "Could not commit.\n");
+                ret = EXIT_FAILURE;
+                goto fail;
+        }
+
+        *fptr = f;
+
+        goto done;
+fail:
+        xunlink(f->fname.buf);
+        mappedfile_close(&f->mf);
+        cstring_release(&f->fname);
+        xfree(f);
+
+done:
+        return ret;
 }

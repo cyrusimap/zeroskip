@@ -1028,7 +1028,7 @@ int zsdb_dump(struct zsdb *db,
 
                         zs_transaction_new(db, &txn);
 
-                        if (zs_transaction_begin(&txn, TXN_ALL) != ZS_OK)
+                        if (zs_transaction_begin(&txn) != ZS_OK)
                                 return ZS_INTERNAL;
 
                         do {
@@ -1103,7 +1103,6 @@ int zsdb_repack(struct zsdb *db)
         ino_t inonum;
         uint32_t startidx, endidx;
         cstring fname = CSTRING_INIT;
-        struct zsdb_file *f;
         struct list_head *pos, *p;
 
         assert_zsdb(db);
@@ -1138,6 +1137,7 @@ int zsdb_repack(struct zsdb *db)
         /* We prefer to pack finalised files first.
          */
         if (!list_empty(&priv->dbfiles.fflist)) {
+                struct zsdb_file *f;
                 /* There are finalised files, which need to be packed, we do
                    that first */
 
@@ -1159,13 +1159,16 @@ int zsdb_repack(struct zsdb *db)
                 }
 
                 zs_packed_file_close(&f);
+
+                priv->dbfiles.pfcount++;
+
                 /* Close finalised files and unlink them */
                 list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
-                        struct zsdb_file *f;
+                        struct zsdb_file *tempf;
                         list_del(pos);
-                        f = list_entry(pos, struct zsdb_file, list);
-                        xunlink(f->fname.buf);
-                        zs_finalised_file_close(&f);
+                        tempf = list_entry(pos, struct zsdb_file, list);
+                        xunlink(tempf->fname.buf);
+                        zs_finalised_file_close(&tempf);
                         priv->dbfiles.ffcount--;
                 }
 
@@ -1179,7 +1182,51 @@ int zsdb_repack(struct zsdb *db)
            1 packed files, we repack the packed files.
          */
         if (!list_empty(&priv->dbfiles.pflist) && (priv->dbfiles.pfcount > 1)) {
-                zslog(LOGDEBUG, "Repacking packed files!\n");
+                struct list_head filelist;
+                struct zsdb_file *newpfile;
+                int i = 0;
+
+                filelist.prev = &filelist;
+
+                zslog(LOGDEBUG, "Repacking packed files:\n");
+                list_for_each_forward_safe(pos, p,  &priv->dbfiles.pflist) {
+                        struct zsdb_file *tempf;
+                        tempf = list_entry(pos, struct zsdb_file, list);
+                        if (i == 2) break; /* XXX: Pack only the latest 2 files */
+
+                        list_del(pos);
+                        list_add_tail(&tempf->list, &filelist);
+                        printf("\t > %s\n", tempf->fname.buf);
+                        i++;
+                }
+
+                /* Find the index range */
+                zs_find_index_range_for_files(&filelist,
+                                              &startidx, &endidx);
+
+                zs_filename_generate_packed(priv, &fname, startidx, endidx);
+                zslog(LOGDEBUG, "Packing into file %s...\n", fname.buf);
+
+                ret = zs_packed_file_new_from_packed_files(fname.buf,
+                                                           startidx, endidx,
+                                                           priv, &filelist,
+                                                           &newpfile);
+
+                zs_packed_file_close(&newpfile);
+
+                priv->dbfiles.pfcount++;
+
+                list_for_each_forward_safe(pos, p, &filelist) {
+                        struct zsdb_file *tempf;
+                        list_del(pos);
+                        tempf = list_entry(pos, struct zsdb_file, list);
+                        xunlink(tempf->fname.buf);
+                        zs_packed_file_close(&tempf);
+                        priv->dbfiles.pfcount--;
+                }
+
+                /* Done, for now. */
+                goto done;
         }
 
         zslog(LOGDEBUG, "Nothing to be packed for now!\n");
@@ -1296,7 +1343,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                                                           prefixlen, &found,
                                                           NULL, NULL);
                 else
-                        zs_transaction_begin(&temptxn, TXN_ALL);
+                        zs_transaction_begin(&temptxn);
 
                 newtxn = 1;
         }
