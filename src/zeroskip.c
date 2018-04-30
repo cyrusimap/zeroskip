@@ -1070,7 +1070,7 @@ int zsdb_dump(struct zsdb *db,
 
 int zsdb_abort(struct zsdb *db)
 {
-        int ret = ZS_OK;
+        int ret = ZS_NOTIMPLEMENTED;
 
         assert_zsdb(db);
 
@@ -1079,7 +1079,7 @@ int zsdb_abort(struct zsdb *db)
 
 int zsdb_consistent(struct zsdb *db)
 {
-        int ret = ZS_OK;
+        int ret = ZS_NOTIMPLEMENTED;
 
         assert_zsdb(db);
 
@@ -1297,7 +1297,54 @@ int zsdb_info(struct zsdb *db)
 
 int zsdb_finalise(struct zsdb *db _unused_)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        ino_t inonum;
+
+        assert_zsdb(db);
+
+        if (!db)
+                return ZS_NOT_OPEN;
+
+        priv = db->priv;
+
+        if (!priv->open || !priv->dbfiles.factive.is_open) {
+                return ZS_NOT_OPEN;
+        }
+
+        if (!zsdb_write_lock_is_locked(db)) {
+                zslog(LOGDEBUG, "Need a write lock to add records.\n");
+                ret = ZS_ERROR;
+                goto done;
+        }
+
+        inonum = zs_dotzsdb_get_ino(priv);
+        if (inonum != priv->dotzsdb_ino) {
+                /* If the inode number differ, the db has changed since the
+                   time it has been opened. We need to reload the DB */
+                zsdb_reload(priv); /* TODO: check return value */
+                ret = ZS_ERROR;
+                goto done;
+        }
+
+        zslog(LOGDEBUG, "Finalising %s.\n",
+              priv->dbfiles.factive.fname.buf);
+        ret = zs_active_file_finalise(priv);
+        if (ret != ZS_OK) goto done;
+
+        ret = zs_active_file_new(priv,
+                                 priv->dotzsdb.curidx + 1);
+        zslog(LOGDEBUG, "New active log file %s created.\n",
+              priv->dbfiles.factive.fname.buf);
+
+        /* Start computing crc32, if we haven't already. The computation will
+           end when the transaction is committed.
+         */
+        if (!priv->dbfiles.factive.mf->compute_crc)
+                crc32_begin(&priv->dbfiles.factive.mf);
+
+done:
+        return ret;
 }
 
 int cyrusdb_fetchnext(struct zsdb *db _unused_, const char *key _unused_,

@@ -431,6 +431,10 @@ int zs_transaction_begin_at_key(struct txn **txn,
         return ZS_OK;
 }
 
+/* zs_transaction_begin():
+ * A function to begin a transaction, on a DB. This is the function that
+ * needs to be used to iterate over all records in the DB!
+ */
 int zs_transaction_begin(struct txn **txn)
 {
         struct zsdb *db = NULL;
@@ -486,15 +490,21 @@ int zs_transaction_begin(struct txn **txn)
         }
 
         /* Add active file to the iterator */
-        prio++;
-        atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, NULL);
-        txn_datav_add_txn(*txn, atxnd);
-        txn_data_process(*txn, atxnd->data.iter->record->key,
-                         atxnd->data.iter->record->keylen, atxnd);
+        if (priv->memtree->count) {
+                prio++;
+                atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, NULL);
+                txn_datav_add_txn(*txn, atxnd);
+                txn_data_process(*txn, atxnd->data.iter->record->key,
+                                 atxnd->data.iter->record->keylen, atxnd);
+        }
 
         return ZS_OK;
 }
 
+/* zs_transaction_begin_for_packed_flist():
+ * A function to begin a transaction on a set of packed files listed in
+ * `pflist`, in a DB and to iterate over it.
+ */
 int zs_transaction_begin_for_packed_flist(struct txn **txn,
                                           struct list_head *pflist)
 {
@@ -519,7 +529,6 @@ int zs_transaction_begin_for_packed_flist(struct txn **txn,
                 return ZS_NOT_OPEN;
         }
 
-
         /* Add packed files to the iterator */
         list_for_each_forward(pos, pflist) {
                 struct txn_data *ptxnd;
@@ -539,6 +548,9 @@ int zs_transaction_begin_for_packed_flist(struct txn **txn,
         return ZS_OK;
 }
 
+/* zs_transaction_get():
+ * Given a valid transaction pointer, get the current transaction data
+ */
 struct txn_data *zs_transaction_get(struct txn *txn)
 {
         struct iter_key_data *ikdata = NULL;
@@ -566,6 +578,10 @@ struct txn_data *zs_transaction_get(struct txn *txn)
         return tdata;
 }
 
+/* zs_transaction_next():
+ * Given a valid transaction pointer, move the next transaction data in the
+ * transaction.
+ */
 int zs_transaction_next(struct txn *txn, struct txn_data *data)
 {
         if (!txn)
@@ -578,6 +594,9 @@ int zs_transaction_next(struct txn *txn, struct txn_data *data)
         return txn->pq.count ? 1 : 0;
 }
 
+/* zs_transaction_end():
+ * End a transaction and free the resources.
+ */
 void zs_transaction_end(struct txn **txn)
 {
         struct txn *t;
