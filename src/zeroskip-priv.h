@@ -344,6 +344,7 @@ extern int zs_packed_file_new_from_packed_files(const char *path,
                                                 uint32_t endidx,
                                                 struct zsdb_priv *priv,
                                                 struct list_head *flist,
+                                                struct txn **txn,
                                                 struct zsdb_file **fptr);
 extern int zs_packed_file_write_btree_record(struct record *record, void *data);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);

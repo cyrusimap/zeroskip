@@ -532,15 +532,15 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
 }
 
 int zs_packed_file_new_from_packed_files(const char *path,
-                                                uint32_t startidx,
-                                                uint32_t endidx,
-                                                struct zsdb_priv *priv,
-                                                struct list_head *flist,
-                                                struct zsdb_file **fptr)
+                                         uint32_t startidx,
+                                         uint32_t endidx,
+                                         struct zsdb_priv *priv,
+                                         struct list_head *flist,
+                                         struct txn **txn,
+                                         struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
         struct zsdb_file *f;
-        struct txn *txn = NULL;
         struct txn_data *data;
         int count = 0;
 
@@ -580,14 +580,14 @@ int zs_packed_file_new_from_packed_files(const char *path,
         /* Seek to location after header */
         mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
-        ret = zs_transaction_begin_for_packed_flist(&txn, flist);
+        ret = zs_transaction_begin_for_packed_flist(txn, flist);
         if (ret != ZS_OK) {
                 zslog(LOGWARNING, "Failed to begin transaction!\n");
                 goto fail;
         }
 
         do {
-                data = zs_transaction_get(txn);
+                data = zs_transaction_get(*txn);
                 switch(data->type) {
                 case ZSDB_BE_PACKED:
                 {
@@ -606,9 +606,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
                 }
 
                 count++;
-        } while (zs_transaction_next(txn, data));
-
-        zs_transaction_end(&txn);
+        } while (zs_transaction_next(*txn, data));
 
         ret = mappedfile_flush(&f->mf);
         if (ret) {

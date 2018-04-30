@@ -1183,7 +1183,8 @@ int zsdb_repack(struct zsdb *db)
          */
         if (!list_empty(&priv->dbfiles.pflist) && (priv->dbfiles.pfcount > 1)) {
                 struct list_head filelist;
-                struct zsdb_file *newpfile;
+                struct zsdb_file *newpfile = NULL;
+                struct txn *txn = NULL;
                 int i = 0;
 
                 filelist.prev = &filelist;
@@ -1207,10 +1208,12 @@ int zsdb_repack(struct zsdb *db)
                 zs_filename_generate_packed(priv, &fname, startidx, endidx);
                 zslog(LOGDEBUG, "Packing into file %s...\n", fname.buf);
 
+                ret = zs_transaction_new(db, &txn);
                 ret = zs_packed_file_new_from_packed_files(fname.buf,
                                                            startidx, endidx,
                                                            priv, &filelist,
-                                                           &newpfile);
+                                                           &txn, &newpfile);
+                zs_transaction_end(&txn);
 
                 zs_packed_file_close(&newpfile);
 
