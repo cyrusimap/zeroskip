@@ -8,7 +8,6 @@
  *
  */
 
-#include "log.h"
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
@@ -57,5 +56,4 @@ void zs_filename_generate_packed(struct zsdb_priv *priv, cstring *fname,
         cstring_addstr(fname, sidx);
         cstring_addch(fname, '-');
         cstring_addstr(fname, eidx);
-
 }

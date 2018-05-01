@@ -144,8 +144,7 @@ int zs_packed_file_write_btree_record(struct record *record, void *data)
         vecu64_append(f->index, f->mf->offset);
         ret = zs_file_write_keyval_record(f, record->key, record->keylen,
                                           record->val, record->vallen);
-        if (ret == ZS_OK) return 1;
-        else return 0;
+        return (ret == ZS_OK) ? 1 : 0;
 }
 
 int zs_packed_file_write_record(void *data,
@@ -157,8 +156,8 @@ int zs_packed_file_write_record(void *data,
 
         vecu64_append(f->index, f->mf->offset);
         ret = zs_file_write_keyval_record(f, key, keylen, value, vallen);
-        if (ret == ZS_OK) return 1;
-        else return 0;
+
+        return (ret == ZS_OK) ? 1 : 0;
 }
 
 int zs_packed_file_write_commit_record(struct zsdb_file *f)
@@ -215,8 +214,7 @@ int zs_packed_file_open(const char *path,
                 goto fail;
         }
 
-        /* TODO:
-         *  Initialise f->index;
+        /*  Initialise f->index;
          *  Seek to the end of file
          *   - go back 8 bytes, and check if there is a commit record,
          *     if there is one, then it is a short commit
@@ -233,6 +231,7 @@ int zs_packed_file_open(const char *path,
          */
         f->index = vecu64_new();
 
+        /* TODO: Verify commit */
         /* Read the commit record and get to the pointers */
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
         ret = get_offset_to_pointers(f, &offset);
@@ -276,21 +275,6 @@ int zs_packed_file_close(struct zsdb_file **fptr)
         cstring_release(&f->fname);
         vecu64_free(&f->index);
         xfree(f);
-
-        return ret;
-}
-
-/* zs_packed_file_new():
- * Open a new file to be used as a packed file for writing.
- */
-int zs_packed_file_new(const char *path _unused_,
-                       uint32_t startidx _unused_, uint32_t endidx _unused_,
-                       struct zsdb_file **fptr _unused_)
-{
-        int ret = ZS_OK;
-        struct zsdb_file *f _unused_;
-        size_t mf_size _unused_;
-        int mappedfile_flags _unused_ = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
 
         return ret;
 }
@@ -543,6 +527,11 @@ int zs_packed_file_new_from_packed_files(const char *path,
         struct zsdb_file *f;
         struct txn_data *data;
         int count = 0;
+
+        if (!txn || !*txn) {
+                zslog(LOGDEBUG, "Need a valid transaction");
+                return ZS_INTERNAL;
+        }
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
         f->type = DB_FTYPE_PACKED;

@@ -331,9 +331,6 @@ extern int zs_header_validate(struct zsdb_file *f);
 /* zeroskip-packed.c */
 extern int zs_packed_file_open(const char *path, struct zsdb_file **fptr);
 extern int zs_packed_file_close(struct zsdb_file **fptr);
-extern int zs_packed_file_new(const char *path,
-                              uint32_t startidx, uint32_t endidx,
-                              struct zsdb_file **fptr);
 extern int zs_packed_file_new_from_memtree(const char *path,
                                            uint32_t startidx,
                                            uint32_t endidx,

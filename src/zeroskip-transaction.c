@@ -423,10 +423,12 @@ int zs_transaction_begin_at_key(struct txn **txn,
                 }
         }
 
-        atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, &aiter);
-        txn_datav_add_txn(*txn, atxnd);
-        txn_data_process(*txn, atxnd->data.iter->record->key,
-                         atxnd->data.iter->record->keylen, atxnd);
+        if (priv->memtree->count) {
+                atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, &aiter);
+                txn_datav_add_txn(*txn, atxnd);
+                txn_data_process(*txn, atxnd->data.iter->record->key,
+                                 atxnd->data.iter->record->keylen, atxnd);
+        }
 
         return ZS_OK;
 }

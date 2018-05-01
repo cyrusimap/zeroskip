@@ -1295,7 +1295,7 @@ int zsdb_info(struct zsdb *db)
         return ret;
 }
 
-int zsdb_finalise(struct zsdb *db _unused_)
+int zsdb_finalise(struct zsdb *db)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
