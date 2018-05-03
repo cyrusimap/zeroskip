@@ -220,6 +220,7 @@ struct txn_data {
         zsdb_be_t type;
         int priority;
         int done;
+        int deleted;
         union {
                 btree_iter_t iter;
                 struct zsdb_file *f;
@@ -294,7 +295,8 @@ extern int zs_active_file_write_delete_record(struct zsdb_priv *priv,
                                               unsigned char *key,
                                               size_t keylen);
 extern int zs_active_file_record_foreach(struct zsdb_priv *priv,
-                                         foreach_cb *cb, void *cbdata);
+                                         foreach_cb *cb, foreach_cb *deleted_cb,
+                                         void *cbdata);
 extern int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx);
 
 /* zeroskip-dotzsdb.c */
@@ -322,7 +324,8 @@ extern void zs_filename_generate_packed(struct zsdb_priv *priv, cstring *fname,
 extern int zs_finalised_file_open(const char *path, struct zsdb_file **fptr);
 extern int zs_finalised_file_close(struct zsdb_file **fptr);
 extern int zs_finalised_file_record_foreach(struct zsdb_file *f,
-                                            foreach_cb *cb, void *cbdata);
+                                            foreach_cb *cb, foreach_cb *deleted_cb,
+                                            void *cbdata);
 
 /* zeroskip-header.c */
 extern int zs_header_write(struct zsdb_file *f);
@@ -344,12 +347,20 @@ extern int zs_packed_file_new_from_packed_files(const char *path,
                                                 struct txn **txn,
                                                 struct zsdb_file **fptr);
 extern int zs_packed_file_write_btree_record(struct record *record, void *data);
+extern int zs_packed_file_write_record(void *data,
+                                       unsigned char *key, size_t keylen,
+                                       unsigned char *value, size_t vallen);
+extern int zs_packed_file_write_delete_record(void *data,
+                                              unsigned char *key, size_t keylen,
+                                              unsigned char *value _unused_,
+                                              size_t vallen _unused_);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
 extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
                                     void *cbdata);
 extern int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
                                               unsigned char **key,
-                                              uint64_t *len);
+                                              uint64_t *len,
+                                              enum record_t *type);
 extern int zs_packed_file_bsearch_index(const unsigned char *key,
                                         const size_t keylen,
                                         struct zsdb_file *f, uint64_t *location,
@@ -357,7 +368,8 @@ extern int zs_packed_file_bsearch_index(const unsigned char *key,
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
-                                    foreach_cb *cb, void *cbdata);
+                                    foreach_cb *cb, foreach_cb *deleted_cb,
+                                    void *cbdata);
 extern int zs_record_read_key_from_file_offset(struct zsdb_file *f,
                                                size_t offset,
                                                struct zs_key *key);

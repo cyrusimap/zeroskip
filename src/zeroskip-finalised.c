@@ -97,7 +97,8 @@ int zs_finalised_file_close(struct zsdb_file **fptr)
 }
 
 int zs_finalised_file_record_foreach(struct zsdb_file *f,
-                                     foreach_cb *cb, void *cbdata)
+                                     foreach_cb *cb, foreach_cb *deleted_cb,
+                                     void *cbdata)
 {
         int ret = ZS_OK;
         size_t mfsize = 0, offset = ZS_HDR_SIZE;
@@ -113,7 +114,8 @@ int zs_finalised_file_record_foreach(struct zsdb_file *f,
 
         while (offset < mfsize) {
                 ret = zs_record_read_from_file(f, &offset,
-                                               cb, cbdata);
+                                               cb, deleted_cb,
+                                               cbdata);
         }
 
         return ret;

@@ -215,7 +215,8 @@ int zs_active_file_write_delete_record(struct zsdb_priv *priv,
 }
 
 int zs_active_file_record_foreach(struct zsdb_priv *priv,
-                                  foreach_cb *cb, void *cbdata)
+                                  foreach_cb *cb, foreach_cb *deleted_cb,
+                                  void *cbdata)
 {
         int ret = ZS_OK;
         size_t dbsize = 0, offset = ZS_HDR_SIZE;
@@ -231,7 +232,7 @@ int zs_active_file_record_foreach(struct zsdb_priv *priv,
 
         while (offset < dbsize) {
                 ret = zs_record_read_from_file(&priv->dbfiles.factive, &offset,
-                                               cb, cbdata);
+                                               cb, deleted_cb, cbdata);
         }
 
         return ret;

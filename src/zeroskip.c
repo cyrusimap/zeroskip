@@ -66,14 +66,27 @@ static int dbfname_cmp(const void *d1, const void *d2, void *cbdata _unused_)
         return natural_strcasecmp(f1->fname.buf, f2->fname.buf);
 }
 
-static int load_records_cb(void *data,
-                           unsigned char *key, size_t keylen,
-                           unsigned char *value, size_t vallen)
+static int load_btree_record_cb(void *data,
+                                unsigned char *key, size_t keylen,
+                                unsigned char *value, size_t vallen)
 {
         struct btree *memtree = (struct btree *)data;
         struct record *rec;
 
-        rec = record_new(key, keylen, value, vallen);
+        rec = record_new(key, keylen, value, vallen, 0);
+        btree_replace(memtree, rec);
+
+        return 0;
+}
+
+static int load_deleted_btree_record_cb(void *data,
+                                        unsigned char *key, size_t keylen,
+                                        unsigned char *value, size_t vallen)
+{
+        struct btree *memtree = (struct btree *)data;
+        struct record *rec;
+
+        rec = record_new(key, keylen, value, vallen, 1);
         btree_replace(memtree, rec);
 
         return 0;
@@ -594,7 +607,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         goto done;
 
                 /* Load records from active file to in-memory tree */
-                zs_active_file_record_foreach(priv, load_records_cb,
+                zs_active_file_record_foreach(priv, load_btree_record_cb,
+                                              load_deleted_btree_record_cb,
                                               priv->memtree);
 
                 /* Load data from finalised files */
@@ -613,7 +627,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                                 f = list_entry(pos, struct zsdb_file, list);
                                 zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
                                 zs_finalised_file_record_foreach(f,
-                                                                 load_records_cb,
+                                                                 load_btree_record_cb,
+                                                                 load_deleted_btree_record_cb,
                                                                  priv->fmemtree);
                                 f->priority = ++priority;
                         }
@@ -790,7 +805,7 @@ int zsdb_add(struct zsdb *db,
         }
         priv->dbfiles.factive.dirty = 1;
 
-        rec = record_new(key, keylen, value, vallen);
+        rec = record_new(key, keylen, value, vallen, 0);
         btree_replace(priv->memtree, rec);
 
         zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
@@ -845,7 +860,7 @@ int zsdb_remove(struct zsdb *db,
         zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
 
         /* Add the entry to the in-memory tree */
-        rec = record_new(key, keylen, NULL, 0);
+        rec = record_new(key, keylen, NULL, 0, 1);
         btree_replace(priv->memtree, rec);
 
 done:
@@ -1033,6 +1048,9 @@ int zsdb_dump(struct zsdb *db,
 
                         do {
                                 data = zs_transaction_get(txn);
+                                if (data->deleted) /* deleted key */
+                                        continue;
+
                                 switch (data->type) {
                                 case ZSDB_BE_ACTIVE:
                                 case ZSDB_BE_FINALISED:
@@ -1044,6 +1062,7 @@ int zsdb_dump(struct zsdb *db,
                                         size_t offset = f->index->data[f->indexpos];
                                         zs_record_read_from_file(f, &offset,
                                                                  print_record_cb,
+                                                                 NULL,
                                                                  NULL);
                                 }
                                 break;
@@ -1193,10 +1212,10 @@ int zsdb_repack(struct zsdb *db)
                 list_for_each_forward_safe(pos, p,  &priv->dbfiles.pflist) {
                         struct zsdb_file *tempf;
                         tempf = list_entry(pos, struct zsdb_file, list);
-                        if (i == 2) break; /* XXX: Pack only the latest 2 files */
+                        if (i == 2) break; /* Pack the 2 oldest files */
 
                         list_del(pos);
-                        list_add_tail(&tempf->list, &filelist);
+                        list_add_head(&tempf->list, &filelist);
                         printf("\t > %s\n", tempf->fname.buf);
                         i++;
                 }
@@ -1405,6 +1424,9 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 struct zs_val vrec;
 
                 data = zs_transaction_get(temptxn);
+                if (data->deleted) /* deleted key */
+                        continue;
+
                 switch (data->type) {
                 case ZSDB_BE_ACTIVE:
                 case ZSDB_BE_FINALISED:

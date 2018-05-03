@@ -42,6 +42,7 @@ struct record {
         size_t keylen;
         unsigned char *val;
         size_t vallen;
+        int deleted;
 };
 
 struct btree_node {
@@ -188,7 +189,8 @@ int btree_print_node_data(struct btree *btree, void *data);
 
 /* Record handlers */
 struct record * record_new(unsigned char *key, size_t keylen,
-                           unsigned char *val, size_t vallen);
+                           unsigned char *val, size_t vallen,
+                           int deleted);
 void record_free(struct record *record);
 
 CPP_GUARD_END

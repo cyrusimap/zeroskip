@@ -161,6 +161,7 @@ static struct txn_data *txn_data_alloc(zsdb_be_t type, int prio,
         d->type = type;
         d->priority = prio;
         d->done = 0;
+        d->deleted = 0;
         if (type == ZSDB_BE_PACKED) {
                 /* data is in files */
                 d->data.f = data;
@@ -232,14 +233,19 @@ static int txn_data_next(struct txn *txn, struct txn_data *txndata)
                 if (btree_next(txndata->data.iter)) {
                         key = txndata->data.iter->record->key;
                         keylen = txndata->data.iter->record->keylen;
+                        txndata->deleted = txndata->data.iter->record->deleted;
                 }
                 break;
         case ZSDB_BE_PACKED:
         {
                 struct zsdb_file *f = txndata->data.f;
+                enum record_t type;
                 f->indexpos++;
                 if (f->indexpos < f->index->count)
-                        zs_packed_file_get_key_from_offset(f, &key, &keylen);
+                        zs_packed_file_get_key_from_offset(f, &key,
+                                                           &keylen, &type);
+                if (type == REC_TYPE_DELETED || type == REC_TYPE_LONG_DELETED)
+                        txndata->deleted = 1;
 
                 break;
         }
@@ -280,7 +286,8 @@ static void txn_data_process(struct txn *txn,
                         /* Process the old txnd */
                         txn_data_next(txn, old_txnd);
                 } else {
-                        /* If the new txnd's priority is greater, we reprocess.
+                        /* If the new txnd's priority is lesser than the older
+                         * transaction, we reprocess the new transaction.
                          */
                         txn_data_next(txn, new_txnd);
                 }
@@ -385,7 +392,8 @@ int zs_transaction_begin_at_key(struct txn **txn,
                 txn_datav_add_txn(*txn, ptxnd);
 
                 zs_packed_file_get_key_from_offset(f, &nextkey,
-                                                   &nextkeylen);
+                                                   &nextkeylen,
+                                                   NULL);
                 txn_data_process(*txn, nextkey, nextkeylen, ptxnd);
         }
 
@@ -476,7 +484,7 @@ int zs_transaction_begin(struct txn **txn)
 
                 prio = f->priority;
 
-                zs_packed_file_get_key_from_offset(f, &key, &keylen);
+                zs_packed_file_get_key_from_offset(f, &key, &keylen, NULL);
 
                 txn_data_process(*txn, key, keylen, ptxnd);
         }
@@ -542,7 +550,7 @@ int zs_transaction_begin_for_packed_flist(struct txn **txn,
                 ptxnd = txn_data_alloc(ZSDB_BE_PACKED, f->priority, f, NULL);
                 txn_datav_add_txn(*txn, ptxnd);
 
-                zs_packed_file_get_key_from_offset(f, &key, &keylen);
+                zs_packed_file_get_key_from_offset(f, &key, &keylen, NULL);
 
                 txn_data_process(*txn, key, keylen, ptxnd);
         }

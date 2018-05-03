@@ -31,7 +31,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
                 sprintf(key, "key%d", j);
                 sprintf(val, "val%d", j);
                 recs[j] = record_new((unsigned char *)key, strlen(key),
-                                     (unsigned char *)val, strlen(val));
+                                     (unsigned char *)val, strlen(val),
+                                     0);
                 if (btree_insert(tree, recs[j]) != BTREE_OK) {
                         fprintf(stderr, "btree_insert didn't work for %s\n", key);
                         goto done;
@@ -43,7 +44,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
         printf("------------------------\n");
         {
                 struct record *trec = record_new((unsigned char *)"key2", strlen("key2"),
-                                                 (unsigned char *)"newval2", strlen("newval2"));
+                                                 (unsigned char *)"newval2", strlen("newval2"),
+                                                 0);
                 ret = btree_insert(tree, trec);
                 if (ret == BTREE_DUPLICATE) {
                         fprintf(stderr, "duplicate key: key2, replacing\n");
@@ -60,7 +62,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
         printf("------------------------\n");
         {
                 struct record *trec = record_new((unsigned char *)"key199", strlen("key199"),
-                                                 (unsigned char *)"val199", strlen("val199"));
+                                                 (unsigned char *)"val199", strlen("val199"),
+                                                 0);
                 ret = btree_insert(tree, trec);
                 if (ret != BTREE_OK) {
                         fprintf(stderr, "failed inserting key199\n");

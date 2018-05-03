@@ -801,7 +801,8 @@ int btree_print_node_data(struct btree *btree, void *data)
 }
 
 struct record * record_new(unsigned char *key, size_t keylen,
-                           unsigned char *val, size_t vallen)
+                           unsigned char *val, size_t vallen,
+                           int deleted)
 {
         struct record *rec = NULL;
 
@@ -815,6 +816,8 @@ struct record * record_new(unsigned char *key, size_t keylen,
         memcpy(rec->val, val, vallen);
         rec->vallen = vallen;
 
+        rec->deleted = deleted;
+
         nodecount++;
         return rec;
 }
@@ -827,6 +830,8 @@ void record_free(struct record *record)
         xfree(record->val);
         record->keylen = 0;
         record->vallen = 0;
+        record->deleted = 0;
+
         xfree(record);
 
         nodecount--;

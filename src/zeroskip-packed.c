@@ -142,8 +142,12 @@ int zs_packed_file_write_btree_record(struct record *record, void *data)
         int ret = ZS_OK;
 
         vecu64_append(f->index, f->mf->offset);
-        ret = zs_file_write_keyval_record(f, record->key, record->keylen,
-                                          record->val, record->vallen);
+
+        if (record->deleted)
+                ret = zs_file_write_delete_record(f, record->key, record->keylen);
+        else
+                ret = zs_file_write_keyval_record(f, record->key, record->keylen,
+                                                  record->val, record->vallen);
         return (ret == ZS_OK) ? 1 : 0;
 }
 
@@ -156,6 +160,20 @@ int zs_packed_file_write_record(void *data,
 
         vecu64_append(f->index, f->mf->offset);
         ret = zs_file_write_keyval_record(f, key, keylen, value, vallen);
+
+        return (ret == ZS_OK) ? 1 : 0;
+}
+
+int zs_packed_file_write_delete_record(void *data,
+                                       unsigned char *key, size_t keylen,
+                                       unsigned char *value _unused_,
+                                       size_t vallen _unused_)
+{
+        struct zsdb_file *f = (struct zsdb_file *)data;
+        int ret = ZS_OK;
+
+        vecu64_append(f->index, f->mf->offset);
+        ret = zs_file_write_delete_record(f, key, keylen);
 
         return (ret == ZS_OK) ? 1 : 0;
 }
@@ -375,7 +393,9 @@ done:
 }
 
 int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
-                                       unsigned char **key, uint64_t *len)
+                                       unsigned char **key,
+                                       uint64_t *len,
+                                       enum record_t *type)
 {
         uint64_t off;
         int ret;
@@ -396,6 +416,9 @@ int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
                 *len = k.base.llen;
 
         *key = k.data;
+
+        if (type)
+                *type = k.base.type;
 
         return ZS_OK;
 }
@@ -577,6 +600,9 @@ int zs_packed_file_new_from_packed_files(const char *path,
 
         do {
                 data = zs_transaction_get(*txn);
+                if (data->deleted)
+                        continue;
+
                 switch(data->type) {
                 case ZSDB_BE_PACKED:
                 {
@@ -584,6 +610,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
                         size_t offset = tempf->index->data[tempf->indexpos];
                         zs_record_read_from_file(tempf, &offset,
                                                  zs_packed_file_write_record,
+                                                 zs_packed_file_write_delete_record,
                                                  (void *)f);
                         break;
                 }

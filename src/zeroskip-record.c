@@ -134,7 +134,8 @@ static int zs_read_deleted_record(struct zsdb_file *f, size_t *offset,
  * Reads a record from a given struct zsdb_file
  */
 int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
-                             foreach_cb *cb, void *cbdata)
+                             foreach_cb *cb, foreach_cb *deleted_cb,
+                             void *cbdata)
 {
         unsigned char *bptr, *fptr;
         uint64_t data;
@@ -172,7 +173,7 @@ int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                 break;
         case REC_TYPE_DELETED:
         case REC_TYPE_LONG_DELETED:
-                zs_read_deleted_record(f, offset, cb, cbdata);
+                zs_read_deleted_record(f, offset, deleted_cb, cbdata);
                 break;
         case REC_TYPE_UNUSED:
                 break;
