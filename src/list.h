@@ -125,6 +125,11 @@ static inline bool list_empty(struct list_head *l)
 #define list_for_each_reverse(pos, l) \
         for (pos = (l)->prev; pos != (l); pos = pos->prev)
 
+/* list_for_each_reverse_safe(): list iterator, where entries can be removed safely */
+#define list_for_each_reverse_safe(pos, ptr, l) \
+        for (pos = (l)->prev; ptr = pos->prev;  \
+             pos != (l);                        \
+             pos = ptr, ptr = pos->prev)
 
 CPP_GUARD_END
 #endif  /* _ZS_LIST_H_ */
