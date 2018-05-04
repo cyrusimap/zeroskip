@@ -62,11 +62,7 @@ struct zsdb_operations {
 /*
  * Zeroskip DB Iterator
  */
-struct zsdb_iter {
-        struct zsdb *db;
-        struct zsdb_iter *next;
-        int flags;
-};
+struct zsbd_iter;
 
 struct zsdb {
         struct zsdb_iter *iter;     /* All open iterators */

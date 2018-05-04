@@ -207,15 +207,6 @@ typedef enum _zsdb_be_t {
         ZSDB_BE_PACKED,
 } zsdb_be_t;
 
-struct zsdb_store {
-        zsdb_be_t type;
-};
-
-struct iter_key_data {
-        unsigned char *key;
-        size_t len;
-};
-
 /* Data for priority queue for lookup */
 struct txn_data {
         zsdb_be_t type;
@@ -250,6 +241,7 @@ struct txn {
         int txn_data_alloc;
 
         int forone_txn;
+        int write_txn;
 };
 
 /* Transaction types */
@@ -258,6 +250,45 @@ enum TxnType {
         TXN_PACKED_ONLY,
 };
 
+/* Iterator */
+struct iter_key_data {
+        unsigned char *key;
+        size_t len;
+};
+
+struct iter_htable {
+        struct htable table;
+};
+
+struct iter_htable_entry {
+        struct htable_entry entry;
+        unsigned char *key;
+        size_t keylen;
+        void *value;
+};
+
+struct zsdb_iter_data {
+        zsdb_be_t type;
+        int priority;
+        int done;
+        int deleted;
+        union {
+                btree_iter_t iter;
+                struct zsdb_file *f;
+        } data;
+};
+
+struct zsdb_iter {
+        struct zsdb *db;
+        struct pqueue pq;
+        struct iter_htable ht;
+
+        struct zsdb_iter_data **datav;
+        int iter_data_count;
+        int iter_data_alloc;
+
+        int forone_iter;
+};
 
 /* Private data structure */
 struct zsdb_priv {
@@ -333,6 +364,22 @@ extern int zs_finalised_file_record_foreach(struct zsdb_file *f,
 /* zeroskip-header.c */
 extern int zs_header_write(struct zsdb_file *f);
 extern int zs_header_validate(struct zsdb_file *f);
+
+/* zeroskip-iterator.c */
+extern int zs_iterator_new(struct zsdb *db, struct zsdb_iter **iter);
+extern int zs_iterator_begin(struct zsdb_iter **iter);
+extern int zs_iterator_begin_at_key(struct zsdb_iter **iter,
+                                    unsigned char *key,
+                                    size_t keylen,
+                                    int *found,
+                                    unsigned char **value,
+                                    size_t *vallen);
+extern int zs_iterator_begin_for_packed_files(struct zsdb_iter **iter,
+                                              struct list_head *pflist);
+extern struct zsdb_iter_data *zs_iterator_get(struct zsdb_iter *iter);
+extern int zs_iterator_next(struct zsdb_iter *iter,
+                            struct zsdb_iter_data *data);
+extern void zs_iterator_end(struct zsdb_iter **iter);
 
 /* zeroskip-packed.c */
 extern int zs_packed_file_open(const char *path, struct zsdb_file **fptr);

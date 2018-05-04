@@ -21,6 +21,7 @@ ZS_LIBOBJS =  			\
 	zeroskip-filename.o	\
 	zeroskip-finalised.o	\
 	zeroskip-header.o	\
+	zeroskip-iterator.o	\
 	zeroskip-packed.o	\
 	zeroskip-record.o	\
 	zeroskip-transaction.o 	\
