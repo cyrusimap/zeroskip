@@ -492,6 +492,7 @@ int btree_insert_opt(struct btree *btree, struct record *record, int replace)
                         rec->val = xmalloc(record->vallen + 1);
                         memcpy(rec->val, record->val, record->vallen);
                         rec->vallen = record->vallen;
+                        rec->deleted = record->deleted;
                         record_free(record);
                         goto done;
                 }
