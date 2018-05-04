@@ -145,8 +145,9 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
         size_t mfsize = 0;
         int mappedfile_flags = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
 
-        /* Update the index */
-        zs_dotzsdb_update_index(priv, idx);
+        /* Update the index and offset in .zsdb */
+        zs_dotzsdb_update_index_and_offset(priv, idx, ZS_HDR_SIZE);
+
         zs_filename_generate_active(priv, &priv->dbfiles.factive.fname);
 
         /* Initialise the header fields of factive */

@@ -68,7 +68,8 @@ static void register_signal_handlers(sigfunc f)
  * The .zsdb file in a DB directory has the following structure:
  *      ZSDB Signature  -  64 bits
  *      current index   -  32 bits
- *      Parsed uuid str - 288 bits
+ *      Parsed uuid str - 296 bits
+ *      offset          -  64 bits (the last known good pos in active file)
  */
 int zs_dotzsdb_create(struct zsdb_priv *priv)
 {
@@ -100,6 +101,11 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         /* UUID */
         memcpy(sptr, &priv->dotzsdb.uuidstr, UUID_STRLEN);
         sptr += UUID_STRLEN;
+
+        /* offset */
+        priv->dotzsdb.offset = 0;
+        *((uint64_t *)sptr) = hton64(0);
+        sptr += sizeof(uint64_t);
 
         /* Write to file */
         if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RW_CR, &mf) != 0) {
@@ -162,7 +168,13 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         priv->dotzsdb_ino = sb.st_ino;
 
         mappedfile_size(&mf, &mfsize);
-        if (mfsize < DOTZSDB_SIZE) {
+        /* The first version of .zsdb was smaller by uint64_t, so the
+         * second comparison of mfsize with (DOTZSDB_SIZE - sizeof(uint64_t))
+         * is just to be backward compatible.
+         * XXX: Need to remove that eventually!
+         */
+        if ((mfsize < DOTZSDB_SIZE) &&
+            (mfsize < (DOTZSDB_SIZE - sizeof(uint64_t)))) {
                 zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);
                 ret = 0;
@@ -183,6 +195,9 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                        sizeof(priv->dotzsdb.curidx),
                        sizeof(priv->dotzsdb.uuidstr));
                 uuid_parse(priv->dotzsdb.uuidstr, priv->uuid);
+
+                /* offset */
+                priv->dotzsdb.offset = ntoh64(dothdr->offset);
         } else {
                 zslog(LOGDEBUG, "Invalid zeroskip DB %s.\n",
                         priv->dotzsdbfname.buf);
@@ -198,10 +213,11 @@ fail1:
 }
 
 /*
- * zs_dotzsdb_update_index():
- * Updates the current index in the .zsdb file.
+ * zs_dotzsdb_update_index_and_offset():
+ * Updates the current index and offset in the .zsdb file.
  */
-int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
+int zs_dotzsdb_update_index_and_offset(struct zsdb_priv *priv,
+                                       uint32_t idx, uint64_t offset)
 {
         int ret = 0;
 
@@ -211,8 +227,10 @@ int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx)
                 goto done;
         }
 
-        /* Update the index to the new value */
+        /* index */
         priv->dotzsdb.curidx = idx;
+        /* offset */
+        priv->dotzsdb.offset = offset;
 
         if (!zs_dotzsdb_update_end(priv)) {
                 zslog(LOGDEBUG, "Failed acquiring lock to update index!\n");

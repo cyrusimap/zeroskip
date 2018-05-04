@@ -81,7 +81,8 @@ struct dotzsdb {
         uint64_t signature;
         uint32_t curidx;
         char uuidstr[37];
-};                              /* A total of 48 bytes */
+        uint64_t offset;
+};                              /* A total of 57 bytes */
 #define DOTZSDB_FNAME ".zsdb"
 #define DOTZSDB_SIZE  sizeof(struct dotzsdb)
 
@@ -302,7 +303,9 @@ extern int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx);
 /* zeroskip-dotzsdb.c */
 extern int zs_dotzsdb_create(struct zsdb_priv *priv);
 extern int zs_dotzsdb_validate(struct zsdb_priv *priv);
-extern int zs_dotzsdb_update_index(struct zsdb_priv *priv, uint32_t idx);
+extern int zs_dotzsdb_update_index_and_offset(struct zsdb_priv *priv,
+                                              uint32_t idx,
+                                              uint64_t offset);
 extern ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_begin(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_end(struct zsdb_priv *priv);
