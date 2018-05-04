@@ -239,12 +239,12 @@ static int txn_data_next(struct txn *txn, struct txn_data *txndata)
         case ZSDB_BE_PACKED:
         {
                 struct zsdb_file *f = txndata->data.f;
-                enum record_t type;
+                enum record_t rectype;
                 f->indexpos++;
                 if (f->indexpos < f->index->count)
                         zs_packed_file_get_key_from_offset(f, &key,
-                                                           &keylen, &type);
-                if (type == REC_TYPE_DELETED || type == REC_TYPE_LONG_DELETED)
+                                                           &keylen, &rectype);
+                if (rectype == REC_TYPE_DELETED || rectype == REC_TYPE_LONG_DELETED)
                         txndata->deleted = 1;
 
                 break;
@@ -477,14 +477,17 @@ int zs_transaction_begin(struct txn **txn)
                 struct zsdb_file *f;
                 unsigned char *key;
                 size_t keylen;
+                enum record_t rectype;
 
                 f = list_entry(pos, struct zsdb_file, list);
                 ptxnd = txn_data_alloc(ZSDB_BE_PACKED, f->priority, f, NULL);
-                txn_datav_add_txn(*txn, ptxnd);
-
                 prio = f->priority;
 
-                zs_packed_file_get_key_from_offset(f, &key, &keylen, NULL);
+                zs_packed_file_get_key_from_offset(f, &key, &keylen, &rectype);
+                if (rectype == REC_TYPE_DELETED || rectype == REC_TYPE_LONG_DELETED)
+                        ptxnd->deleted = 1;
+
+                txn_datav_add_txn(*txn, ptxnd);
 
                 txn_data_process(*txn, key, keylen, ptxnd);
         }
@@ -494,6 +497,7 @@ int zs_transaction_begin(struct txn **txn)
                 prio++;
                 ftxnd = txn_data_alloc(ZSDB_BE_FINALISED, prio,
                                        priv->fmemtree, NULL);
+                ftxnd->deleted = ftxnd->data.iter->record->deleted;
                 txn_datav_add_txn(*txn, ftxnd);
                 txn_data_process(*txn, ftxnd->data.iter->record->key,
                                  ftxnd->data.iter->record->keylen, ftxnd);
@@ -503,6 +507,7 @@ int zs_transaction_begin(struct txn **txn)
         if (priv->memtree->count) {
                 prio++;
                 atxnd = txn_data_alloc(ZSDB_BE_ACTIVE, prio, priv->memtree, NULL);
+                atxnd->deleted = atxnd->data.iter->record->deleted;
                 txn_datav_add_txn(*txn, atxnd);
                 txn_data_process(*txn, atxnd->data.iter->record->key,
                                  atxnd->data.iter->record->keylen, atxnd);
