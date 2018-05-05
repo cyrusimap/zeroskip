@@ -543,15 +543,15 @@ int zs_packed_file_new_from_packed_files(const char *path,
                                          uint32_t endidx,
                                          struct zsdb_priv *priv,
                                          struct list_head *flist,
-                                         struct txn **txn,
+                                         struct zsdb_iter **iter,
                                          struct zsdb_file **fptr)
 {
         int ret = ZS_OK;
         struct zsdb_file *f;
-        struct txn_data *data;
+        struct zsdb_iter_data *data;
         int count = 0;
 
-        if (!txn || !*txn) {
+        if (!iter || !*iter) {
                 zslog(LOGDEBUG, "Need a valid transaction");
                 return ZS_INTERNAL;
         }
@@ -592,14 +592,14 @@ int zs_packed_file_new_from_packed_files(const char *path,
         /* Seek to location after header */
         mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
-        ret = zs_transaction_begin_for_packed_flist(txn, flist);
+        ret = zs_iterator_begin_for_packed_files(iter, flist);
         if (ret != ZS_OK) {
                 zslog(LOGWARNING, "Failed to begin transaction!\n");
                 goto fail;
         }
 
         do {
-                data = zs_transaction_get(*txn);
+                data = zs_iterator_get(*iter);
                 if (data->deleted)
                         continue;
 
@@ -622,7 +622,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
                 }
 
                 count++;
-        } while (zs_transaction_next(*txn, data));
+        } while (zs_iterator_next(*iter, data));
 
         ret = mappedfile_flush(&f->mf);
         if (ret) {

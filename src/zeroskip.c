@@ -1019,8 +1019,7 @@ static int print_btree_rec(struct record *record, void *data _unused_)
         return 0;
 }
 
-int zsdb_dump(struct zsdb *db,
-              DBDumpLevel level)
+int zsdb_dump(struct zsdb *db, DBDumpLevel level)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1038,27 +1037,27 @@ int zsdb_dump(struct zsdb *db,
 
         if (level == DB_DUMP_ACTIVE || level == DB_DUMP_ALL) {
                 if (level == DB_DUMP_ALL) {
-                        struct txn *txn = NULL;
-                        struct txn_data *data;
+                        struct zsdb_iter *iter = NULL;
+                        struct zsdb_iter_data *idata;
 
-                        zs_transaction_new(db, &txn);
+                        zs_iterator_new(db, &iter);
 
-                        if (zs_transaction_begin(&txn) != ZS_OK)
+                        if (zs_iterator_begin(&iter) != ZS_OK)
                                 return ZS_INTERNAL;
 
                         do {
-                                data = zs_transaction_get(txn);
-                                if (data->deleted) /* deleted key */
+                                idata = zs_iterator_get(iter);
+                                if (idata->deleted) /* deleted key */
                                         continue;
 
-                                switch (data->type) {
+                                switch (idata->type) {
                                 case ZSDB_BE_ACTIVE:
                                 case ZSDB_BE_FINALISED:
-                                        print_btree_rec(data->data.iter->record, NULL);
+                                        print_btree_rec(idata->data.iter->record, NULL);
                                         break;
                                 case ZSDB_BE_PACKED:
                                 {
-                                        struct zsdb_file *f = data->data.f;
+                                        struct zsdb_file *f = idata->data.f;
                                         size_t offset = f->index->data[f->indexpos];
                                         zs_record_read_from_file(f, &offset,
                                                                  print_record_cb,
@@ -1070,9 +1069,9 @@ int zsdb_dump(struct zsdb *db,
                                         break; /* Should never reach here */
                                 }
                                 count++;
-                        } while (zs_transaction_next(txn, data));
+                        } while (zs_iterator_next(iter, idata));
 
-                        zs_transaction_end(&txn);
+                        zs_iterator_end(&iter);
                 } else {
                         /* Dump active records only */
                         btree_walk_forward(priv->memtree, print_btree_rec, NULL);
@@ -1203,7 +1202,7 @@ int zsdb_repack(struct zsdb *db)
         if (!list_empty(&priv->dbfiles.pflist) && (priv->dbfiles.pfcount > 1)) {
                 struct list_head filelist;
                 struct zsdb_file *newpfile = NULL;
-                struct txn *txn = NULL;
+                struct zsdb_iter *iter = NULL;
                 int i = 0;
 
                 filelist.prev = &filelist;
@@ -1227,12 +1226,12 @@ int zsdb_repack(struct zsdb *db)
                 zs_filename_generate_packed(priv, &fname, startidx, endidx);
                 zslog(LOGDEBUG, "Packing into file %s...\n", fname.buf);
 
-                ret = zs_transaction_new(db, &txn);
+                ret = zs_iterator_new(db, &iter);
                 ret = zs_packed_file_new_from_packed_files(fname.buf,
                                                            startidx, endidx,
                                                            priv, &filelist,
-                                                           &txn, &newpfile);
-                zs_transaction_end(&txn);
+                                                           &iter, &newpfile);
+                zs_iterator_end(&iter);
 
                 zs_packed_file_close(&newpfile);
 
@@ -1380,8 +1379,8 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
-        struct txn_data *data;
-        struct txn *temptxn = NULL;
+        struct zsdb_iter_data *data;
+        struct zsdb_iter *tempiter = NULL;
         int newtxn = 0;
         int found = 0;
 
@@ -1401,18 +1400,17 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         }
 
         if (txn && *txn) {      /* Existing transaction */
-                assert((*txn)->forone_txn); /* XXX: Should I assert here? */
-                temptxn = *txn;
+                /* temptxn = *txn; */ /*XXX: FIXME*/
         } else {                /* New transaction */
-                zs_transaction_new(db, &temptxn);
+                zs_iterator_new(db, &tempiter);
 
                 if (prefix)
-                        ret = zs_transaction_begin_at_key(&temptxn,
-                                                          (unsigned char *)prefix,
-                                                          prefixlen, &found,
-                                                          NULL, NULL);
+                        ret = zs_iterator_begin_at_key(&tempiter,
+                                                       (unsigned char *)prefix,
+                                                       prefixlen, &found,
+                                                       NULL, NULL);
                 else
-                        zs_transaction_begin(&temptxn);
+                        zs_iterator_begin(&tempiter);
 
                 newtxn = 1;
         }
@@ -1423,7 +1421,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 struct zs_key krec;
                 struct zs_val vrec;
 
-                data = zs_transaction_get(temptxn);
+                data = zs_iterator_get(tempiter);
                 if (data->deleted) /* deleted key */
                         continue;
 
@@ -1462,21 +1460,21 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                                 break;
                 }
 
-        } while (zs_transaction_next(temptxn, data));
+        } while (zs_iterator_next(tempiter, data));
 
         if (newtxn)
-                zs_transaction_end(&temptxn);
+                zs_iterator_end(&tempiter);
 
         return ret;
 }
 
 int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
                 foreach_p *p, foreach_cb *cb, void *cbdata,
-                struct txn **txn)
+                struct txn **txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
-        struct txn *temptxn = NULL;
+        struct zsdb_iter *tempiter = NULL;
         unsigned char *value = NULL;
         size_t vallen = 0;
         int found = 0;
@@ -1494,10 +1492,10 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
         }
 
         /* Create a new transaction */
-        zs_transaction_new(db, &temptxn);
-        temptxn->forone_txn = 1;
+        zs_iterator_new(db, &tempiter);
+        tempiter->forone_iter = 1;
 
-        ret = zs_transaction_begin_at_key(&temptxn, key, keylen, &found,
+        ret = zs_iterator_begin_at_key(&tempiter, key, keylen, &found,
                                           &value, &vallen);
         if (ret != ZS_OK) {
                 goto fail;
@@ -1506,7 +1504,7 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
         if (!found) {
                 goto fail;
         } else {
-                *txn = temptxn;
+                /* *txn = temptxn; *//* XXX: FIXME*/
                 if (!p || p(cbdata, key, keylen, value, vallen))
                         ret = cb(cbdata, key, keylen, value, vallen);
                 goto done;
@@ -1514,28 +1512,19 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
 
 fail:
         ret = 0;
-        zs_transaction_end(&temptxn);
+        zs_iterator_end(&tempiter);
 done:
         return ret;
 }
 
-int zsdb_transaction_end(struct zsdb *db, struct txn **txn)
+int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
 {
-        struct zsdb_priv *priv;
+        return zs_transaction_begin(db, txn);
+}
 
-        assert_zsdb(db);
-
-        priv = db->priv;
-        if (!priv) return ZS_INTERNAL;
-
-        if (!priv->open) {
-                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
-                return ZS_NOT_OPEN;
-        }
-
+void zsdb_transaction_end(struct txn **txn)
+{
         zs_transaction_end(txn);
-
-        return ZS_OK;
 }
 
 /* Lock file names */

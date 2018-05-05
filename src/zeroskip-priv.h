@@ -174,7 +174,7 @@ extern void assert_zsdb(struct zsdb *db);
 #endif
 
 
-/* File Data */
+/** File Data **/
 struct zsdb_file {
         struct list_head list;
         enum db_ftype_t type;
@@ -200,57 +200,14 @@ struct zsdb_files {
         unsigned int ffcount;     /* Number of finalised files */
 };
 
-/* Storage Backend */
+/** Storage Backend **/
 typedef enum _zsdb_be_t {
         ZSDB_BE_ACTIVE,
         ZSDB_BE_FINALISED,
         ZSDB_BE_PACKED,
 } zsdb_be_t;
 
-/* Data for priority queue for lookup */
-struct txn_data {
-        zsdb_be_t type;
-        int priority;
-        int done;
-        int deleted;
-        union {
-                btree_iter_t iter;
-                struct zsdb_file *f;
-        } data;
-};
-
-/* Transaction structure */
-struct txn_htable {
-        struct htable table;
-};
-
-struct txn_htable_entry {
-        struct htable_entry entry;
-        unsigned char *key;
-        size_t keylen;
-        void *value;
-};
-
-struct txn {
-        struct zsdb *db;
-        struct pqueue pq;
-        struct txn_htable ht;
-
-        struct txn_data **datav;
-        int txn_data_count;
-        int txn_data_alloc;
-
-        int forone_txn;
-        int write_txn;
-};
-
-/* Transaction types */
-enum TxnType {
-        TXN_ALL,
-        TXN_PACKED_ONLY,
-};
-
-/* Iterator */
+/** Iterator **/
 struct iter_key_data {
         unsigned char *key;
         size_t len;
@@ -290,7 +247,20 @@ struct zsdb_iter {
         int forone_iter;
 };
 
-/* Private data structure */
+/** Transactions **/
+enum TxnType {
+        TXN_ALL,
+        TXN_PACKED_ONLY,
+};
+
+struct txn {
+        struct zsdb *db;
+        struct zsdb_iter *iter;
+        int alloced;
+};
+
+
+/** Private data structure **/
 struct zsdb_priv {
         uuid_t uuid;              /* The UUID for the DB */
         cstring dotzsdbfname;     /* The filename, with path of .zsdb */
@@ -394,7 +364,7 @@ extern int zs_packed_file_new_from_packed_files(const char *path,
                                                 uint32_t endidx,
                                                 struct zsdb_priv *priv,
                                                 struct list_head *flist,
-                                                struct txn **txn,
+                                                struct zsdb_iter **iter,
                                                 struct zsdb_file **fptr);
 extern int zs_packed_file_write_btree_record(struct record *record, void *data);
 extern int zs_packed_file_write_record(void *data,
@@ -429,19 +399,8 @@ extern int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
                                                    struct zs_val *val);
 
 /* zeroskip-transaction.c */
-extern int zs_transaction_new(struct zsdb *db, struct txn **txn);
-extern int zs_transaction_begin(struct txn **txn);
-extern int zs_transaction_begin_at_key(struct txn **txn,
-                                       unsigned char *key,
-                                       size_t keylen,
-                                       int *found,
-                                       unsigned char **value,
-                                       size_t *vallen);
-extern int zs_transaction_begin_for_packed_flist(struct txn **txn,
-                                                 struct list_head *pflist);
-extern struct txn_data *zs_transaction_get(struct txn *txn);
-extern int zs_transaction_next(struct txn *txn,
-                               struct txn_data *data);
+extern int zs_transaction_begin(struct zsdb *db, struct txn **txn);
 extern void zs_transaction_end(struct txn **txn);
+
 CPP_GUARD_END
 #endif  /* _ZEROSKIP_PRIV_H_ */
