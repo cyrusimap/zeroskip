@@ -48,7 +48,10 @@ void zs_transaction_end(struct txn **txn)
                 t = *txn;
                 *txn = NULL;
                 t->db = NULL;
-                t->iter = NULL;
+                if (t->iter) {
+                        zs_iterator_end(&t->iter);
+                        t->iter = NULL;
+                }
                 t->alloced = 0;
 
                 xfree(t);

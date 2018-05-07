@@ -500,11 +500,13 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                 }
         }
 
-        fiterd = zsdb_iter_data_alloc(ZSDB_BE_FINALISED, prio,
-                                      priv->fmemtree, &fiter);
-        zsdb_iter_datav_add_iter(*iter, fiterd);
-        zsdb_iter_data_process(*iter, fiterd->data.iter->record->key,
-                               fiterd->data.iter->record->keylen, fiterd);
+        if (priv->fmemtree->count) {
+                fiterd = zsdb_iter_data_alloc(ZSDB_BE_FINALISED, prio,
+                                              priv->fmemtree, &fiter);
+                zsdb_iter_datav_add_iter(*iter, fiterd);
+                zsdb_iter_data_process(*iter, fiterd->data.iter->record->key,
+                                       fiterd->data.iter->record->keylen, fiterd);
+        }
 
         /* Look for the key in the active in-memory btree and add the iterator */
         prio++;

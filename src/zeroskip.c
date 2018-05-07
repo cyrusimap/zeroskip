@@ -1000,6 +1000,15 @@ done:
         return ret;
 }
 
+int zsdb_fetchnext(struct zsdb *db _unused_,
+                   const unsigned char *key _unused_, size_t keylen _unused_,
+                   const unsigned char **found _unused_, size_t *foundlen _unused_,
+                   const unsigned char **value _unused_, size_t *vallen _unused_,
+                   struct txn **txn _unused_)
+{
+        return ZS_NOTIMPLEMENTED;
+}
+
 static int print_btree_rec(struct record *record, void *data _unused_)
 {
         size_t i;
@@ -1398,12 +1407,11 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         }
 
         if (prefixlen) {
-                zslog(LOGWARNING, "Need a prefix if prefix length is given.\n");
                 assert(prefix);
         }
 
-        if (txn && *txn) {      /* Existing transaction */
-                /* temptxn = *txn; */ /*XXX: FIXME*/
+        if (txn && *txn && (*txn)->iter) {  /* Existing transaction */
+                tempiter = (*txn)->iter;
         } else {                /* New transaction */
                 zs_iterator_new(db, &tempiter);
 
@@ -1425,6 +1433,9 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 struct zs_val vrec;
 
                 data = zs_iterator_get(tempiter);
+                if (!data)
+                        break;
+
                 if (data->deleted) /* deleted key */
                         continue;
 
@@ -1456,6 +1467,12 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                         abort(); /* Should never reach here */
                 }
 
+                /* If there is a prefix, then ensure we match it */
+                if (prefixlen) {
+                        if (memcmp_raw(key, prefixlen, prefix, prefixlen))
+                                break;
+                }
+
                 if (!p || p(cbdata, key, keylen, val, vallen)) {
                         /* TODO: We should check the return of this statement? */
                         ret = cb(cbdata, key, keylen, val, vallen);
@@ -1473,7 +1490,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
 
 int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
                 foreach_p *p, foreach_cb *cb, void *cbdata,
-                struct txn **txn _unused_)
+                struct txn **txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1494,7 +1511,7 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
                 return ZS_NOT_OPEN;
         }
 
-        /* Create a new transaction */
+        /* Create a new iterator */
         zs_iterator_new(db, &tempiter);
         tempiter->forone_iter = 1;
 
@@ -1517,6 +1534,9 @@ fail:
         ret = 0;
         zs_iterator_end(&tempiter);
 done:
+        if (txn && *txn && (*txn)->alloced)
+                (*txn)->iter = tempiter;
+
         return ret;
 }
 
