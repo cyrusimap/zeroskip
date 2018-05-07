@@ -325,7 +325,7 @@ int zs_iterator_new(struct zsdb *db, struct zsdb_iter **iter)
                 return ZS_NOT_OPEN;
         }
 
-        t = xcalloc(1, sizeof(struct txn));
+        t = xcalloc(1, sizeof(struct zsdb_iter));
 
         t->db = db;
         t->pq.cmp = iter_pq_cmp;
@@ -657,6 +657,6 @@ void zs_iterator_end(struct zsdb_iter **iter)
                 iter_htable_free(&titer->ht);
                 zsdb_iter_datav_clear_iter(titer);
 
-                xfree(iter);
+                xfree(titer);
         }
 }

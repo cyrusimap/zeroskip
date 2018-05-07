@@ -1047,6 +1047,9 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
 
                         do {
                                 idata = zs_iterator_get(iter);
+                                if (!idata)
+                                        break;
+
                                 if (idata->deleted) /* deleted key */
                                         continue;
 
