@@ -90,7 +90,7 @@ static int add_records(struct zsdb *db, struct txn *txn)
         /* Add records */
         for (i = 0; i < ARRAY_SIZE(kvrecs); i++) {
                 ret = zsdb_add(db, kvrecs[i].k, kvrecs[i].klen,
-                               kvrecs[i].v, kvrecs[i].vlen);
+                               kvrecs[i].v, kvrecs[i].vlen, &txn);
                 if (ret != ZS_OK) {
                         zslog(LOGWARNING, "Failed adding %s to %s\n",
                               (char *)kvrecs[i].k, DBNAME);
@@ -100,7 +100,7 @@ static int add_records(struct zsdb *db, struct txn *txn)
         }
 
         /* Commit the add records transaction */
-        if (zsdb_commit(db) != ZS_OK) {
+        if (zsdb_commit(db, txn) != ZS_OK) {
                 zslog(LOGWARNING, "Failed committing transaction!\n");
                 ret = EXIT_FAILURE;
                 goto done;

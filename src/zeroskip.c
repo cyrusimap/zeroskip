@@ -729,7 +729,8 @@ int zsdb_add(struct zsdb *db,
              unsigned char *key,
              size_t keylen,
              unsigned char *value,
-             size_t vallen)
+             size_t vallen,
+             struct txn **txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -816,8 +817,8 @@ done:
 }
 
 int zsdb_remove(struct zsdb *db,
-                unsigned char *key,
-                size_t keylen)
+                unsigned char *key, size_t keylen,
+                struct txn **txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -867,7 +868,7 @@ done:
         return ret;
 }
 
-int zsdb_commit(struct zsdb *db)
+int zsdb_commit(struct zsdb *db, struct txn *txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;

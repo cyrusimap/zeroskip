@@ -90,9 +90,10 @@ extern void zsdb_final(struct zsdb **pdb);
 extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
 extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
-                    unsigned char *value, size_t vallen);
-extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen);
-extern int zsdb_commit(struct zsdb *db);
+                    unsigned char *value, size_t vallen, struct txn **txn);
+extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen,
+                       struct txn **txn);
+extern int zsdb_commit(struct zsdb *db, struct txn *txn);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
                       unsigned char **value, size_t *vallen, struct txn **txn);
 extern int zsdb_fetchnext(struct zsdb *db,

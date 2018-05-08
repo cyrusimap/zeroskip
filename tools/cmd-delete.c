@@ -68,13 +68,13 @@ int cmd_delete(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_remove(db, (unsigned char *)key, strlen(key)) != ZS_OK) {
+        if (zsdb_remove(db, (unsigned char *)key, strlen(key), NULL) != ZS_OK) {
                 zslog(LOGDEBUG, "Cannot delete record from %s\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
-        if (zsdb_commit(db) != ZS_OK) {
+        if (zsdb_commit(db, NULL) != ZS_OK) {
                 zslog(LOGDEBUG, "Could not commit record.\n");
                 ret = EXIT_FAILURE;
                 goto done;
