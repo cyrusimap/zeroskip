@@ -283,6 +283,11 @@ static inline int get_filenames_with_matching_prefix_rel(char *const path[],
 
 }
 
+/* recursive_rm():
+ * Recursively remove contents of a directory.
+ */
+int recursive_rm(const char *path);
+
 static inline int is_dotdir(const char *name)
 {
         return (name[0] == '.' &&

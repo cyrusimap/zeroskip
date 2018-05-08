@@ -153,7 +153,7 @@ done:
 int main(int argc _unused_, char **argv _unused_)
 {
         struct zsdb *db = NULL;
-        int ret;
+        int ret = EXIT_SUCCESS;
         struct txn *txn = NULL;
 
         if (zsdb_init(&db) != ZS_OK) {
@@ -194,6 +194,7 @@ int main(int argc _unused_, char **argv _unused_)
         /* The 5 records are abc, abc.name, abc.place, abc.animal, abc.thing */
         assert(record_count == 5);
 
+        ret = EXIT_SUCCESS;
 fail1:
         if (zsdb_close(db) != ZS_OK) {
                 zslog(LOGWARNING, "Could not close DB.\n");
@@ -204,7 +205,12 @@ fail1:
 done:
         zsdb_final(&db);
 
-        /* TODO: Recursively delete the DB dir */
+        recursive_rm(DBNAME);
+
+        if (ret == EXIT_SUCCESS)
+                printf("foreach() heirarchy: SUCCESS\n");
+        else
+                printf("foreach() heirarchy: FAILED\n");
 
         exit(ret);
 }

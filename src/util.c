@@ -18,6 +18,12 @@
 
 #if defined(LINUX) || defined(DARWIN) || defined(BSD)
 #include <fts.h>
+
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
+#endif
+#include <ftw.h>
+
 #endif
 
 #include <libgen.h>             /* For basename() */
@@ -246,6 +252,23 @@ int get_filenames_with_matching_prefix(char *const path[], const char *prefix,
 
         return err;
 }
+
+static int recursive_rm_cb(const char *path, const struct stat *sb _unused_,
+                           int typeflag _unused_, struct FTW *ftwbuf _unused_)
+{
+        int ret = remove(path);
+
+        if (ret)
+                perror(path);
+
+        return ret;
+}
+
+int recursive_rm(const char *path)
+{
+        return nftw(path, recursive_rm_cb, 64, FTW_DEPTH | FTW_PHYS);
+}
+
 #else
 int get_filenames_with_matching_prefix(char *const path[]  _unused_,
                                        const char *prefix _unused_,
@@ -254,6 +277,12 @@ int get_filenames_with_matching_prefix(char *const path[]  _unused_,
 {
         return 0;
 }
+
+int recursive_rm(const char *path _unused_)
+{
+        return 0;               /* TODO: Not implemented yet. */
+}
+
 #endif  /* #if defined(LINUX) || defined(DARWIN) || defined(BSD) */
 
 /**
