@@ -427,9 +427,7 @@ int zs_iterator_begin(struct zsdb_iter **iter)
 int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                              unsigned char *key,
                              size_t keylen,
-                             int *found,
-                             unsigned char **value,
-                             size_t *vallen)
+                             int *found)
 {
         struct zsdb_priv *priv;
         struct list_head *pos;
@@ -468,7 +466,7 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
 
                 if (zs_packed_file_bsearch_index(key, keylen, f,
                                                  &location,
-                                                 value, vallen)) {
+                                                 NULL, 0)) {
                         zslog(LOGDEBUG, "Record found at location %ld\n",
                               location);
                         *found = 1;
@@ -491,13 +489,6 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
         if (btree_find(priv->fmemtree, key, keylen, fiter)) {
                 /* We found the key in finalised records */
                 *found = 1;
-                if (*value == NULL) {
-                        unsigned char *v;
-                        *vallen = fiter->record->vallen;
-                        v = xmalloc(*vallen);
-                        memcpy(v, fiter->record->val, *vallen);
-                        *value = v;
-                }
         }
 
         if (priv->fmemtree->count) {
@@ -513,13 +504,6 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
         if (btree_find(priv->memtree, key, keylen, aiter)) {
                 /* We found the key in active records */
                 *found = 1;
-                if (*value == NULL) {
-                        unsigned char *v;
-                        *vallen = aiter->record->vallen;
-                        v = xmalloc(*vallen);
-                        memcpy(v, aiter->record->val, *vallen);
-                        *value = v;
-                }
         }
 
         if (priv->memtree->count) {

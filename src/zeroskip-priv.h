@@ -341,9 +341,7 @@ extern int zs_iterator_begin(struct zsdb_iter **iter);
 extern int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                                     unsigned char *key,
                                     size_t keylen,
-                                    int *found,
-                                    unsigned char **value,
-                                    size_t *vallen);
+                                    int *found);
 extern int zs_iterator_begin_for_packed_files(struct zsdb_iter **iter,
                                               struct list_head *pflist);
 extern struct zsdb_iter_data *zs_iterator_get(struct zsdb_iter *iter);

@@ -1418,8 +1418,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 if (prefix)
                         ret = zs_iterator_begin_at_key(&tempiter,
                                                        (unsigned char *)prefix,
-                                                       prefixlen, &found,
-                                                       NULL, NULL);
+                                                       prefixlen, &found);
                 else
                         zs_iterator_begin(&tempiter);
 
@@ -1474,9 +1473,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                 }
 
                 if (!p || p(cbdata, key, keylen, val, vallen)) {
-                        /* TODO: We should check the return of this statement? */
-                        ret = cb(cbdata, key, keylen, val, vallen);
-                        if (ret)
+                        if (cb(cbdata, key, keylen, val, vallen))
                                 break;
                 }
 
@@ -1495,8 +1492,6 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
         int ret = ZS_OK;
         struct zsdb_priv *priv;
         struct zsdb_iter *tempiter = NULL;
-        unsigned char *value = NULL;
-        size_t vallen = 0;
         int found = 0;
 
         assert_zsdb(db);
@@ -1515,8 +1510,7 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
         zs_iterator_new(db, &tempiter);
         tempiter->forone_iter = 1;
 
-        ret = zs_iterator_begin_at_key(&tempiter, key, keylen, &found,
-                                          &value, &vallen);
+        ret = zs_iterator_begin_at_key(&tempiter, key, keylen, &found);
         if (ret != ZS_OK) {
                 goto fail;
         }
@@ -1524,9 +1518,22 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
         if (!found) {
                 goto fail;
         } else {
-                /* *txn = temptxn; *//* XXX: FIXME*/
-                if (!p || p(cbdata, key, keylen, value, vallen))
-                        ret = cb(cbdata, key, keylen, value, vallen);
+                struct zsdb_iter_data *data;
+                data = zs_iterator_get(tempiter);
+
+                if (!p || p(cbdata, key, keylen, data->data.iter->record->val,
+                            data->data.iter->record->vallen))
+                        ret = cb(cbdata, key, keylen,
+                                 data->data.iter->record->val,
+                                 data->data.iter->record->vallen);
+
+                /* We've already got the key we wanted,
+                 * iterate to the next item */
+                zs_iterator_next(tempiter, data);
+
+                if (txn && *txn && (*txn)->alloced)
+                        (*txn)->iter = tempiter;
+
                 goto done;
         }
 
@@ -1534,9 +1541,6 @@ fail:
         ret = 0;
         zs_iterator_end(&tempiter);
 done:
-        if (txn && *txn && (*txn)->alloced)
-                (*txn)->iter = tempiter;
-
         return ret;
 }
 
