@@ -172,13 +172,13 @@ static struct zsdb_iter_data *zsdb_iter_data_alloc(zsdb_be_t type, int prio,
                 struct btree *tree = data;
                 if (!iter) {
                         btree_begin(tree, d->data.iter);
-                        btree_next(d->data.iter);
                 } else {
                         d->data.iter->tree = (*iter)->tree;
                         d->data.iter->node = (*iter)->node;
                         d->data.iter->pos  = (*iter)->pos;
                         d->data.iter->record = (*iter)->record;
                 }
+                btree_next(d->data.iter);
         }
 
         return d;
