@@ -308,22 +308,28 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 lc.type2 = REC_TYPE_2ND_HALF_COMMIT;
 
                 /* Compute CRC32 */
-                lccrc = crc32(0L, Z_NULL, 0);
-                lccrc = crc32(lccrc, (void *)&lc,
-                              sizeof(struct zs_long_commit) - sizeof(uint32_t));
                 crc = crc32_end(&f->mf);
-                lc.crc32 = crc32_combine(crc, lccrc, sizeof(uint32_t));
+
+                lccrc = crc32(0L, Z_NULL, 0);
 
                 /* Create long commit */
                 val = ((uint64_t)lc.type1 << 56); /* type 1 */
                 write_be64(ptr + pos, val);
                 pos += sizeof(uint64_t);
+                lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
 
-                write_be64(ptr + pos, lc.length); /* length */
+                val = lc.length;
+                write_be64(ptr + pos, val); /* length */
                 pos += sizeof(uint64_t);
+                lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
 
                 val = 0;
                 val = ((uint64_t)lc.type2 << 56); /* type 2 */
+
+                /* The final CRC  */
+                lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
+                lc.crc32 = crc32_combine(crc, lccrc, 3 * sizeof(uint64_t));
+
                 val |= (uint64_t)lc.crc32;        /* crc */
 
                 write_be64(ptr + pos, val);
@@ -340,14 +346,15 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 sc.length = f->mf->crc32_data_len;
 
                 /* Compute CRC32 */
-                sccrc = crc32(0L, Z_NULL, 0);
-                sccrc = crc32(sccrc, (void *)&sc,
-                              sizeof(struct zs_short_commit) - sizeof(uint32_t));
                 crc = crc32_end(&f->mf);
-                sc.crc32 = crc32_combine(crc, sccrc, sizeof(uint32_t));
+                sccrc = crc32(0L, Z_NULL, 0);
 
                 val = ((uint64_t)sc.type << 56);               /* type */
                 val |= ((uint64_t)sc.length << 32);            /* length */
+                /* The final CRC  */
+                sccrc = crc32_z(sccrc, (void *)&val, sizeof(uint64_t));
+                sc.crc32 = crc32_combine(crc, sccrc, sizeof(uint64_t));
+
                 val |= (uint64_t)sc.crc32;                     /* crc */
 
                 write_be64(ptr + pos, val);

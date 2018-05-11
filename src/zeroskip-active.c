@@ -22,13 +22,14 @@
  * Public functions
  */
 /* FIXME: Make `int create`, the 3rd argument to this function
-   (active_file_open an enum or something more meaninful
+   (active_file_open an enum or something more meaningful
 */
 int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
 {
         int ret = ZS_OK;
         size_t mf_size = 0;
         int mappedfile_flags = MAPPEDFILE_RW;
+        uint32_t crc;
 
         zs_filename_generate_active(priv, &priv->dbfiles.factive.fname);
 
@@ -68,6 +69,10 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
                 ret = ZS_INVALID_DB;
                 mappedfile_close(&priv->dbfiles.factive.mf);
                 goto done;
+        }
+
+        /* Check CRC of an existing file */
+        if (!create) {
         }
 
         /* Seek to location after header */

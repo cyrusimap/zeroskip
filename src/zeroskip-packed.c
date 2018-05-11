@@ -65,9 +65,9 @@ static int zs_packed_file_write_index(void *data, uint64_t offset)
  * Returns error otherwise.
  */
 static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
-                                  uint32_t *checksum)
+                                  uint32_t *checksum, size_t *crc_offset,
+                                  uint32_t *reccrc)
 {
-        /* TODO: Verify CRC32 */
         unsigned char *bptr, *fptr;
         uint64_t data;
         enum record_t rectype;
@@ -83,24 +83,49 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
 
         if (rectype == REC_TYPE_FINAL) {
                 uint32_t len;
+                uint64_t val;
 
                 len = (data >> 32) & 0xFFFFFF;
+
+                val = data & 0xFFFFFFFF00000000;
+                *reccrc = crc32(0L, Z_NULL, 0);
+                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
+
                 *checksum = data & 0xFFFFFFFF;
+                /* CRC begins at 4 bytes from the start of commit record */
+                *crc_offset = *offset + 4;
                 *offset = *offset - len;
 
                 return ZS_OK;
         } else if (rectype == REC_TYPE_2ND_HALF_COMMIT) {
-                /* This is a long commit, all we need is the CRC */
+                uint32_t val;
+
+                val = data & 0xFFFFFFFF00000000;
+                *reccrc = crc32(0L, Z_NULL, 0);
+                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
+
+                /* This is a long commit, all we need is the CRC.
+                 * CRC begins at 4 bytes from the start of commit record */
+                *crc_offset = *offset + 4;
+                *checksum = data & 0xFFFFFFFF;
                 *offset = *offset - (ZS_LONG_COMMIT_REC_SIZE -
                                      ZS_SHORT_COMMIT_REC_SIZE);
-                *checksum = data & data & 0xFFFFFFFF;
-                return get_offset_to_pointers(f, offset, checksum);
+                return get_offset_to_pointers(f, offset, checksum, crc_offset, reccrc);
         } else if (rectype == REC_TYPE_LONG_FINAL) {
                 uint64_t len;
+                uint32_t val;
+
+                /* reccrc - should have been initilased in the 2ND_HALF_COMMIT
+                 * section */
+                val = data;
+                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
 
                 fptr = fptr + sizeof(uint64_t);
                 len = read_be64(fptr);
                 *offset = *offset - len;
+
+                val = len;
+                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
 
                 return ZS_OK;
         } else {
@@ -200,9 +225,9 @@ int zs_packed_file_open(const char *path,
         int ret = ZS_OK;
         struct zsdb_file *f;
         size_t mf_size = 0;
-        size_t offset, temp;
+        size_t offset, temp, crc_offset = 0;
         int mappedfile_flags = MAPPEDFILE_RD;
-        uint32_t crc, stored_crc = 0;
+        uint32_t crc, stored_crc = 0, reccrc = 0;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
         f->type = DB_FTYPE_PACKED;
@@ -257,13 +282,16 @@ int zs_packed_file_open(const char *path,
         crc = crc32(0L, Z_NULL, 0);
         /* Read the commit record and get to the pointers */
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
-        temp = offset;          /* save offset, so that can verify commit */
-        ret = get_offset_to_pointers(f, &offset, &stored_crc);
+        temp = offset;
+
+        ret = get_offset_to_pointers(f, &offset, &stored_crc, &crc_offset, &reccrc);
         if (ret != ZS_OK) {
                 zslog(LOGDEBUG, "Could not get pointer block.\n");
                 goto fail;
         }
+
         crc = crc32(crc, (void *)(f->mf->ptr + offset), (temp - offset));
+        crc = crc32_combine(crc, reccrc, sizeof(uint64_t));
         if (crc != stored_crc) {
                 zslog(LOGDEBUG, "checksum failed for zeroskip packed file.\n");
                 zslog(LOGDEBUG, "Pointers section in packed file is not valid.\n");

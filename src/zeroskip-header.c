@@ -37,7 +37,7 @@ int zs_header_write(struct zsdb_file *f)
                 return ZS_ERROR;
         }
 
-        crc =crc32(0L, Z_NULL, 0);
+        crc = crc32(0L, Z_NULL, 0);
 
         /* XXX: The copying should be done to an unsigned char buffer */
         hdr.signature = hton64(f->header.signature);

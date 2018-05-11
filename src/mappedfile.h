@@ -26,6 +26,7 @@ struct mappedfile {
         unsigned int is_dirty:1;
         unsigned int compute_crc;
         uint32_t crc32;
+        size_t crc32_begin_offset;
         size_t crc32_data_len;
         size_t size;
         size_t offset;

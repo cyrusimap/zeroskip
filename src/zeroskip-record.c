@@ -125,6 +125,13 @@ static int zs_read_deleted_record(struct zsdb_file *f, size_t *offset,
         return ZS_OK;
 }
 
+static int zs_read_and_verify_commit_record(struct zsdb_file *f _unused_,
+                                            size_t *offset)
+{
+        *offset = *offset + ZS_SHORT_COMMIT_REC_SIZE;
+        return ZS_OK;
+}
+
 /*
  * Public functions
  */
@@ -160,7 +167,7 @@ int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                 zslog(LOGWARNING, "Control shouldn't reach here.\n");
                 break;
         case REC_TYPE_COMMIT:
-                *offset = *offset + ZS_SHORT_COMMIT_REC_SIZE;
+                zs_read_and_verify_commit_record(f, offset);
                 break;
         case REC_TYPE_LONG_COMMIT:
                 *offset = *offset + ZS_LONG_COMMIT_REC_SIZE;
