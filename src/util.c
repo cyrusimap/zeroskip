@@ -179,6 +179,8 @@ int xunlink(const char *path)
         return ret;
 }
 
+#define MAX_BUF_PATH (2 * PATH_MAX)
+
 #if defined(LINUX) || defined(DARWIN) || defined(BSD)
 /* get_filenames_with_matching_prefix()
  * get files(only) in a given path, matching a prefix.
@@ -212,7 +214,7 @@ int get_filenames_with_matching_prefix(char *const path[], const char *prefix,
 
         while ((fp = fts_read(ftsp)) != NULL) {
                 char *bname;
-                char sbuf[PATH_MAX];
+                char sbuf[MAX_BUF_PATH];
                 int add = 0;
 
                 if (fp->fts_info == FTS_DNR ||
@@ -228,10 +230,10 @@ int get_filenames_with_matching_prefix(char *const path[], const char *prefix,
                 bname = basename(fp->fts_path);
 
                 if (full_path)
-                        snprintf(sbuf, PATH_MAX, "%s/%s/%s", buf,
+                        snprintf(sbuf, MAX_BUF_PATH, "%s/%s/%s", buf,
                                  *path ? *path : buf, bname);
                 else
-                        snprintf(sbuf, PATH_MAX, "%s/%s", *path ? *path : buf, bname);
+                        snprintf(sbuf, MAX_BUF_PATH, "%s/%s", *path ? *path : buf, bname);
 
                 if (!prefix)
                         add = 1;

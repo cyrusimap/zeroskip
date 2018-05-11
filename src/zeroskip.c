@@ -231,6 +231,8 @@ enum {
         DB_ABS_PATH = 1,
 };
 
+#define MAX_BUF_PATH (2 * PATH_MAX)
+
 #if defined(LINUX) || defined(DARWIN) || defined(BSD)
 static int for_each_db_file_in_dbdir(char *const path[],
                                      int full_path,
@@ -257,7 +259,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
 
         while ((fp = fts_read(ftsp)) != NULL) {
                 char *bname;
-                char sbuf[PATH_MAX];
+                char sbuf[MAX_BUF_PATH];
 
                 if (fp->fts_info == FTS_DNR ||
                     fp->fts_info == FTS_ERR ||
@@ -272,10 +274,10 @@ static int for_each_db_file_in_dbdir(char *const path[],
                 bname = basename(fp->fts_path);
 
                 if (full_path)
-                        snprintf(sbuf, PATH_MAX, "%s/%s/%s", buf,
+                        snprintf(sbuf, MAX_BUF_PATH, "%s/%s/%s", buf,
                                  *path ? *path : buf, bname);
                 else
-                        snprintf(sbuf, PATH_MAX, "%s/%s", *path ? *path : buf, bname);
+                        snprintf(sbuf, MAX_BUF_PATH, "%s/%s", *path ? *path : buf, bname);
 
                 if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
                         switch(interpret_db_filename(sbuf, strlen(sbuf),
@@ -329,7 +331,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
 
         while ((de = readdir(dir)) != NULL) {
                 char *bname;
-                char sbuf[PATH_MAX];
+                char sbuf[MAX_BUF_PATH];
                 struct stat sb;
 
                 if (is_dotdir(de->d_name))
@@ -338,10 +340,10 @@ static int for_each_db_file_in_dbdir(char *const path[],
                 bname = basename(de->d_name);
 
                 if (full_path)
-                        snprintf(sbuf, PATH_MAX, "%s/%s/%s", buf,
+                        snprintf(sbuf, MAX_BUF_PATH, "%s/%s/%s", buf,
                                  *path ? *path : buf, bname);
                 else
-                        snprintf(sbuf, PATH_MAX, "%s/%s",
+                        snprintf(sbuf, MAX_BUF_PATH, "%s/%s",
                                  *path ? *path : buf, bname);
 
                 if (lstat(sbuf, &sb) != 0) {

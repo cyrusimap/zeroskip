@@ -28,8 +28,8 @@ static int zs_read_key_rec(struct zsdb_file *f, size_t *offset,
 
         if (key->base.type == REC_TYPE_KEY ||
             key->base.type == REC_TYPE_DELETED) {
-                key->base.slen = data >> 40;
-                key->base.sval_offset = data & ((1ULL >> 40) - 1);
+                key->base.slen = data >> 40 & 0xFFFFFF;
+                key->base.sval_offset = data & 0xFFFFFFFF;
                 key->base.llen = 0;
                 key->base.lval_offset = 0;
         } else if (key->base.type == REC_TYPE_LONG_KEY ||
@@ -59,7 +59,7 @@ static int zs_read_val_rec(struct zsdb_file *f, size_t *offset,
         val->base.type = data >> 56;
 
         if (val->base.type == REC_TYPE_VALUE) {
-                val->base.slen = data & ((1UL >> 32) - 1);
+                val->base.slen = (data >> 32) & 0xFFFFFF ;
                 val->base.nullpad = 0;
                 val->base.llen = 0;
         } else if (val->base.type == REC_TYPE_LONG_VALUE) {

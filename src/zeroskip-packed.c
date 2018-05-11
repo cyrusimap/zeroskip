@@ -17,6 +17,7 @@
 #include "zeroskip.h"
 #include "zeroskip-priv.h"
 
+#include <zlib.h>
 /**
  * Private functions
  */
@@ -60,10 +61,11 @@ static int zs_packed_file_write_index(void *data, uint64_t offset)
 /* get_offset_to_pointers():
  * Given a struct zsdb_file pointer and an offset to the final commit
  * record, this function returns the offset to the beginning of the pointers
- * section.
+ * section and the stored CRC.
  * Returns error otherwise.
  */
-static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset)
+static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
+                                  uint32_t *checksum)
 {
         /* TODO: Verify CRC32 */
         unsigned char *bptr, *fptr;
@@ -80,25 +82,26 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset)
         rectype = data >> 56;
 
         if (rectype == REC_TYPE_FINAL) {
-                /* TODO: just read length not the whole record */
-                struct zs_short_commit zshort;
-                zshort.type = rectype;
-                zshort.length = (data >> 32) & 0xFFFFFF;
-                zshort.crc32 = data & ((1UL >> 32) - 1);
+                uint32_t len;
 
-                *offset = *offset - zshort.length;
+                len = (data >> 32) & 0xFFFFFF;
+                *checksum = data & 0xFFFFFFFF;
+                *offset = *offset - len;
+
                 return ZS_OK;
         } else if (rectype == REC_TYPE_2ND_HALF_COMMIT) {
-                /* This is a long commit */
+                /* This is a long commit, all we need is the CRC */
                 *offset = *offset - (ZS_LONG_COMMIT_REC_SIZE -
                                      ZS_SHORT_COMMIT_REC_SIZE);
-                return get_offset_to_pointers(f, offset);
+                *checksum = data & data & 0xFFFFFFFF;
+                return get_offset_to_pointers(f, offset, checksum);
         } else if (rectype == REC_TYPE_LONG_FINAL) {
                 uint64_t len;
+
                 fptr = fptr + sizeof(uint64_t);
                 len = read_be64(fptr);
-
                 *offset = *offset - len;
+
                 return ZS_OK;
         } else {
                 zslog(LOGDEBUG, "Not a valid final commit record\n");
@@ -197,8 +200,9 @@ int zs_packed_file_open(const char *path,
         int ret = ZS_OK;
         struct zsdb_file *f;
         size_t mf_size = 0;
-        size_t offset;
+        size_t offset, temp;
         int mappedfile_flags = MAPPEDFILE_RD;
+        uint32_t crc, stored_crc = 0;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
         f->type = DB_FTYPE_PACKED;
@@ -249,12 +253,21 @@ int zs_packed_file_open(const char *path,
          */
         f->index = vecu64_new();
 
-        /* TODO: Verify commit */
+        /* Verify CRC of the pointers section */
+        crc = crc32(0L, Z_NULL, 0);
         /* Read the commit record and get to the pointers */
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
-        ret = get_offset_to_pointers(f, &offset);
+        temp = offset;          /* save offset, so that can verify commit */
+        ret = get_offset_to_pointers(f, &offset, &stored_crc);
         if (ret != ZS_OK) {
                 zslog(LOGDEBUG, "Could not get pointer block.\n");
+                goto fail;
+        }
+        crc = crc32(crc, (void *)(f->mf->ptr + offset), (temp - offset));
+        if (crc != stored_crc) {
+                zslog(LOGDEBUG, "checksum failed for zeroskip packed file.\n");
+                zslog(LOGDEBUG, "Pointers section in packed file is not valid.\n");
+                ret = ZS_INVALID_DB;
                 goto fail;
         }
 

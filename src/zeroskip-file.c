@@ -54,10 +54,11 @@ static int zs_prepare_key_buf(unsigned char *key, size_t keylen,
 
         if (type == REC_TYPE_KEY) {
                 /* If it is a short key, the first 3 fields make up 64 bits */
-                uint64_t val;
-                val = ((uint64_t)kbuflen & ((1ULL << 40) - 1)); /* Val offset */
-                val |= ((uint64_t)keylen << 40);     /* Key length */
-                val |= ((uint64_t)type << 56);       /* Type */
+                uint64_t val = 0;
+
+                val = ((uint64_t)type << 56);       /* Type */
+                val |= ((uint64_t)keylen << 40);    /* Key length */
+                val |= ((uint64_t)kbuflen);         /* Val offset */
                 write_be64(kbuf + pos, val);
                 pos += sizeof(uint64_t);
                 write_be64(kbuf + pos, 0ULL);     /* Extended length */
@@ -67,8 +68,8 @@ static int zs_prepare_key_buf(unsigned char *key, size_t keylen,
 
         } else {
                 /* A long key has the type followed by 56 bits of nothing */
-                uint64_t val;
-                val = ((uint64_t)type & ((1ULL << 56) - 1));
+                uint64_t val = 0;
+                val = ((uint64_t)type << 56);       /* Type */
                 write_be64(kbuf + pos, val);
                 pos += sizeof(uint64_t);
                 write_be64(kbuf + pos, keylen);     /* Extended length */
@@ -121,8 +122,9 @@ static int zs_prepare_val_buf(unsigned char *val, size_t vallen,
         if (type == REC_TYPE_VALUE) {
                 /* The first 3 fields in a short key make up 64 bits */
                 uint64_t val = 0;
-                val = ((uint64_t)vallen & ((1UL << 32) - 1));  /* Val length */
-                val |= ((uint64_t)type << 56);                 /* Type */
+
+                val = ((uint64_t)type << 56);     /* Type */
+                val |= ((uint64_t)vallen << 32);  /* Val length */
                 write_be64(vbuf + pos, val);
                 pos += sizeof(uint64_t);
                 write_be64(vbuf + pos, 0ULL);     /* Extended length */
@@ -130,10 +132,10 @@ static int zs_prepare_val_buf(unsigned char *val, size_t vallen,
         } else {
                 /* A long val has the type followed by 56 bits of nothing */
                 uint64_t val;
-                val = ((uint64_t)type & ((1UL << 56) - 1));
+                val = ((uint64_t)type << 56);   /* Type */
                 write_be64(vbuf + pos, val);
                 pos += sizeof(uint64_t);
-                write_be64(vbuf + pos, vallen);
+                write_be64(vbuf + pos, vallen); /* Extended length */
                 pos += sizeof(uint64_t);
         }
 
@@ -174,9 +176,8 @@ static int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
         }
 
         if (keylen <= MAX_SHORT_KEY_LEN) {
-                val = ((uint64_t)0ULL & ((1ULL << 40) - 1));
-                val |= ((uint64_t)keylen << 40);     /* Key length */
-                val |= ((uint64_t)type << 56);       /* Type */
+                val = ((uint64_t)type << 56);     /* Type */
+                val |= ((uint64_t)keylen << 40);  /* Key length */
                 write_be64(kbuf + pos, val);
                 pos += sizeof(uint64_t);
                 write_be64(kbuf + pos, 0ULL);     /* Extended length */
@@ -185,7 +186,7 @@ static int zs_prepare_delete_key_buf(unsigned char *key, size_t keylen,
                 pos += sizeof(uint64_t);
         } else {
                 type = REC_TYPE_LONG_DELETED;
-                val = ((uint64_t)type & ((1ULL << 56) - 1));
+                val = ((uint64_t)type << 56);
                 pos += sizeof(uint64_t);
                 write_be64(kbuf + pos, keylen);     /* Extended length */
                 pos += sizeof(uint64_t);
@@ -314,16 +315,17 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 lc.crc32 = crc32_combine(crc, lccrc, sizeof(uint32_t));
 
                 /* Create long commit */
-                val = ((uint64_t)lc.type1 & ((1ULL << 56) - 1));
+                val = ((uint64_t)lc.type1 << 56); /* type 1 */
                 write_be64(ptr + pos, val);
                 pos += sizeof(uint64_t);
 
-                write_be64(ptr + pos, lc.length);
+                write_be64(ptr + pos, lc.length); /* length */
                 pos += sizeof(uint64_t);
 
                 val = 0;
-                val = ((uint64_t)lc.crc32 & ((1UL << 32) - 1)); /* crc */
-                val |= ((uint64_t)lc.type2 << 56);               /* type */
+                val = ((uint64_t)lc.type2 << 56); /* type 2 */
+                val |= (uint64_t)lc.crc32;        /* crc */
+
                 write_be64(ptr + pos, val);
                 pos += sizeof(uint64_t);
 
@@ -344,9 +346,10 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 crc = crc32_end(&f->mf);
                 sc.crc32 = crc32_combine(crc, sccrc, sizeof(uint32_t));
 
-                val = ((uint64_t)sc.crc32 & ((1UL << 32) - 1)); /* crc */
-                val |= ((uint64_t)sc.length << 32);             /* length */
-                val |= ((uint64_t)sc.type << 56);               /* type */
+                val = ((uint64_t)sc.type << 56);               /* type */
+                val |= ((uint64_t)sc.length << 32);            /* length */
+                val |= (uint64_t)sc.crc32;                     /* crc */
+
                 write_be64(ptr + pos, val);
                 pos += sizeof(uint64_t);
 
