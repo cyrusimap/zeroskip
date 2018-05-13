@@ -1380,14 +1380,6 @@ done:
         return ret;
 }
 
-int cyrusdb_fetchnext(struct zsdb *db _unused_, const char *key _unused_,
-                      size_t keylen _unused_, const char **found _unused_,
-                      size_t *foundlen _unused_, const char **data _unused_,
-                      size_t *datalen _unused_, struct txn **txn _unused_)
-{
-        return ZS_NOTIMPLEMENTED;
-}
-
 int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                  foreach_p *p, foreach_cb *cb, void *cbdata,
                  struct txn **txn)
