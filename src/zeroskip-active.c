@@ -238,6 +238,10 @@ int zs_active_file_record_foreach(struct zsdb_priv *priv,
         while (offset < dbsize) {
                 ret = zs_record_read_from_file(&priv->dbfiles.factive, &offset,
                                                cb, deleted_cb, cbdata);
+                if (ret != ZS_OK) {
+                        zslog(LOGWARNING, "Cannot read records from active file.\n!");
+                        break;
+                }
         }
 
         return ret;

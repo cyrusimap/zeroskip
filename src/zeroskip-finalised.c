@@ -116,6 +116,10 @@ int zs_finalised_file_record_foreach(struct zsdb_file *f,
                 ret = zs_record_read_from_file(f, &offset,
                                                cb, deleted_cb,
                                                cbdata);
+                if (ret != ZS_OK) {
+                        zslog(LOGWARNING, "Cannot read records from finalised file.\n!");
+                        break;
+                }
         }
 
         return ret;
