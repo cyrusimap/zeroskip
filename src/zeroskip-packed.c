@@ -89,7 +89,11 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
 
                 val = data & 0xFFFFFFFF00000000;
                 *reccrc = crc32(0L, Z_NULL, 0);
+                #if ZLIB_VERNUM == 0x12b0
                 *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
+                #endif
 
                 *checksum = data & 0xFFFFFFFF;
                 /* CRC begins at 4 bytes from the start of commit record */
@@ -102,7 +106,11 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
 
                 val = data & 0xFFFFFFFF00000000;
                 *reccrc = crc32(0L, Z_NULL, 0);
+                #if ZLIB_VERNUM == 0x12b0
                 *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
+                #endif
 
                 /* This is a long commit, all we need is the CRC.
                  * CRC begins at 4 bytes from the start of commit record */
@@ -118,14 +126,22 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
                 /* reccrc - should have been initilased in the 2ND_HALF_COMMIT
                  * section */
                 val = data;
+                #if ZLIB_VERNUM == 0x12b0
                 *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
+                #endif
 
                 fptr = fptr + sizeof(uint64_t);
                 len = read_be64(fptr);
                 *offset = *offset - len;
 
                 val = len;
+                #if ZLIB_VERNUM == 0x12b0
                 *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
+                #endif
 
                 return ZS_OK;
         } else {

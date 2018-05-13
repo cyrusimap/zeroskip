@@ -29,7 +29,6 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
         int ret = ZS_OK;
         size_t mf_size = 0;
         int mappedfile_flags = MAPPEDFILE_RW;
-        uint32_t crc;
 
         zs_filename_generate_active(priv, &priv->dbfiles.factive.fname);
 

@@ -316,12 +316,20 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 val = ((uint64_t)lc.type1 << 56); /* type 1 */
                 write_be64(ptr + pos, val);
                 pos += sizeof(uint64_t);
+                #if ZLIB_VERNUM == 0x12b0
                 lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                lccrc = crc32(lccrc, (void *)&val, sizeof(uint64_t));
+                #endif
 
                 val = lc.length;
                 write_be64(ptr + pos, val); /* length */
                 pos += sizeof(uint64_t);
+                #if ZLIB_VERNUM == 0x12b0
                 lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                lccrc = crc32(lccrc, (void *)&val, sizeof(uint64_t));
+                #endif
 
                 val = 0;
                 val = ((uint64_t)lc.type2 << 56); /* type 2 */
@@ -352,7 +360,11 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 val = ((uint64_t)sc.type << 56);               /* type */
                 val |= ((uint64_t)sc.length << 32);            /* length */
                 /* The final CRC  */
+                #if ZLIB_VERNUM == 0x12b0
                 sccrc = crc32_z(sccrc, (void *)&val, sizeof(uint64_t));
+                #else
+                sccrc = crc32_z(sccrc, (void *)&val, sizeof(uint64_t));
+                #endif
                 sc.crc32 = crc32_combine(crc, sccrc, sizeof(uint64_t));
 
                 val |= (uint64_t)sc.crc32;                     /* crc */
