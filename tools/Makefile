@@ -39,7 +39,7 @@ Makefile.dep:
 	$(ZS_CC) -I$(ZEROSKIP_INC) -c $<
 
 $(DBTOOL): $(TOOL_OBJS)
-	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^  $(ZS_LDFLAGS) ../src/$(AR_LIB_FILE) $(LIBS)
+	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ ../src/$(AR_LIB_FILE) $(LIBS) $(ZS_LDFLAGS)
 
 clean:
 	$(ZS_RM) $(TOOL_OBJS) $(DBTOOL) *.o Makefile.dep

@@ -47,10 +47,10 @@ $(BT_TEST): $(BT_OBJS)
 	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ ../src/$(AR_LIB_FILE) $(BT_LIBS)
 
 $(ZST_FOREACH_COUNT): $(ZST_FOREACH_COUNT_OBJS)
-	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ $(ZST_LIBS) ../src/$(AR_LIB_FILE)
+	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ ../src/$(AR_LIB_FILE) $(ZST_LIBS)
 
 $(ZST_FOREACH_HEIRARCHY): $(ZST_FOREACH_HEIRARCHY_OBJS)
-	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ $(ZST_LIBS) ../src/$(AR_LIB_FILE)
+	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ ../src/$(AR_LIB_FILE) $(ZST_LIBS)
 
 
 test-run:
