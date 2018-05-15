@@ -1101,7 +1101,7 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
         return ret;
 }
 
-int zsdb_abort(struct zsdb *db)
+int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
 {
         int ret = ZS_NOTIMPLEMENTED;
 
@@ -1110,7 +1110,7 @@ int zsdb_abort(struct zsdb *db)
         return ret;
 }
 
-int zsdb_consistent(struct zsdb *db)
+int zsdb_consistent(struct zsdb *db, struct txn **txn _unused_)
 {
         int ret = ZS_NOTIMPLEMENTED;
 

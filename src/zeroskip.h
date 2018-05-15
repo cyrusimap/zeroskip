@@ -107,9 +107,9 @@ extern int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
 extern int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
                        foreach_p *p, foreach_cb *cb, void *cbdata,
                        struct txn **txn);
+extern int zsdb_abort(struct zsdb *db, struct txn **txn);
+extern int zsdb_consistent(struct zsdb *db, struct txn **txn);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
-extern int zsdb_abort(struct zsdb *db);
-extern int zsdb_consistent(struct zsdb *db);
 extern int zsdb_repack(struct zsdb *db);
 extern int zsdb_info(struct zsdb *db);
 extern int zsdb_finalise(struct zsdb *db);
