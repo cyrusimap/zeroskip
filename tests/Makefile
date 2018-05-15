@@ -21,13 +21,21 @@ ZST_FOREACH_HEIRARCHY_OBJS = \
 	$(NULL)
 ZST_FOREACH_HEIRARCHY=zst-foreach-heirarchy
 
+# zs abort test
+ZST_ABORT_TRANSACTION_OBJS = \
+	zst-abort-transaction.o \
+	$(NULL)
+ZST_ABORT_TRANSACTION=zst-abort-transaction
+
+# Zeroskip Test Libs
 ZST_LIBS+= $(UUID_LIBS) $(ZLIB_LIBS)
 
 ZEROSKIP_INC=../src
 
 all: test $(BT_TEST) \
-	$(ZST_FOREACH_COUNT) \
+	$(ZST_FOREACH_COUNT)  	\
 	$(ZST_FOREACH_HEIRARCHY) \
+	$(ZST_ABORT_TRANSACTION) \
 	$(NULL)
 
 test: clean prep
@@ -52,6 +60,8 @@ $(ZST_FOREACH_COUNT): $(ZST_FOREACH_COUNT_OBJS)
 $(ZST_FOREACH_HEIRARCHY): $(ZST_FOREACH_HEIRARCHY_OBJS)
 	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ ../src/$(AR_LIB_FILE) $(ZST_LIBS)
 
+$(ZST_ABORT_TRANSACTION): $(ZST_ABORT_TRANSACTION_OBJS)
+	$(ZS_LD) -I$(ZEROSKIP_INC) -o $@ $^ ../src/$(AR_LIB_FILE) $(ZST_LIBS)
 
 test-run:
 	$(E) "Running tests..."

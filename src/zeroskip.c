@@ -1107,6 +1107,8 @@ int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
 
         assert_zsdb(db);
 
+        zslog(LOGWARNING, "Aborting transaction!\n");
+
         return ret;
 }
 
