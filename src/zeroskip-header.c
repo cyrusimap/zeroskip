@@ -108,12 +108,14 @@ int zs_header_validate(struct zsdb_file *f)
 
         /* Version */
         version = ntohl(phdr->version);
+        #if 0
         if (version == 1) {
                 zslog(LOGDEBUG, "Valid zeroskip DB file(%s). Version: %d\n",
                       f->fname.buf, version);
         } else {
                 zslog(LOGDEBUG, "Invalid zeroskip DB version.\n");
         }
+        #endif
         f->header.version = version;
 
         /* UUID */
@@ -130,7 +132,7 @@ int zs_header_validate(struct zsdb_file *f)
         crc = crc32(crc, (void *)&f->header,
                     sizeof(struct zs_header) - sizeof(uint32_t));
         if (crc != f->header.crc32) {
-                zslog(LOGDEBUG, "checksum failed for zeroskip header.\n");
+                zslog(LOGDEBUG, "Checksum failed for zeroskip header.\n");
                 return ZS_INVALID_DB;
         }
 

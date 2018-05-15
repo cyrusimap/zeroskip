@@ -172,7 +172,8 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
                 #endif
 
                 if (sc.crc32 != crc) {
-                        zslog(LOGWARNING, "Checksum failed for record\n");
+                        zslog(LOGWARNING, "Checksum failed for record at offset: %zu\n",
+                                *offset);
                         ret = ZS_INVALID_DB;
                 } else
                         ret = ZS_OK;
@@ -212,7 +213,8 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
                 #endif
 
                 if (lc.crc32 != crc) {
-                        zslog(LOGWARNING, "Checksum failed for record\n");
+                        zslog(LOGWARNING, "Checksum failed for record at offset: %zu\n",
+                                *offset);
                         ret = ZS_INVALID_DB;
                 } else
                         ret = ZS_OK;

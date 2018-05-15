@@ -609,9 +609,11 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         goto done;
 
                 /* Load records from active file to in-memory tree */
-                zs_active_file_record_foreach(priv, load_btree_record_cb,
-                                              load_deleted_btree_record_cb,
-                                              priv->memtree);
+                ret = zs_active_file_record_foreach(priv, load_btree_record_cb,
+                                                    load_deleted_btree_record_cb,
+                                                    priv->memtree);
+                if (ret != ZS_OK)
+                        goto done;
 
                 /* Load data from finalised files */
                 while (finalisedpq.count) {
