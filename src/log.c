@@ -28,18 +28,19 @@ const int syslogLevels[] = {
         LOG_WARNING,
 };
 
-static void _zslog(int level, const char *msg)
+static int _zslog(int level, const char *msg)
 {
         FILE *fp;
         int log_to_stdout = zs_log_file.buf == cstring_base;
+        int ret;
 
         if (level < zs_log_verbosity)
-                return;
+                return 0;
 
         fp = (log_to_stdout) ? stdout : fopen(zs_log_file.buf, "a");
-        if (!fp) return;
+        if (!fp) return 0;
 
-        fprintf(fp, "[zeroskip] %s", msg);
+        ret = fprintf(fp, "[zeroskip] %s", msg);
         fflush(fp);
 
         if (!log_to_stdout)
@@ -47,19 +48,21 @@ static void _zslog(int level, const char *msg)
 
         if (zs_log_to_syslog)
                 syslog(syslogLevels[level], "%s", msg);
+
+        return ret;
 }
 
-void zslog(int level, const char *fmt, ...)
+int zslog(int level, const char *fmt, ...)
 {
         va_list ap;
         char msg[LOGBUF_SIZE];
 
         if (level < zs_log_verbosity)
-                return;
+                return 0;
 
         va_start(ap, fmt);
         vsnprintf(msg, sizeof(msg), fmt, ap);
         va_end(ap);
 
-        _zslog(level, msg);
+        return _zslog(level, msg);
 }

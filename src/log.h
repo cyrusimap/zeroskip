@@ -29,7 +29,7 @@ extern int zs_log_verbosity;
 extern int zs_log_to_syslog;   /* Set to 1 to enable logging to syslog */
 extern cstring zs_log_file;
 
-void zslog(int level, const char *fmt, ...);
+int zslog(int level, const char *fmt, ...);
 
 CPP_GUARD_END
 
