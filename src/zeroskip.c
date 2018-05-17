@@ -1110,10 +1110,33 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
 int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
 {
         int ret = ZS_NOTIMPLEMENTED;
+        struct zsdb_priv *priv;
 
         assert_zsdb(db);
 
+        if (db)
+                priv = db->priv;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
         zslog(LOGWARNING, "Aborting transaction!\n");
+
+        /* Truncate the active file until the last known valid offset as
+           stored in priv->dotzsdb.offset
+        */
+        if (mappedfile_truncate(&priv->dbfiles.factive.mf,
+                                priv->dotzsdb.offset) != 0) {
+                zslog(LOGWARNING, "Failed truncating file %s to offset %lu",
+                      priv->dbfiles.factive.fname.buf, priv->dotzsdb.offset);
+        }
+        priv->dbfiles.factive.mf->offset = priv->dotzsdb.offset;
+
+        /* End the current transaction */
+        if (txn && *txn && (*txn)->alloced)
+                zs_transaction_end(txn);
 
         return ret;
 }

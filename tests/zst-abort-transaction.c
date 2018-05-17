@@ -191,6 +191,7 @@ int main(int argc _unused_, char **argv _unused_)
         }
 
         txn = NULL;
+
         /* Count records */
         ret = zsdb_foreach(db, NULL, 0, fe_p, fe_cb, NULL, &txn);
         if (ret != ZS_OK) {
@@ -267,7 +268,6 @@ fail1:
                 ret = EXIT_FAILURE;
                 goto done;
         }
-        zsdb_final(&db);
 
 done:
         zsdb_final(&db);
