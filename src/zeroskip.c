@@ -889,6 +889,10 @@ int zsdb_commit(struct zsdb *db, struct txn *txn _unused_)
         if (ret == ZS_OK)
                 priv->dbfiles.factive.dirty = 0;
 
+        /* Update the index and offset in the .zsdb file */
+        zs_dotzsdb_update_index_and_offset(priv, priv->dotzsdb.curidx,
+               priv->dbfiles.factive.mf->offset);
+
         return ret;
 }
 

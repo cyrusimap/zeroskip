@@ -96,7 +96,7 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         sptr += sizeof(uint64_t);
 
         /* Offset */
-        priv->dotzsdb.offset = DOTZSDB_SIZE;
+        priv->dotzsdb.offset = ZS_HDR_SIZE;
         *((uint64_t *)sptr) = hton64(priv->dotzsdb.offset);
         sptr += sizeof(uint64_t);
 

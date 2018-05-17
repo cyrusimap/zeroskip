@@ -150,7 +150,7 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
         int mappedfile_flags = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
 
         /* Update the index and offset in .zsdb */
-        zs_dotzsdb_update_index_and_offset(priv, idx, DOTZSDB_SIZE);
+        zs_dotzsdb_update_index_and_offset(priv, idx, ZS_HDR_SIZE);
 
         zs_filename_generate_active(priv, &priv->dbfiles.factive.fname);
 
