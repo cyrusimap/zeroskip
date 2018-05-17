@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <unistd.h>
+#include <zlib.h>
 
 typedef void (*sigfunc)(int);
 
@@ -66,10 +67,11 @@ static void register_signal_handlers(sigfunc f)
  * since this function is called when the DB is created first.
  *
  * The .zsdb file in a DB directory has the following structure:
- *      ZSDB Signature  -  64 bits
- *      current index   -  32 bits
- *      Parsed uuid str - 296 bits
- *      offset          -  64 bits (the last known good pos in active file)
+ *      ZSDB Signature       -  64 bits
+ *      offset               -  64 bits (the last known good position in active file)
+ *      Parsed uuid str      - 296 bits
+ *      current index        -  32 bits
+ *      CRC32                -  32 bits
  */
 int zs_dotzsdb_create(struct zsdb_priv *priv)
 {
@@ -93,19 +95,32 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         memcpy(sptr, &priv->dotzsdb.signature, sizeof(uint64_t));
         sptr += sizeof(uint64_t);
 
-        /* Index */
-        priv->dotzsdb.curidx = 0;
-        *((uint32_t *)sptr) = hton32(0);
-        sptr += sizeof(uint32_t);
+        /* Offset */
+        priv->dotzsdb.offset = DOTZSDB_SIZE;
+        *((uint64_t *)sptr) = hton64(priv->dotzsdb.offset);
+        sptr += sizeof(uint64_t);
 
         /* UUID */
         memcpy(sptr, &priv->dotzsdb.uuidstr, UUID_STRLEN);
         sptr += UUID_STRLEN;
 
-        /* offset */
-        priv->dotzsdb.offset = 0;
-        *((uint64_t *)sptr) = hton64(0);
-        sptr += sizeof(uint64_t);
+        /* Index */
+        priv->dotzsdb.curidx = 0;
+        *((uint32_t *)sptr) = hton32(priv->dotzsdb.curidx);
+        sptr += sizeof(uint32_t);
+
+        /* CRC */
+        priv->dotzsdb.crc = crc32(0L, Z_NULL, 0);
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.signature,
+                                  sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.offset,
+                                  sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.uuidstr,
+                                  UUID_STRLEN);
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.curidx,
+                                  sizeof(uint32_t));
+        *((uint32_t *)sptr) = hton32(priv->dotzsdb.crc);
+        sptr += sizeof(uint32_t);
 
         /* Write to file */
         if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RW_CR, &mf) != 0) {
@@ -168,13 +183,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         priv->dotzsdb_ino = sb.st_ino;
 
         mappedfile_size(&mf, &mfsize);
-        /* The first version of .zsdb was smaller by uint64_t, so the
-         * second comparison of mfsize with (DOTZSDB_SIZE - sizeof(uint64_t))
-         * is just to be backward compatible.
-         * XXX: Need to remove that eventually!
-         */
-        if ((mfsize < DOTZSDB_SIZE) &&
-            (mfsize < (DOTZSDB_SIZE - sizeof(uint64_t)))) {
+        if (mfsize < DOTZSDB_SIZE) {
                 zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);
                 ret = 0;
@@ -183,21 +192,42 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
 
         dothdr = (struct dotzsdb *)mf->ptr;
         if (dothdr->signature == ZS_SIGNATURE) {
+                uint32_t crc;
                 /* Signature */
                 priv->dotzsdb.signature = dothdr->signature;
+
+                /* Offset */
+                priv->dotzsdb.offset = ntoh64(dothdr->offset);
+
+                /* UUID str */
+                memcpy(&priv->dotzsdb.uuidstr,dothdr->uuidstr,
+                       UUID_STRLEN);
+                uuid_parse(priv->dotzsdb.uuidstr, priv->uuid);
 
                 /* Index */
                 priv->dotzsdb.curidx = ntoh32(dothdr->curidx);
 
-                /* UUID str */
-                memcpy(&priv->dotzsdb.uuidstr,
-                       mf->ptr + sizeof(priv->dotzsdb.signature) +
-                       sizeof(priv->dotzsdb.curidx),
-                       sizeof(priv->dotzsdb.uuidstr));
-                uuid_parse(priv->dotzsdb.uuidstr, priv->uuid);
+                /* Verify CRC */
+                crc = crc32(0L, Z_NULL, 0);
+                crc = crc32(crc, (void *)&priv->dotzsdb.signature,
+                            sizeof(uint64_t));
+                crc = crc32(crc, (void *)&priv->dotzsdb.offset,
+                            sizeof(uint64_t));
+                crc = crc32(crc, (void *)&priv->dotzsdb.uuidstr,
+                            UUID_STRLEN);
+                crc = crc32(crc, (void *)&priv->dotzsdb.curidx,
+                            sizeof(uint32_t));
 
-                /* offset */
-                priv->dotzsdb.offset = ntoh64(dothdr->offset);
+                if (crc != ntoh32(dothdr->crc)) {
+                        zslog(LOGWARNING, "Invalid zeroskip DB %s. CRC failed\n",
+                              priv->dotzsdbfname.buf);
+                        ret = 0;
+                        goto fail2;
+                }
+
+                /* CRC */
+                priv->dotzsdb.crc = ntoh32(dothdr->crc);
+
         } else {
                 zslog(LOGDEBUG, "Invalid zeroskip DB %s.\n",
                         priv->dotzsdbfname.buf);
@@ -305,17 +335,41 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
 
         dothdr = (struct dotzsdb *)zsdbfile->ptr;
         if (dothdr->signature == ZS_SIGNATURE) {
+                uint32_t crc;
+
                 /* Signature */
                 priv->dotzsdb.signature = dothdr->signature;
+
+                /* Offset */
+                priv->dotzsdb.offset = ntoh64(dothdr->offset);
+
+                /* UUID str */
+                memcpy(&priv->dotzsdb.uuidstr, dothdr->uuidstr, UUID_STRLEN);
 
                 /* Index */
                 priv->dotzsdb.curidx = ntoh32(dothdr->curidx);
 
-                /* UUID str */
-                memcpy(&priv->dotzsdb.uuidstr,
-                       zsdbfile->ptr + sizeof(priv->dotzsdb.signature) +
-                       sizeof(priv->dotzsdb.curidx),
-                       sizeof(priv->dotzsdb.uuidstr));
+                /* Verify CRC */
+                crc = crc32(0L, Z_NULL, 0);
+                crc = crc32(crc, (void *)&priv->dotzsdb.signature,
+                            sizeof(uint64_t));
+                crc = crc32(crc, (void *)&priv->dotzsdb.offset,
+                            sizeof(uint64_t));
+                crc = crc32(crc, (void *)&priv->dotzsdb.uuidstr,
+                            UUID_STRLEN);
+                crc = crc32(crc, (void *)&priv->dotzsdb.curidx,
+                            sizeof(uint32_t));
+
+                if (crc != ntoh32(dothdr->crc)) {
+                        zslog(LOGWARNING, "Invalid zeroskip DB %s. CRC failed\n",
+                              priv->dotzsdbfname.buf);
+                        ret = 0;
+                        goto fail1;
+                }
+
+                /* CRC */
+                priv->dotzsdb.crc = ntoh32(dothdr->crc);
+
         } else {
                 /* XXX: This should *never* happen here, since the db must have
                  * been successfully opened by the time we've got here.
@@ -350,6 +404,7 @@ int zs_dotzsdb_update_end(struct zsdb_priv *priv)
         unsigned char stackbuf[DOTZSDB_SIZE];
         unsigned char *sptr;
         ssize_t nr;
+        size_t count = DOTZSDB_SIZE;
 
         if (!priv->open) {
                 zslog(LOGDEBUG, "DB not opened. Please open the db before updating\n");
@@ -369,24 +424,46 @@ int zs_dotzsdb_update_end(struct zsdb_priv *priv)
         memcpy(sptr, &priv->dotzsdb.signature, sizeof(uint64_t));
         sptr += sizeof(uint64_t);
 
-        /* Index */
-        *((uint32_t *)sptr) = hton32(priv->dotzsdb.curidx);
-        sptr += sizeof(uint32_t);
+        /* Offset */
+        *((uint64_t *)sptr) = hton64(priv->dotzsdb.offset);
+        sptr += sizeof(uint64_t);
 
         /* UUID */
         memcpy(sptr, &priv->dotzsdb.uuidstr, UUID_STRLEN);
         sptr += UUID_STRLEN;
 
-        sptr = stackbuf;
-        while (1) {
-                nr = write(dblock.fd, sptr, DOTZSDB_SIZE);
-                if (nr < 0) {
-                        if (errno == EINTR)
-                                continue;
-                }
+        /* Index */
+        *((uint32_t *)sptr) = hton32(priv->dotzsdb.curidx);
+        sptr += sizeof(uint32_t);
 
-                fsync(dblock.fd);
-                break;
+        /* CRC */
+        priv->dotzsdb.crc = crc32(0L, Z_NULL, 0);
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.signature,
+                                  sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.offset,
+                                  sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.uuidstr,
+                                  UUID_STRLEN);
+        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.curidx,
+                                  sizeof(uint32_t));
+
+        *((uint32_t *)sptr) = hton32(priv->dotzsdb.crc);
+        sptr += sizeof(uint32_t);
+
+        sptr = stackbuf;
+        while (count > 0) {
+                while (1) {
+                        nr = write(dblock.fd, sptr, DOTZSDB_SIZE);
+                        if (nr < 0) {
+                                if (errno == EINTR)
+                                        continue;
+                        }
+
+                        fsync(dblock.fd);
+                        break;
+                }
+                count -= nr;
+                sptr += nr;
         }
 
         /* rename */

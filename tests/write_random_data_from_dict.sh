@@ -129,7 +129,7 @@ gen_key_val()
         VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
 
         if [[ $VERBOSE == 1 ]]; then
-            ../tools/zeroskip set $dbdir "$KEY" "$VAL"
+            ZS_LOG_LEVEL=3 ../tools/zeroskip set $dbdir "$KEY" "$VAL"
         else
             RET=$(../tools/zeroskip set $dbdir "$KEY" "$VAL")
             pgbar ${i} ${nummsgs}

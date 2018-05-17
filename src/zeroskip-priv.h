@@ -77,12 +77,13 @@ struct zs_header {
 /**
  * Zeroskip .zsdb
  */
-struct dotzsdb {
+struct _packed_ dotzsdb{
         uint64_t signature;
-        uint32_t curidx;
-        char uuidstr[37];
         uint64_t offset;
-};                              /* A total of 57 bytes */
+        char uuidstr[37];
+        uint32_t curidx;
+        uint32_t crc;
+};
 #define DOTZSDB_FNAME ".zsdb"
 #define DOTZSDB_SIZE  sizeof(struct dotzsdb)
 
