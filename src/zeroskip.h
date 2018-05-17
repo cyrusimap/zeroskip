@@ -43,6 +43,14 @@ enum {
         ZS_INVALID_FILE   = -13,
 };
 
+/* Log levels */
+enum {
+        ZSLOGDEBUG   = 0,
+        ZSLOGVERBOSE = 1,
+        ZSLOGNOTICE  = 2,
+        ZSLOGWARNING = 3,
+};
+
 /* Transactions */
 struct txn;
 

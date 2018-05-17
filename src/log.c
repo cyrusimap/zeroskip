@@ -15,10 +15,9 @@
 
 #define LOGBUF_SIZE  1024
 
- /* TODO: These should go into a global structure. */
-int zs_log_verbosity = LOGDEBUG;
-int zs_log_to_syslog = 0;
-cstring zs_log_file = CSTRING_INIT;
+#define ZS_LOG_LEVEL_ENV      "ZS_LOG_LEVEL"
+#define ZS_LOG_FILE_ENV       "ZS_LOG_FILE"
+#define ZS_LOG_TO_SYSLOG_ENV  "ZS_LOG_TO_SYSLOG"
 
 /* Map from ZS log levels to syslog() levels */
 const int syslogLevels[] = {
@@ -28,16 +27,41 @@ const int syslogLevels[] = {
         LOG_WARNING,
 };
 
+static enum log_level get_log_level(void)
+{
+        char *log_level;
+        enum log_level level;
+
+        log_level = getenv(ZS_LOG_LEVEL_ENV);
+        if (!log_level)
+                return LOGNONE;
+
+        level = (enum log_level)strtoul(log_level, NULL, 10);
+
+        return level;
+}
+
+static char *get_log_file_name(void)
+{
+        return getenv(ZS_LOG_FILE_ENV);
+}
+
+static int should_log_to_syslog(void)
+{
+        return getenv(ZS_LOG_TO_SYSLOG_ENV) ? 1 : 0;
+}
+
 static int _zslog(int level, const char *msg)
 {
         FILE *fp;
-        int log_to_stdout = zs_log_file.buf == cstring_base;
+        char *zs_log_file = NULL;
+        int log_to_stdout;
         int ret;
 
-        if (level < zs_log_verbosity)
-                return 0;
+        zs_log_file = get_log_file_name();
+        log_to_stdout = (zs_log_file == NULL);
 
-        fp = (log_to_stdout) ? stdout : fopen(zs_log_file.buf, "a");
+        fp = (log_to_stdout) ? stdout : fopen(zs_log_file, "a");
         if (!fp) return 0;
 
         ret = fprintf(fp, "[zeroskip] %s", msg);
@@ -46,7 +70,7 @@ static int _zslog(int level, const char *msg)
         if (!log_to_stdout)
                 fclose(fp);
 
-        if (zs_log_to_syslog)
+        if (should_log_to_syslog())
                 syslog(syslogLevels[level], "%s", msg);
 
         return ret;
@@ -56,8 +80,11 @@ int zslog(int level, const char *fmt, ...)
 {
         va_list ap;
         char msg[LOGBUF_SIZE];
+        int log_level;
 
-        if (level < zs_log_verbosity)
+        log_level = get_log_level();
+
+        if (log_level < level)
                 return 0;
 
         va_start(ap, fmt);

@@ -18,16 +18,13 @@
 
 CPP_GUARD_START
 
-enum {
-        LOGDEBUG   = 0,
-        LOGVERBOSE = 1,
-        LOGNOTICE  = 2,
-        LOGWARNING = 3,
+enum log_level {
+        LOGNONE    = -1,
+        LOGWARNING = 0,
+        LOGNOTICE  = 1,
+        LOGVERBOSE = 2,
+        LOGDEBUG   = 3,
 };
-
-extern int zs_log_verbosity;
-extern int zs_log_to_syslog;   /* Set to 1 to enable logging to syslog */
-extern cstring zs_log_file;
 
 int zslog(int level, const char *fmt, ...);
 
