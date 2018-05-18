@@ -49,31 +49,32 @@ int cmd_repack(int argc, char **argv, const char *progname)
         cmd_parse_config(config_file);
 
         if (zsdb_init(&db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed initialising DB.\n");
+                fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
-                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                fprintf(stderr, "ERROR: Could not open DB %s.\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_pack_lock_acquire(db, 0) != ZS_OK) {
-                zslog(LOGWARNING, "Could not acquire pack lock for packing.\n");
+                fprintf(stderr, "ERROR: Could not acquire pack lock for packing.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
 
         if (zsdb_repack(db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed repacking DB.\n");
+                fprintf(stderr, "ERROR: Failed repacking DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         ret = EXIT_SUCCESS;
+        fprintf(stderr, "OK\n");
 done:
         if (zsdb_pack_lock_release(db) != ZS_OK) {
                 zslog(LOGWARNING, "Could not release pack lock.\n");

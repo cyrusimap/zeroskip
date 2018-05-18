@@ -55,20 +55,20 @@ int cmd_get(int argc, char **argv, const char *progname)
         cmd_parse_config(config_file);
 
         if (zsdb_init(&db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed initialising DB.\n");
+                fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
-                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                fprintf(stderr, "ERROR: Could not open DB %s.\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_fetch(db, (unsigned char *)key, strlen(key),
                        &value, &vallen, &txn)) {
-                zslog(LOGDEBUG, "Cannot find record with key %s in %s\n",
+                fprintf(stderr, "ERROR: Cannot find record with key %s in %s\n",
                       key, dbname);
                 ret = EXIT_FAILURE;
                 goto done;
@@ -86,7 +86,7 @@ int cmd_get(int argc, char **argv, const char *progname)
 done:
         xfree(value);
         if (zsdb_close(db) != ZS_OK) {
-                zslog(LOGWARNING, "Could not close DB.\n");
+                fprintf(stderr, "ERROR: Could not close DB.\n");
                 ret = EXIT_FAILURE;
         }
 

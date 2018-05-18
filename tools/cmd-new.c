@@ -52,24 +52,25 @@ int cmd_new(int argc, char **argv, const char *progname)
         cmd_parse_config(config_file);
 
         if (zsdb_init(&db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed initialising DB.\n");
+                fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_open(db, fname, MODE_CREATE) != ZS_OK) {
-                zslog(LOGWARNING, "Could not create DB.\n");
+                fprintf(stderr, "ERROR: Could not create DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_close(db) != ZS_OK) {
-                zslog(LOGWARNING, "Could not close DB.\n");
+                fprintf(stderr, "ERROR: Could not close DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         ret = EXIT_SUCCESS;
+        fprintf(stderr, "OK\n");
 done:
         zsdb_final(&db);
 

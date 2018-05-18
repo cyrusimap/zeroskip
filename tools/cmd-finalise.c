@@ -50,31 +50,32 @@ int cmd_finalise(int argc, char **argv, const char *progname)
         cmd_parse_config(config_file);
 
         if (zsdb_init(&db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed initialising DB.\n");
+                fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
-                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                fprintf(stderr, "ERROR: Could not open DB %s.\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_write_lock_acquire(db, 0) != ZS_OK) {
-                zslog(LOGWARNING, "Could not acquire write lock for addition.\n");
+                fprintf(stderr, "ERROR: Could not acquire write lock for addition.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_finalise(db) != ZS_OK) {
-                zslog(LOGDEBUG, "Cannot finalised db %s\n", dbname);
+                fprintf(stderr, "ERROR: Cannot finalised db %s\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
 
         ret = EXIT_SUCCESS;
+        fprintf(stderr, "OK\n");
 done:
         if (zsdb_write_lock_release(db) != ZS_OK) {
                 zslog(LOGWARNING, "Could not release write lock after addition.\n");

@@ -42,19 +42,19 @@ int cmd_info(int argc, char **argv, const char *progname)
         dbname = argv[optind];
 
         if (zsdb_init(&db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed initialising DB.\n");
+                fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
-                zslog(LOGWARNING, "Could not open DB %s.\n", dbname);
+                fprintf(stderr, "ERROR: Could not open DB %s.\n", dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         if (zsdb_info(db) != ZS_OK) {
-                zslog(LOGWARNING, "Failed dumping records in %s.\n",
+                fprintf(stderr, "ERROR: Failed dumping records in %s.\n",
                       dbname);
                 ret = EXIT_FAILURE;
                 goto done;
@@ -63,7 +63,7 @@ int cmd_info(int argc, char **argv, const char *progname)
         ret = EXIT_SUCCESS;
 done:
         if (zsdb_close(db) != ZS_OK) {
-                zslog(LOGWARNING, "Could not close DB.\n");
+                fprintf(stderr, "ERROR: Could not close DB.\n");
                 ret = EXIT_FAILURE;
         }
 
