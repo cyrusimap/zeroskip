@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/stat.h>
 #include <sys/uio.h>
 
 #include "macros.h"
@@ -59,6 +60,7 @@ extern int mappedfile_write_iov(struct mappedfile **mfp,
                                 unsigned int iov_cnt,
                                 size_t *nbytes);
 extern int mappedfile_size(struct mappedfile **mfp, size_t *psize);
+extern int mappedfile_stat(struct mappedfile **mfp, struct stat *stbuf);
 extern int mappedfile_truncate(struct mappedfile **mfp, size_t len);
 extern int mappedfile_flush(struct mappedfile **mfp);
 extern int mappedfile_seek(struct mappedfile **mfp, size_t offset,

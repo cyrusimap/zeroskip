@@ -22,6 +22,7 @@
 #include "util.h"
 #include "vecu64.h"
 
+#include <sys/stat.h>
 #include <uuid/uuid.h>
 
 CPP_GUARD_START
@@ -174,6 +175,14 @@ extern void assert_zsdb(struct zsdb *db);
 #define zsdb_break(x) (x)
 #endif
 
+/* masks for file stat changes */
+#define ZSDB_FILE_INO_CHANGED    0x0001
+#define ZSDB_FILE_MODE_CHANGED   0x0002
+#define ZSDB_FILE_UID_CHANGED    0x0004
+#define ZSDB_FILE_GID_CHANGED    0x0008
+#define ZSDB_FILE_SIZE_CHANGED   0x0010
+#define ZSDB_FILE_MTIM_CHANGED   0x0020
+#define ZSDB_FILE_CTIM_CHANGED   0x0040
 
 /** File Data **/
 struct zsdb_file {
@@ -183,6 +192,7 @@ struct zsdb_file {
         cstring fname;
         struct mappedfile *mf;
         struct vecu64 *index;
+        struct stat st;
         /* TODO: Fix the indexpos type int to uint64_t.
            Here and in struct vecu64 (count)
          */
@@ -319,6 +329,8 @@ extern int zs_file_write_keyval_record(struct zsdb_file *f,
 extern int zs_file_write_commit_record(struct zsdb_file *f, int final);
 extern int zs_file_write_delete_record(struct zsdb_file *f,
                                        unsigned char *key, size_t keylen);
+extern int zs_file_update_stat(struct zsdb_file *f);
+extern int zs_file_check_stat(struct zsdb_file *f);
 
 /* zeroskip-filename.c */
 extern void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname);

@@ -403,9 +403,33 @@ int mappedfile_size(struct mappedfile **mfp, size_t *psize)
         }
 
         return err;
-
 }
 
+/*
+  mappedfile_stat():
+
+  * Return:
+    - On Success: returns 0
+    - On Failure: returns non 0
+ */
+int mappedfile_stat(struct mappedfile **mfp, struct stat *stbuf)
+{
+        struct mappedfile *mf = *mfp;
+
+        if (!mf)
+            return EINVAL;
+
+        if (mf == &mf_init || mf->ptr == MAP_FAILED)
+                return EINVAL;
+
+        if (mf->ptr && (mf->flags & PROT_WRITE))
+                msync(mf->ptr, mf->size, MS_SYNC);
+
+        if (fstat(mf->fd, stbuf) != 0)
+                return errno;
+
+        return 0;
+}
 
 /*
   mappedfile_truncate()

@@ -451,3 +451,54 @@ done:
                 xfree(dbuf);
         return ret;
 }
+
+/* zs_file_update_stat():
+ * Fetch and update the `struct stat` information for a file pointed to by f.
+ *
+ * Returns ZS_OK when the stat() command worked, ZS_ERROR otherwise.
+ */
+int zs_file_update_stat(struct zsdb_file *f)
+{
+        if (!f->is_open)
+                return ZS_INTERNAL;
+
+        memset(&f->st, 0, sizeof(struct stat));
+
+        return mappedfile_stat(&f->mf, &f->st) == 0 ? ZS_OK : ZS_ERROR;
+}
+
+/* zs_file_check_stat():
+ * Given a file `f`, check if the stats for f have changed.
+ *
+ * Returns 0 if nothing has changed, and 1 otherwise.
+ */
+int zs_file_check_stat(struct zsdb_file *f)
+{
+        struct stat st;
+        int status = 0;
+
+        if (!f->is_open)
+                return ZS_INTERNAL;
+
+        if (mappedfile_stat(&f->mf, &st) != 0) {
+                zslog(LOGWARNING, "Cannot stat %s.\n", f->fname.buf);
+                return ZS_ERROR;
+        }
+
+        if (st.st_ino != f->st.st_ino)
+                status |= ZSDB_FILE_INO_CHANGED;
+        if (st.st_mode != f->st.st_mode)
+                status |= ZSDB_FILE_MODE_CHANGED;
+        if (st.st_uid |= f->st.st_uid)
+                status |= ZSDB_FILE_UID_CHANGED;
+        if (st.st_gid |= f->st.st_gid)
+                status |= ZSDB_FILE_GID_CHANGED;
+        if (st.st_size |= f->st.st_size)
+                status |= ZSDB_FILE_SIZE_CHANGED;
+        if (st.st_mtim.tv_nsec |= f->st.st_mtim.tv_nsec)
+                status |= ZSDB_FILE_MTIM_CHANGED;
+        if (st.st_ctim.tv_nsec |= f->st.st_ctim.tv_nsec)
+                status |= ZSDB_FILE_CTIM_CHANGED;
+
+        return status;
+}
