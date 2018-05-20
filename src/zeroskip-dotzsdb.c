@@ -404,7 +404,6 @@ int zs_dotzsdb_update_end(struct zsdb_priv *priv)
         unsigned char stackbuf[DOTZSDB_SIZE];
         unsigned char *sptr;
         ssize_t nr;
-        size_t count = DOTZSDB_SIZE;
 
         if (!priv->open) {
                 zslog(LOGDEBUG, "DB not opened. Please open the db before updating\n");
@@ -451,19 +450,15 @@ int zs_dotzsdb_update_end(struct zsdb_priv *priv)
         sptr += sizeof(uint32_t);
 
         sptr = stackbuf;
-        while (count > 0) {
-                while (1) {
-                        nr = write(dblock.fd, sptr, DOTZSDB_SIZE);
-                        if (nr < 0) {
-                                if (errno == EINTR)
-                                        continue;
-                        }
-
-                        fsync(dblock.fd);
-                        break;
+        while (1) {
+                nr = write(dblock.fd, sptr, DOTZSDB_SIZE);
+                if (nr < 0) {
+                        if (errno == EINTR)
+                                continue;
                 }
-                count -= nr;
-                sptr += nr;
+
+                fsync(dblock.fd);
+                break;
         }
 
         /* rename */
