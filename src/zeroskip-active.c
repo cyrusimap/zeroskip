@@ -100,6 +100,7 @@ int zs_active_file_close(struct zsdb_priv *priv)
         cstring_release(&priv->dbfiles.factive.fname);
 
         priv->dbfiles.factive.is_open = 0;
+        priv->dbfiles.afcount = 0;
 
         return ret;
 }

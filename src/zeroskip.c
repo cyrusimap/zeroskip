@@ -421,9 +421,113 @@ static void zs_find_index_range_for_files(struct list_head *flist,
         }
 }
 
-static int zsdb_reload(struct zsdb_priv *priv _unused_)
+static int zsdb_reload(struct zsdb_priv *priv)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct list_head *pos, *p;
+        size_t mfsize;
+        uint64_t priority = 0;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB not open!\n");
+                return ZS_ERROR;
+        }
+
+        /** Close all files **/
+        /* Close active */
+        zs_active_file_close(priv);
+
+        list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
+                struct zsdb_file *f;
+                list_del(pos);
+                f = list_entry(pos, struct zsdb_file, list);
+                zs_finalised_file_close(&f);
+                priv->dbfiles.ffcount--;
+        }
+
+        list_for_each_forward_safe(pos, p, &priv->dbfiles.pflist) {
+                struct zsdb_file *f;
+                list_del(pos);
+                f = list_entry(pos, struct zsdb_file, list);
+                zs_packed_file_close(&f);
+                priv->dbfiles.pfcount--;
+        }
+
+        if (priv->memtree) {
+                btree_free(priv->memtree);
+                priv->memtree = NULL;
+        }
+
+        if (priv->fmemtree) {
+                btree_free(priv->fmemtree);
+                priv->fmemtree = NULL;
+        }
+
+        /* Allocate In-memory tree */
+        priv->memtree = btree_new(NULL, NULL);
+        priv->fmemtree = btree_new(NULL, NULL);
+
+        /** Reopen/Reload all files */
+        ret = for_each_db_file_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH,
+                                        priv);
+        if (ret != ZS_OK)
+                goto done;
+
+        /* Load records from active file to in-memory tree */
+        ret = zs_active_file_record_foreach(priv, load_btree_record_cb,
+                                            load_deleted_btree_record_cb,
+                                            priv->memtree);
+        if (ret != ZS_OK)
+                goto done;
+
+        /* Load data from finalised files */
+        while (finalisedpq.count) {
+                struct zsdb_file *f = pqueue_get(&finalisedpq);
+                list_add_head(&f->list, &priv->dbfiles.fflist);
+                priv->dbfiles.ffcount++;
+        }
+        pqueue_free(&finalisedpq);
+
+        if (priv->dbfiles.ffcount) {
+                priority = 0;
+                zslog(LOGDEBUG, "Loading data from finalised files\n");
+                list_for_each_reverse(pos, &priv->dbfiles.fflist) {
+                        struct zsdb_file *f;
+                        f = list_entry(pos, struct zsdb_file, list);
+                        zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
+                        zs_finalised_file_record_foreach(f,
+                                                         load_btree_record_cb,
+                                                         load_deleted_btree_record_cb,
+                                                         priv->fmemtree);
+                        f->priority = ++priority;
+                }
+        }
+
+
+        while (packedpq.count) {
+                struct zsdb_file *f = pqueue_get(&packedpq);
+                list_add_head(&f->list, &priv->dbfiles.pflist);
+                priv->dbfiles.pfcount++;
+        }
+        pqueue_free(&packedpq);
+
+
+        /* Set priority of packed files */
+        priority = 0;
+        list_for_each_forward(pos, &priv->dbfiles.pflist) {
+                struct zsdb_file *f;
+                f = list_entry(pos, struct zsdb_file, list);
+                f->priority = ++priority;
+        }
+
+        /* Seek to the end of the file, that's where the
+           records need to appended to.
+        */
+        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
+        if (mfsize)
+                mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
+done:
+        return ret;
 }
 
 /**
@@ -770,9 +874,12 @@ int zsdb_add(struct zsdb *db,
         if (inonum != priv->dotzsdb_ino) {
                 /* If the inode number differ, the db has changed since the
                    time it has been opened. We need to reload the DB */
-                zsdb_reload(priv); /* TODO: check return value */
-                ret = ZS_ERROR;
-                goto done;
+                ret = zsdb_reload(priv);
+                if (ret != ZS_OK) {
+                        zslog(LOGWARNING, "Failed reoloading DB!\n");
+                        goto done;
+                }
+                zslog(LOGDEBUG, "Reloaded DB!\n");
         }
 
         /* check file size and finalise if necessary */
@@ -1132,7 +1239,12 @@ int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
                 zslog(LOGWARNING, "Failed truncating file %s to offset %lu",
                       priv->dbfiles.factive.fname.buf, priv->dotzsdb.offset);
         }
+
         priv->dbfiles.factive.mf->offset = priv->dotzsdb.offset;
+
+        /* Mark the active file as *NOT* dirty, so that we don't
+         * write the commit record */
+        priv->dbfiles.factive.dirty = 0;
 
         /* End the current transaction */
         if (txn && *txn && (*txn)->alloced)
@@ -1189,7 +1301,12 @@ int zsdb_repack(struct zsdb *db)
         if (inonum != priv->dotzsdb_ino) {
                 /* If the inode numbers differ, the db has changed, since the
                    time it has been opened. We need to reload the DB */
-                zsdb_reload(priv);
+                ret = zsdb_reload(priv);
+                if (ret != ZS_OK) {
+                        zslog(LOGWARNING, "Failed reoloading DB!\n");
+                        goto done;
+                }
+                zslog(LOGDEBUG, "Reloaded DB!\n");
         }
 
         if (!zs_dotzsdb_update_begin(priv)) {
@@ -1386,9 +1503,12 @@ int zsdb_finalise(struct zsdb *db)
         if (inonum != priv->dotzsdb_ino) {
                 /* If the inode number differ, the db has changed since the
                    time it has been opened. We need to reload the DB */
-                zsdb_reload(priv); /* TODO: check return value */
-                ret = ZS_ERROR;
-                goto done;
+                ret = zsdb_reload(priv);
+                if (ret != ZS_OK) {
+                        zslog(LOGWARNING, "Failed reoloading DB!\n");
+                        goto done;
+                }
+                zslog(LOGDEBUG, "Reloaded DB!\n");
         }
 
         zslog(LOGDEBUG, "Finalising %s.\n",
