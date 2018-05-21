@@ -27,6 +27,8 @@ before_script:
   - ccache --version
   - ccache --zero-stats
   - gcc -v
+
+script:
   - autoreconf --install
   - ./configure
   - make
