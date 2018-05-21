@@ -30,8 +30,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
                 char val[10];
                 sprintf(key, "key%d", j);
                 sprintf(val, "val%d", j);
-                recs[j] = record_new((unsigned char *)key, strlen(key),
-                                     (unsigned char *)val, strlen(val),
+                recs[j] = record_new((const unsigned char *)key, strlen(key),
+                                     (const unsigned char *)val, strlen(val),
                                      0);
                 if (btree_insert(tree, recs[j]) != BTREE_OK) {
                         fprintf(stderr, "btree_insert didn't work for %s\n", key);
@@ -43,8 +43,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
         btree_print_node_data(tree, NULL);
         printf("------------------------\n");
         {
-                struct record *trec = record_new((unsigned char *)"key2", strlen("key2"),
-                                                 (unsigned char *)"newval2", strlen("newval2"),
+                struct record *trec = record_new((const unsigned char *)"key2",
+                                                 strlen("key2"),
+                                                 (const unsigned char *)"newval2",
+                                                 strlen("newval2"),
                                                  0);
                 ret = btree_insert(tree, trec);
                 if (ret == BTREE_DUPLICATE) {
@@ -61,8 +63,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 
         printf("------------------------\n");
         {
-                struct record *trec = record_new((unsigned char *)"key199", strlen("key199"),
-                                                 (unsigned char *)"val199", strlen("val199"),
+                struct record *trec = record_new((const unsigned char *)"key199",
+                                                 strlen("key199"),
+                                                 (const unsigned char *)"val199",
+                                                 strlen("val199"),
                                                  0);
                 ret = btree_insert(tree, trec);
                 if (ret != BTREE_OK) {
@@ -73,7 +77,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
         btree_print_node_data(tree, NULL);
         printf("------------------------\n");
 
-        if (btree_find(tree, (unsigned char *)"key2", strlen("key2"), iter)) {
+        if (btree_find(tree, (const unsigned char *)"key2",
+                       strlen("key2"), iter)) {
                 size_t i;
                 printf("Record found:\n");
                 printf("key: ");

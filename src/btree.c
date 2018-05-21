@@ -428,11 +428,11 @@ void btree_free(struct btree *btree)
         xfree(btree);
 }
 
-int btree_begin(const struct btree *btree, btree_iter_t iter)
+int btree_begin(struct btree *btree, btree_iter_t iter)
 {
         struct btree_node *node;
 
-        iter->tree = (struct btree *)btree;
+        iter->tree = btree;
         iter->node = btree->root;
         iter->pos = 0;
         if (iter->node->depth)
@@ -569,12 +569,12 @@ unsigned int btree_memcmp_natural(unsigned char *key, size_t keylen,
         return start;
 }
 
-unsigned int btree_memcmp_raw(unsigned char *key, size_t keylen,
+unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                               struct record **recs,
                               unsigned int count, int *found)
 {
         unsigned int start = 0;
-        unsigned char *k = (unsigned char *) key;
+        const unsigned char *k = key;
 
         while (count) {
                 unsigned int middle = count >> 1;
@@ -622,8 +622,8 @@ int btree_destroy(struct record *record,
         return 0;
 }
 
-int btree_find(struct btree *btree, unsigned char *key, size_t keylen,
-                  btree_iter_t iter)
+int btree_find(struct btree *btree, const unsigned char *key, size_t keylen,
+               btree_iter_t iter)
 {
         struct btree_node *node = btree->root;
         uint32_t depth;
@@ -801,8 +801,8 @@ int btree_print_node_data(struct btree *btree, void *data)
         return btree_walk_forward(btree, node_print_data, data);
 }
 
-struct record * record_new(unsigned char *key, size_t keylen,
-                           unsigned char *val, size_t vallen,
+struct record * record_new(const unsigned char *key, size_t keylen,
+                           const unsigned char *val, size_t vallen,
                            int deleted)
 {
         struct record *rec = NULL;

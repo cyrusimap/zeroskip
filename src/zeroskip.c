@@ -56,8 +56,8 @@ int zsdb_break(int err)
  */
 static int dbfname_cmp(const void *d1, const void *d2, void *cbdata _unused_)
 {
-        struct zsdb_file *f1 = (struct zsdb_file *)d1;
-        struct zsdb_file *f2 = (struct zsdb_file *)d2;
+        const struct zsdb_file *f1 = (const struct zsdb_file *)d1;
+        const struct zsdb_file *f2 = (const struct zsdb_file *)d2;
 
         return natural_strcasecmp(f1->fname.buf, f2->fname.buf);
 }
@@ -192,8 +192,8 @@ done:
 static enum db_ftype_t interpret_db_filename(const char *str, size_t len,
                                              uint32_t *sidx, uint32_t *eidx)
 {
-        const char *p;
-        const char *idx;
+        char *p;
+        char *idx;
         uint32_t startidx = 0, endidx = 0;
         enum db_ftype_t type = DB_FTYPE_UNKNOWN;
 
@@ -831,9 +831,9 @@ done:
 }
 
 int zsdb_add(struct zsdb *db,
-             unsigned char *key,
+             const unsigned char *key,
              size_t keylen,
-             unsigned char *value,
+             const unsigned char *value,
              size_t vallen,
              struct txn **txn _unused_)
 {
@@ -926,7 +926,7 @@ done:
 }
 
 int zsdb_remove(struct zsdb *db,
-                unsigned char *key, size_t keylen,
+                const unsigned char *key, size_t keylen,
                 struct txn **txn _unused_)
 {
         int ret = ZS_OK;
@@ -1638,7 +1638,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         return ret;
 }
 
-int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
+int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
                 foreach_p *p, foreach_cb *cb, void *cbdata,
                 struct txn **txn)
 {

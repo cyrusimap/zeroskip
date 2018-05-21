@@ -97,9 +97,10 @@ extern int zsdb_init(struct zsdb **pdb);
 extern void zsdb_final(struct zsdb **pdb);
 extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
 extern int zsdb_close(struct zsdb *db);
-extern int zsdb_add(struct zsdb *db, unsigned char *key, size_t keylen,
-                    unsigned char *value, size_t vallen, struct txn **txn);
-extern int zsdb_remove(struct zsdb *db, unsigned char *key, size_t keylen,
+extern int zsdb_add(struct zsdb *db, const unsigned char *key, size_t keylen,
+                    const unsigned char *value, size_t vallen,
+                    struct txn **txn);
+extern int zsdb_remove(struct zsdb *db, const unsigned char *key, size_t keylen,
                        struct txn **txn);
 extern int zsdb_commit(struct zsdb *db, struct txn *txn);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
@@ -112,7 +113,7 @@ extern int zsdb_fetchnext(struct zsdb *db,
 extern int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                         foreach_p *p, foreach_cb *cb, void *cbdata,
                         struct txn **txn);
-extern int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
+extern int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
                        foreach_p *p, foreach_cb *cb, void *cbdata,
                        struct txn **txn);
 extern int zsdb_abort(struct zsdb *db, struct txn **txn);

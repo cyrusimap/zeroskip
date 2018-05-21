@@ -483,14 +483,14 @@ int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
 
 int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unused_)
 {
-        struct zsdb_file *f1, *f2;
+        const struct zsdb_file *f1, *f2;
         uint64_t off1, off2;
         struct zs_key key1, key2;
         int ret;
         uint64_t len1 = 0, len2 = 0;
 
-        f1 = (struct zsdb_file *)d1;
-        f2 = (struct zsdb_file *)d2;
+        f1 = (const struct zsdb_file *)d1;
+        f2 = (const struct zsdb_file *)d2;
 
         assert(f1->indexpos <= f1->index->count);
         assert(f2->indexpos <= f2->index->count);

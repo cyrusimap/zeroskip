@@ -16,7 +16,8 @@
 /*
  * Private functions
  */
-static int zs_read_key_rec(struct zsdb_file *f, size_t *offset,
+static int zs_read_key_rec(const struct zsdb_file *f,
+                           size_t *offset,
                            struct zs_key *key)
 {
         unsigned char *bptr;
@@ -290,7 +291,8 @@ int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
  * Reads a key from a given struct zsdb_file offset. This is primarily used in
  * the PQ comparison packed file records.
  */
-int zs_record_read_key_from_file_offset(struct zsdb_file *f, size_t offset,
+int zs_record_read_key_from_file_offset(const struct zsdb_file *f,
+                                        size_t offset,
                                         struct zs_key *key)
 {
         unsigned char *bptr, *fptr;

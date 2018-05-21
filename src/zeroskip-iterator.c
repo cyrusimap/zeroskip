@@ -59,7 +59,7 @@ static void iter_htable_init(struct iter_htable *ht)
         htable_init(&ht->table, iter_htable_entry_cmpfn, NULL, 0);
 }
 
-static void *iter_htable_get(struct iter_htable *ht, const unsigned char *key,
+static void *iter_htable_get(struct iter_htable *ht, unsigned char *key,
                              size_t keylen)
 {
         struct iter_htable_entry k;
@@ -142,10 +142,10 @@ static void free_iter_key_data(struct iter_key_data **data)
 
 static int iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
 {
-        struct iter_key_data *e1, *e2;
+        const struct iter_key_data *e1, *e2;
 
-        e1 = (struct iter_key_data *)d1;
-        e2 = (struct iter_key_data *)d2;
+        e1 = (const struct iter_key_data *)d1;
+        e2 = (const struct iter_key_data *)d2;
 
         return memcmp_raw(e1->key, e1->len, e2->key, e2->len);
 }

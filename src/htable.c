@@ -94,7 +94,7 @@ static void rehash(struct htable *ht, unsigned int newsize)
 unsigned int bufhash(const void *buf, size_t len)
 {
         unsigned int hash = FNV32_BASE;
-        unsigned char *ptr = (unsigned char *) buf;
+        const unsigned char *ptr = buf;
 
         while (len--) {
                 unsigned int c = *ptr++;

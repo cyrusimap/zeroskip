@@ -21,35 +21,35 @@
 #define DBNAME "ZSTESTDB"
 
 static struct {
-        unsigned char *k;
+        const unsigned char *k;
         size_t klen;
-        unsigned char *v;
+        const unsigned char *v;
         size_t vlen;
 } kvrecs1[] = {
-        { (unsigned char *)"123", 3, (unsigned char *)"456", 3 },
-        { (unsigned char *)"foo", 3, (unsigned char *)"bar", 3 },
-        { (unsigned char *)"abc", 3, (unsigned char *)"def", 3 },
-        { (unsigned char *)"abc.name", 8, (unsigned char *)"foo", 3 },
-        { (unsigned char *)"1233", 4, (unsigned char *)"456", 3 },
-        { (unsigned char *)"abc.place", 9, (unsigned char *)"foo", 3 },
-        { (unsigned char *)"1232", 4, (unsigned char *)"456", 3 },
-        { (unsigned char *)"abc.animal", 10, (unsigned char *)"foo", 3 },
-        { (unsigned char *)"Apple", 5, (unsigned char *)"iPhone7s", 8 },
-        { (unsigned char *)"abc.thing", 9, (unsigned char *)"foo", 3 },
-        { (unsigned char *)"12311", 5, (unsigned char *)"456", 3 },
-        { (unsigned char *)"blackberry", 10, (unsigned char *)"BB10", 3 },
-        { (unsigned char *)"1231", 4, (unsigned char *)"456", 3 },
-        { (unsigned char *)"nokia", 5, (unsigned char *)"meego", 5 },
+        { (const unsigned char *)"123", 3, (const unsigned char *)"456", 3 },
+        { (const unsigned char *)"foo", 3, (const unsigned char *)"bar", 3 },
+        { (const unsigned char *)"abc", 3, (const unsigned char *)"def", 3 },
+        { (const unsigned char *)"abc.name", 8, (const unsigned char *)"foo", 3 },
+        { (const unsigned char *)"1233", 4, (const unsigned char *)"456", 3 },
+        { (const unsigned char *)"abc.place", 9, (const unsigned char *)"foo", 3 },
+        { (const unsigned char *)"1232", 4, (const unsigned char *)"456", 3 },
+        { (const unsigned char *)"abc.animal", 10, (const unsigned char *)"foo", 3 },
+        { (const unsigned char *)"Apple", 5, (const unsigned char *)"iPhone7s", 8 },
+        { (const unsigned char *)"abc.thing", 9, (const unsigned char *)"foo", 3 },
+        { (const unsigned char *)"12311", 5, (const unsigned char *)"456", 3 },
+        { (const unsigned char *)"blackberry", 10, (const unsigned char *)"BB10", 3 },
+        { (const unsigned char *)"1231", 4, (const unsigned char *)"456", 3 },
+        { (const unsigned char *)"nokia", 5, (const unsigned char *)"meego", 5 },
 };
 
 static struct {
-        unsigned char *k;
+        const unsigned char *k;
         size_t klen;
-        unsigned char *v;
+        const unsigned char *v;
         size_t vlen;
 } kvrecs2[] = {
-        { (unsigned char *)"Australia.Sydney", 4, (unsigned char *)"2000", 3 },
-        { (unsigned char *)"Australia.Melbourne", 5, (unsigned char *)"3000", 5 },
+        { (const unsigned char *)"Australia.Sydney", 4, (const unsigned char *)"2000", 3 },
+        { (const unsigned char *)"Australia.Melbourne", 5, (const unsigned char *)"3000", 5 },
 };
 
 static int record_count = 0;
@@ -104,7 +104,7 @@ static int add_records_to_db_and_commit(struct zsdb *db, struct txn *txn)
                                kvrecs1[i].v, kvrecs1[i].vlen, &txn);
                 if (ret != ZS_OK) {
                         zslog(LOGWARNING, "Failed adding %s to %s\n",
-                              (char *)kvrecs1[i].k, DBNAME);
+                              (const char *)kvrecs1[i].k, DBNAME);
                         ret = EXIT_FAILURE;
                         goto done;
                 }
@@ -151,7 +151,7 @@ static int add_two_records_to_db_and_dont_commit(struct zsdb *db,
                                kvrecs2[i].v, kvrecs2[i].vlen, &txn);
                 if (ret != ZS_OK) {
                         zslog(LOGWARNING, "Failed adding %s to %s\n",
-                              (char *)kvrecs2[i].k, DBNAME);
+                              (const char *)kvrecs2[i].k, DBNAME);
                         ret = EXIT_FAILURE;
                         goto done;
                 }

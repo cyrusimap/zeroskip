@@ -101,7 +101,7 @@ static inline void cstring_addch(cstring *cstr, int ch)
  * Add data of a given length to the cstring buffer.
  *
  */
-void cstring_add(cstring *cstr, void *data, size_t len);
+void cstring_add(cstring *cstr, const void *data, size_t len);
 
 /*
  * cstring_addstr():
@@ -109,7 +109,7 @@ void cstring_add(cstring *cstr, void *data, size_t len);
  */
 static inline void cstring_addstr(cstring *cstr, const char *str)
 {
-        cstring_add(cstr, (void *)str, strlen(str));
+        cstring_add(cstr, (const void *)str, strlen(str));
 }
 
 /*

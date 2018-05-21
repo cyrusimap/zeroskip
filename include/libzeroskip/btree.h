@@ -72,7 +72,7 @@ typedef struct btree_iter btree_iter_t[1];
 /** Callbacks **/
 /* btree_action_cb_t should return 1 for success, for the loop to continue */
 typedef int (*btree_action_cb_t)(struct record *record, void *data);
-typedef unsigned int (*btree_search_cb_t)(unsigned char *key,
+typedef unsigned int (*btree_search_cb_t)(const unsigned char *key,
                                           size_t keylen,
                                           struct record **recs,
                                           unsigned int count,
@@ -154,12 +154,12 @@ int btree_lookup(struct btree *tree, const void *key);
  *  On Success: returns 1 with iter->element containing the match
  *  On Failure: returns 0
  */
-int btree_find(struct btree *tree, unsigned char *key, size_t keylen,
+int btree_find(struct btree *tree, const unsigned char *key, size_t keylen,
                btree_iter_t iter);
 
 int btree_walk_forward(struct btree *btree, btree_action_cb_t action,
                        void *data);
-int btree_begin(const struct btree *btree, btree_iter_t iter);
+int btree_begin(struct btree *btree, btree_iter_t iter);
 int btree_prev(btree_iter_t iter);
 int btree_next(btree_iter_t iter);
 
@@ -179,7 +179,7 @@ unsigned int btree_memcmp_natural(unsigned char *key, size_t keylen,
 /* btree_memcmp_raw():
    Sorts raw - data with common prefixes are grouped together.
  */
-unsigned int btree_memcmp_raw(unsigned char *key, size_t keylen,
+unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                               struct record **recs,
                               unsigned int count, int *found);
 
@@ -188,8 +188,8 @@ int btree_destroy(struct record *record, void *data);
 int btree_print_node_data(struct btree *btree, void *data);
 
 /* Record handlers */
-struct record * record_new(unsigned char *key, size_t keylen,
-                           unsigned char *val, size_t vallen,
+struct record * record_new(const unsigned char *key, size_t keylen,
+                           const unsigned char *val, size_t vallen,
                            int deleted);
 void record_free(struct record *record);
 

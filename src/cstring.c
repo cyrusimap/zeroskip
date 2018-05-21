@@ -75,7 +75,7 @@ void cstring_attach(cstring *cstr, void *buf, size_t len, size_t alloc)
         cstr->buf[cstr->len] = '\0';
 }
 
-void cstring_add(cstring *cstr, void *data, size_t len)
+void cstring_add(cstring *cstr, const void *data, size_t len)
 {
         cstring_grow(cstr, len);
         memcpy(cstr->buf + cstr->len, data, len);

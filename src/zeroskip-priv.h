@@ -385,6 +385,7 @@ extern int zs_packed_file_write_delete_record(void *data,
                                               unsigned char *value _unused_,
                                               size_t vallen _unused_);
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
+extern int zs_packed_file_write_final_commit_record(struct zsdb_file *f);
 extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
                                     void *cbdata);
 extern int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
@@ -400,7 +401,7 @@ extern int zs_packed_file_bsearch_index(const unsigned char *key,
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
                                     foreach_cb *cb, foreach_cb *deleted_cb,
                                     void *cbdata);
-extern int zs_record_read_key_from_file_offset(struct zsdb_file *f,
+extern int zs_record_read_key_from_file_offset(const struct zsdb_file *f,
                                                size_t offset,
                                                struct zs_key *key);
 extern int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
