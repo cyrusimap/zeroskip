@@ -31,8 +31,6 @@ before_script:
   - ./configure
   - make
 
-script:
-
 branches:
   only:
     - master
