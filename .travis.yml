@@ -27,11 +27,12 @@ before_script:
   - ccache --version
   - ccache --zero-stats
   - gcc -v
-  - make clean
-  - make V=1
+  - autoreconf --install
+  - ./configure
+  - make
 
 script:
-  - make test
+  #- make test
 
 branches:
   only:

@@ -8,8 +8,8 @@
  *
  */
 
-#include "log.h"
-#include "zeroskip.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
 #include <errno.h>

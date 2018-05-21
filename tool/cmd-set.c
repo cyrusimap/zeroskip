@@ -12,8 +12,7 @@
 #include <string.h>
 
 #include "cmds.h"
-#include "log.h"
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
 
 int cmd_set(int argc, char **argv, const char *progname)
 {

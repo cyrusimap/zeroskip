@@ -5,14 +5,14 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-#include "btree.h"
 #include "cstring.h"
 #include "htable.h"
-#include "log.h"
-#include "macros.h"
 #include "pqueue.h"
-#include "util.h"
-#include "zeroskip.h"
+#include <libzeroskip/btree.h>
+#include <libzeroskip/log.h>
+#include <libzeroskip/macros.h>
+#include <libzeroskip/util.h>
+#include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
 #include <errno.h>
@@ -25,9 +25,15 @@
 
 #include <libgen.h>
 #include <stdlib.h>
+
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE
+#endif
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -40,20 +46,10 @@
 static struct pqueue finalisedpq;
 static struct pqueue packedpq;
 
-#ifdef ZS_DEBUG
-void assert_zsdb(struct zsdb *db)
-{
-        assert(db);
-        assert(db->priv);
-}
-
 int zsdb_break(int err)
 {
         return err;
 }
-#else
-#define assert_zsdb(x)
-#endif
 
 /**
  * Private functions
@@ -616,7 +612,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         struct stat sb = { 0 };
         int newdb = 0;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
         assert(dbdir && dbdir[0]);
 
         if (!db || !db->priv) {
@@ -846,7 +843,8 @@ int zsdb_add(struct zsdb *db,
         struct record *rec;
         ino_t inonum;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
         assert(key);
         assert(keylen);
         assert(value);
@@ -935,7 +933,8 @@ int zsdb_remove(struct zsdb *db,
         struct zsdb_priv *priv;
         struct record *rec;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
         assert(key);
         assert(keylen);
 
@@ -1015,7 +1014,8 @@ int zsdb_fetch(struct zsdb *db,
         btree_iter_t iter;
         struct list_head *pos;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
         assert(key);
         assert(keylen);
 
@@ -1150,7 +1150,8 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
         struct zsdb_priv *priv;
         int count = 0;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         if (db)
                 priv = db->priv;
@@ -1219,7 +1220,8 @@ int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
         int ret = ZS_NOTIMPLEMENTED;
         struct zsdb_priv *priv;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         if (db)
                 priv = db->priv;
@@ -1257,7 +1259,8 @@ int zsdb_consistent(struct zsdb *db, struct txn **txn _unused_)
 {
         int ret = ZS_NOTIMPLEMENTED;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         return ret;
 }
@@ -1281,7 +1284,8 @@ int zsdb_repack(struct zsdb *db)
         cstring fname = CSTRING_INIT;
         struct list_head *pos, *p;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
@@ -1429,7 +1433,8 @@ int zsdb_info(struct zsdb *db)
         struct zsdb_priv *priv;
         struct list_head *pos;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
@@ -1482,7 +1487,8 @@ int zsdb_finalise(struct zsdb *db)
         struct zsdb_priv *priv;
         ino_t inonum;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         if (!db)
                 return ZS_NOT_OPEN;
@@ -1542,7 +1548,8 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         int newtxn = 0;
         int found = 0;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         if (db)
                 priv = db->priv;
@@ -1640,7 +1647,8 @@ int zsdb_forone(struct zsdb *db, unsigned char *key, size_t keylen,
         struct zsdb_iter *tempiter = NULL;
         int found = 0;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
         assert(key);
         assert(keylen);
 

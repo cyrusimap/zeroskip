@@ -9,8 +9,8 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-#include "util.h"
-#include "strarray.h"
+#include <libzeroskip/strarray.h>
+#include <libzeroskip/util.h>
 
 #include <string.h>
 

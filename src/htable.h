@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "macros.h"
+#include <libzeroskip/macros.h>
 
 CPP_GUARD_START
 

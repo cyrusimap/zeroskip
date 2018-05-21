@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "zeroskip.h"
-#include "macros.h"
+#include <libzeroskip/macros.h>
+#include <libzeroskip/zeroskip.h>
 
 void cmd_die_usage(const char *progname, const char *usage)
 {

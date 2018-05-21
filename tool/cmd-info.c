@@ -11,13 +11,11 @@
 #include <stdlib.h>
 
 #include "cmds.h"
-#include "log.h"
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
 
-int cmd_repack(int argc, char **argv, const char *progname)
+int cmd_info(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
-                {"config", required_argument, NULL, 'c'},
                 {"help", no_argument, NULL, 'h'},
                 {NULL, 0, NULL, 0}
         };
@@ -26,27 +24,21 @@ int cmd_repack(int argc, char **argv, const char *progname)
         struct zsdb *db = NULL;
         const char *dbname;
         int ret;
-        const char *config_file = NULL;
 
         while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
-                case 'c':
-                        config_file = optarg;
-                        break;
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_repack_usage);
+                        cmd_die_usage(progname, cmd_info_usage);
                 };
         }
 
         if (argc - optind != 1) {
-                cmd_die_usage(progname, cmd_repack_usage);
+                cmd_die_usage(progname, cmd_info_usage);
         }
 
         dbname = argv[optind];
-
-        cmd_parse_config(config_file);
 
         if (zsdb_init(&db) != ZS_OK) {
                 fprintf(stderr, "ERROR: Failed initialising DB.\n");
@@ -60,31 +52,17 @@ int cmd_repack(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_pack_lock_acquire(db, 0) != ZS_OK) {
-                fprintf(stderr, "ERROR: Could not acquire pack lock for packing.\n");
-                ret = EXIT_FAILURE;
-                goto done;
-        }
-
-
-        if (zsdb_repack(db) != ZS_OK) {
-                fprintf(stderr, "ERROR: Failed repacking DB.\n");
+        if (zsdb_info(db) != ZS_OK) {
+                fprintf(stderr, "ERROR: Failed dumping records in %s.\n",
+                      dbname);
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         ret = EXIT_SUCCESS;
-        fprintf(stderr, "OK\n");
 done:
-        if (zsdb_pack_lock_release(db) != ZS_OK) {
-                zslog(LOGWARNING, "Could not release pack lock.\n");
-                ret = EXIT_FAILURE;
-                goto done;
-        }
-
-
         if (zsdb_close(db) != ZS_OK) {
-                zslog(LOGWARNING, "Could not close DB.\n");
+                fprintf(stderr, "ERROR: Could not close DB.\n");
                 ret = EXIT_FAILURE;
         }
 

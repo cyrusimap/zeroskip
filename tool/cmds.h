@@ -9,7 +9,7 @@
 #ifndef _CMDS_H_
 #define _CMDS_H_
 
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
 
 int cmd_show(int argc, char **argv, const char *progname);
 #define cmd_show_usage "show "

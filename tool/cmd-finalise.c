@@ -9,16 +9,15 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cmds.h"
-#include "log.h"
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
 
-int cmd_dump(int argc, char **argv, const char *progname)
+int cmd_finalise(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
                 {"config", required_argument, NULL, 'c'},
-                {"recs", required_argument, NULL, 'r'},
                 {"help", no_argument, NULL, 'h'},
                 {NULL, 0, NULL, 0}
         };
@@ -26,27 +25,23 @@ int cmd_dump(int argc, char **argv, const char *progname)
         int option_index;
         const char *config_file = NULL;
         struct zsdb *db = NULL;
-        const char *dbname;
+        char *dbname = NULL;
         int ret;
-        DBDumpLevel level = DB_DUMP_ACTIVE;
 
-        while((option = getopt_long(argc, argv, "r", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
-                case 'r':       /* level of detail */
-                        level = parse_dump_level_string(optarg);
-                        break;
-                case 'c':       /* config file */
+                case 'c':       /* Config file */
                         config_file = optarg;
                         break;
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_dump_usage);
+                        cmd_die_usage(progname, cmd_finalise_usage);
                 };
         }
 
         if (argc - optind != 1) {
-                cmd_die_usage(progname, cmd_dump_usage);
+                cmd_die_usage(progname, cmd_finalise_usage);
         }
 
         dbname = argv[optind];
@@ -65,18 +60,30 @@ int cmd_dump(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_dump(db, level) != ZS_OK) {
-                fprintf(stderr, "ERROR: Failed dumping records in %s.\n",
-                      dbname);
+        if (zsdb_write_lock_acquire(db, 0) != ZS_OK) {
+                fprintf(stderr, "ERROR: Could not acquire write lock for addition.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
+        if (zsdb_finalise(db) != ZS_OK) {
+                fprintf(stderr, "ERROR: Cannot finalised db %s\n", dbname);
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+
         ret = EXIT_SUCCESS;
         fprintf(stderr, "OK\n");
 done:
+        if (zsdb_write_lock_release(db) != ZS_OK) {
+                fprintf(stderr, "Could not release write lock after addition.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
         if (zsdb_close(db) != ZS_OK) {
-                fprintf(stderr, "ERROR: Could not close DB.\n");
+                fprintf(stderr, "Could not close DB.\n");
                 ret = EXIT_FAILURE;
         }
 

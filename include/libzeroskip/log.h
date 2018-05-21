@@ -11,8 +11,7 @@
 #ifndef _LOG_H_
 #define _LOG_H_
 
-#include "cstring.h"
-#include "macros.h"
+#include <libzeroskip/macros.h>
 
 #include <stdio.h>
 

@@ -8,7 +8,8 @@
  *
  */
 
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
+
 #include "zeroskip-priv.h"
 
 /* zs_filename_generate_active():

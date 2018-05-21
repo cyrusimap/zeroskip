@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "macros.h"
+#include <libzeroskip/macros.h>
 
 CPP_GUARD_START
 

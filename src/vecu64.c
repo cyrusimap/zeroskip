@@ -8,8 +8,8 @@
  *
  */
 
-#include "log.h"
-#include "util.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/util.h>
 #include "vecu64.h"
 
 /**

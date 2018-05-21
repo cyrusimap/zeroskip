@@ -9,8 +9,8 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-#include "btree.h"
-#include "util.h"
+#include <libzeroskip/btree.h>
+#include <libzeroskip/util.h>
 
 #include <assert.h>
 #include <string.h>
@@ -25,7 +25,7 @@
 
 static int nodecount = 0;
 
-void print_rec_entry(unsigned char *d, size_t l)
+static void print_rec_entry(unsigned char *d, size_t l)
 {
         size_t i;
         for (i = 0; i < l; i++)
@@ -378,7 +378,7 @@ static int node_walk_forward(const struct btree_node *node,
         return 1;
 }
 
-int node_print_data(struct record *record, void *data _unused_)
+static int node_print_data(struct record *record, void *data _unused_)
 {
         size_t i;
 

@@ -9,8 +9,8 @@
  */
 
 #include "file-lock.h"
-#include "log.h"
-#include "util.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/util.h>
 
 #include <errno.h>
 #include <fcntl.h>

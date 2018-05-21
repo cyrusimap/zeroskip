@@ -9,7 +9,7 @@
 #ifndef _ZEROSKIP_H_
 #define _ZEROSKIP_H_
 
-#include "macros.h"
+#include <libzeroskip/macros.h>
 
 #include <stdio.h>
 #include <stdint.h>

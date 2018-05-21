@@ -11,7 +11,7 @@
  */
 
 #include "cstring.h"
-#include "util.h"
+#include <libzeroskip/util.h>
 
 #include <ctype.h>
 

@@ -7,11 +7,12 @@
  * Copyright (c) 2017 Partha Susarla <mail@spartha.org>
  */
 
-#include "zeroskip.h"
-#include "macros.h"
-#include "log.h"
-#include "util.h"
+#include <libzeroskip/zeroskip.h>
+#include <libzeroskip/macros.h>
+#include <libzeroskip/log.h>
+#include <libzeroskip/util.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

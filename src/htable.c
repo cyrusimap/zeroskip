@@ -8,7 +8,7 @@
  *
  */
 #include "htable.h"
-#include "util.h"
+#include <libzeroskip/util.h>
 
 #include <stdio.h>
 #include <string.h>

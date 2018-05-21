@@ -8,13 +8,14 @@
  */
 
 
-#include "btree.h"
-#include "log.h"
-#include "macros.h"
 #include "pqueue.h"
 #include "vecu64.h"
-#include "util.h"
-#include "zeroskip.h"
+
+#include <libzeroskip/btree.h>
+#include <libzeroskip/log.h>
+#include <libzeroskip/macros.h>
+#include <libzeroskip/util.h>
+#include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
 #include <zlib.h>
@@ -486,7 +487,7 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unuse
         uint64_t off1, off2;
         struct zs_key key1, key2;
         int ret;
-        uint64_t len1, len2;
+        uint64_t len1 = 0, len2 = 0;
 
         f1 = (struct zsdb_file *)d1;
         f2 = (struct zsdb_file *)d2;

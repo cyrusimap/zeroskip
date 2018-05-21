@@ -9,10 +9,11 @@
 #include <getopt.h>
 #include <libgen.h>
 
-#include "zeroskip.h"
-#include "version.h"
-#include "util.h"
-#include "macros.h"
+#include <libzeroskip/macros.h>
+#include <libzeroskip/util.h>
+#include <libzeroskip/version.h>
+#include <libzeroskip/zeroskip.h>
+
 #include "cmds.h"
 
 #define DBCMD(name) { #name, cmd_##name##_usage, cmd_##name }

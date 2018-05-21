@@ -15,7 +15,7 @@
 #include <stdbool.h>            /* for `bool` */
 #include <stddef.h>             /* for offsetof() */
 
-#include "macros.h"
+#include <libzeroskip/macros.h>
 
 CPP_GUARD_START
 /*

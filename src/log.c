@@ -7,10 +7,11 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-#include "log.h"
-#include "macros.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/macros.h>
 
 #include <stdarg.h>
+#include <stdlib.h>
 #include <syslog.h>
 
 #define LOGBUF_SIZE  1024

@@ -9,8 +9,8 @@
 
 #include <stdio.h>
 
-#include "log.h"
-#include "zeroskip.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
 #include <zlib.h>
@@ -121,19 +121,19 @@ static int zs_prepare_val_buf(unsigned char *val, size_t vallen,
 
         if (type == REC_TYPE_VALUE) {
                 /* The first 3 fields in a short key make up 64 bits */
-                uint64_t val = 0;
+                uint64_t value = 0;
 
-                val = ((uint64_t)type << 56);     /* Type */
-                val |= ((uint64_t)vallen << 32);  /* Val length */
-                write_be64(vbuf + pos, val);
+                value = ((uint64_t)type << 56);     /* Type */
+                value |= ((uint64_t)vallen << 32);  /* Val length */
+                write_be64(vbuf + pos, value);
                 pos += sizeof(uint64_t);
                 write_be64(vbuf + pos, 0ULL);     /* Extended length */
                 pos += sizeof(uint64_t);
         } else {
                 /* A long val has the type followed by 56 bits of nothing */
-                uint64_t val;
-                val = ((uint64_t)type << 56);   /* Type */
-                write_be64(vbuf + pos, val);
+                uint64_t value;
+                value = ((uint64_t)type << 56);   /* Type */
+                write_be64(vbuf + pos, value);
                 pos += sizeof(uint64_t);
                 write_be64(vbuf + pos, vallen); /* Extended length */
                 pos += sizeof(uint64_t);

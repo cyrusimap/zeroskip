@@ -1,0 +1,29 @@
+/*
+ * libzeroskip
+ *
+ * zeroskip is free software; you can redistribute it and/or modify
+ * it under the terms of the MIT license. See LICENSE for details.
+ *
+ */
+
+#ifndef _ZS_VERSION_H_
+#define _ZS_VERSION_H_
+
+#define ZS_VERSION "@ZS_VERSION@"
+#define ZS_VERSION_MAJOR @ZS_VERSION_MAJOR@
+#define ZS_VERSION_MINOR @ZS_VERSION_MINOR@
+#define ZS_VERSION_MICRO @ZS_VERSION_MICRO@
+
+#define ZS_VERSION_CHECK(major,minor,micro) \
+        (ZS_VERSION_MAJOR > (major) || \
+        (ZS_VERSION_MAJOR == (major) && ZS_VERSION_MINOR > (minor)) || \
+        (ZS_VERSION_MAJOR == (major) && ZS_VERSION_MINOR == (minor) && \
+                ZS_VERSION_MICRO >= (micro)))
+
+typedef struct zs_version_t {
+        unsigned int major;
+        unsigned int minor;
+        unsigned int micro;
+} zs_version_t;
+
+#endif  /* _ZS_VERSION_H_ */

@@ -7,7 +7,7 @@
  * Copyright (c) 2017 Partha Susarla <mail@spartha.org>
  */
 
-#include "btree.h"
+#include <libzeroskip/btree.h>
 
 #include <stdio.h>
 #include <stdlib.h>

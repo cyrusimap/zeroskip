@@ -7,12 +7,11 @@
  * it under the terms of the MIT license. See LICENSE for details.
  */
 
-#include "log.h"
-#include "util.h"
-#include "zeroskip.h"
-#include "zeroskip-priv.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/util.h>
+#include <libzeroskip/zeroskip.h>
 
-extern void assert_zsdb(struct zsdb *db);
+#include "zeroskip-priv.h"
 
 /**
  * Private functions
@@ -315,7 +314,8 @@ int zs_iterator_new(struct zsdb *db, struct zsdb_iter **iter)
         struct zsdb_iter *t = NULL;
         struct zsdb_priv *priv;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
@@ -359,7 +359,8 @@ int zs_iterator_begin(struct zsdb_iter **iter)
 
         db = (*iter)->db;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
@@ -535,7 +536,8 @@ int zs_iterator_begin_for_packed_files(struct zsdb_iter **iter,
 
         db = (*iter)->db;
 
-        assert_zsdb(db);
+        assert(db);
+        assert(db->priv);
 
         priv = db->priv;
         if (!priv) return ZS_INTERNAL;
@@ -577,7 +579,8 @@ struct zsdb_iter_data *zs_iterator_get(struct zsdb_iter *iter)
         if (!iter)
                 return NULL;
 
-        assert_zsdb(iter->db);
+        assert(iter->db);
+        assert(iter->db->priv);
 
         ikdata = pqueue_get(&iter->pq);
         if (!ikdata)
@@ -604,7 +607,8 @@ int zs_iterator_next(struct zsdb_iter *iter,
         if (!iter)
                 return 0;
 
-        assert_zsdb(iter->db);
+        assert(iter->db);
+        assert(iter->db->priv);
 
         zsdb_iter_data_next(iter, data);
 

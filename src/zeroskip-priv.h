@@ -11,16 +11,18 @@
 #ifndef _ZEROSKIP_PRIV_H_
 #define _ZEROSKIP_PRIV_H_
 
-#include "btree.h"
 #include "cstring.h"
 #include "file-lock.h"
 #include "htable.h"
 #include "list.h"
-#include "macros.h"
 #include "mappedfile.h"
 #include "pqueue.h"
-#include "util.h"
 #include "vecu64.h"
+
+#include <libzeroskip/btree.h>
+#include <libzeroskip/macros.h>
+#include <libzeroskip/util.h>
+#include <libzeroskip/zeroskip.h>
 
 #include <sys/stat.h>
 #include <uuid/uuid.h>
@@ -168,12 +170,6 @@ struct zs_long_commit {
 #define MAX_SHORT_KEY_LEN 65535
 #define MAX_SHORT_VAL_LEN 16777215
 
-#ifdef ZS_DEBUG
-extern int zsdb_break(int err);
-extern void assert_zsdb(struct zsdb *db);
-#else
-#define zsdb_break(x) (x)
-#endif
 
 /* masks for file stat changes */
 #define ZSDB_FILE_INO_CHANGED    0x0001
@@ -295,6 +291,9 @@ struct zsdb_priv {
         int dbdirty;              /* Marked dirty when there are changes
                                    * (add/remove/pack) to the db */
 };
+
+
+extern int zsdb_break(int err);
 
 /* zeroskip-active.c */
 extern int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int mode);

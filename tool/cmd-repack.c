@@ -11,11 +11,9 @@
 #include <stdlib.h>
 
 #include "cmds.h"
-#include "log.h"
-#include "util.h"
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
 
-int cmd_get(int argc, char **argv, const char *progname)
+int cmd_repack(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
                 {"config", required_argument, NULL, 'c'},
@@ -24,14 +22,10 @@ int cmd_get(int argc, char **argv, const char *progname)
         };
         int option;
         int option_index;
-        const char *config_file = NULL;
         struct zsdb *db = NULL;
-        char *dbname = NULL;
-        char *key = NULL;
-        unsigned char *value = NULL;
-        size_t vallen = 0, i;
+        const char *dbname;
         int ret;
-        struct txn *txn;
+        const char *config_file = NULL;
 
         while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
@@ -41,16 +35,15 @@ int cmd_get(int argc, char **argv, const char *progname)
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_get_usage);
+                        cmd_die_usage(progname, cmd_repack_usage);
                 };
         }
 
-        if (argc - optind != 2) {
-                cmd_die_usage(progname, cmd_get_usage);
+        if (argc - optind != 1) {
+                cmd_die_usage(progname, cmd_repack_usage);
         }
 
-        dbname = argv[optind++];
-        key = argv[optind++];
+        dbname = argv[optind];
 
         cmd_parse_config(config_file);
 
@@ -66,27 +59,31 @@ int cmd_get(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_fetch(db, (unsigned char *)key, strlen(key),
-                       &value, &vallen, &txn)) {
-                fprintf(stderr, "ERROR: Cannot find record with key %s in %s\n",
-                      key, dbname);
+        if (zsdb_pack_lock_acquire(db, 0) != ZS_OK) {
+                fprintf(stderr, "ERROR: Could not acquire pack lock for packing.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
-        fprintf(stderr, "Found record with key %s, has value of length %zu: ",
-                key, vallen);
-        for (i = 0; i < vallen; i++)
-                fprintf(stderr, "%c", value[i]);
-        if (value) free(value);
 
-        fprintf(stderr, "\n");
+        if (zsdb_repack(db) != ZS_OK) {
+                fprintf(stderr, "ERROR: Failed repacking DB.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
 
         ret = EXIT_SUCCESS;
+        fprintf(stderr, "OK\n");
 done:
-        xfree(value);
+        if (zsdb_pack_lock_release(db) != ZS_OK) {
+                fprintf(stderr, "Could not release pack lock.\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+
         if (zsdb_close(db) != ZS_OK) {
-                fprintf(stderr, "ERROR: Could not close DB.\n");
+                fprintf(stderr, "Could not close DB.\n");
                 ret = EXIT_FAILURE;
         }
 

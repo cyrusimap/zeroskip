@@ -5,9 +5,11 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
-#include "log.h"
-#include "util.h"
-#include "zeroskip.h"
+#include <libzeroskip/log.h>
+#include <libzeroskip/util.h>
+
+#include <libzeroskip/zeroskip.h>
+
 #include "zeroskip-priv.h"
 
 /*

@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <sys/uio.h>
 
-#include "macros.h"
+#include <libzeroskip/log.h>
 
 CPP_GUARD_START
 

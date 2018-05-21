@@ -11,7 +11,7 @@
  */
 
 #include "pqueue.h"
-#include "util.h"
+#include <libzeroskip/util.h>
 
 #include <string.h>
 

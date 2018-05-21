@@ -7,39 +7,47 @@
  */
 
 #include <getopt.h>
+#include <sys/param.h>          /* For MAXPATHLEN */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "cmds.h"
-#include "log.h"
-#include "zeroskip.h"
+#include <libzeroskip/zeroskip.h>
 
-int cmd_info(int argc, char **argv, const char *progname)
+int cmd_new(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
+                {"config", required_argument, NULL, 'c'},
                 {"help", no_argument, NULL, 'h'},
                 {NULL, 0, NULL, 0}
         };
         int option;
         int option_index;
+        const char *config_file = NULL;
         struct zsdb *db = NULL;
-        const char *dbname;
+        char *fname;
         int ret;
 
         while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
                 switch (option) {
+                case 'c':       /* config file */
+                        config_file = optarg;
+                        break;
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_info_usage);
+                        cmd_die_usage(progname, cmd_new_usage);
                 };
         }
 
         if (argc - optind != 1) {
-                cmd_die_usage(progname, cmd_info_usage);
+                cmd_die_usage(progname, cmd_new_usage);
         }
 
-        dbname = argv[optind];
+        fname = argv[optind];
+
+        cmd_parse_config(config_file);
 
         if (zsdb_init(&db) != ZS_OK) {
                 fprintf(stderr, "ERROR: Failed initialising DB.\n");
@@ -47,26 +55,21 @@ int cmd_info(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_open(db, dbname, MODE_RDWR) != ZS_OK) {
-                fprintf(stderr, "ERROR: Could not open DB %s.\n", dbname);
+        if (zsdb_open(db, fname, MODE_CREATE) != ZS_OK) {
+                fprintf(stderr, "ERROR: Could not create DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
-        if (zsdb_info(db) != ZS_OK) {
-                fprintf(stderr, "ERROR: Failed dumping records in %s.\n",
-                      dbname);
+        if (zsdb_close(db) != ZS_OK) {
+                fprintf(stderr, "ERROR: Could not close DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
         }
 
         ret = EXIT_SUCCESS;
+        fprintf(stderr, "OK\n");
 done:
-        if (zsdb_close(db) != ZS_OK) {
-                fprintf(stderr, "ERROR: Could not close DB.\n");
-                ret = EXIT_FAILURE;
-        }
-
         zsdb_final(&db);
 
         exit(ret);
