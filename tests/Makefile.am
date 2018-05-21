@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include
 LDADD = $(top_builddir)/src/libzeroskip.la
 
-bin_PROGRAMS = \
+noinst_PROGRAMS = \
 	bt-test \
 	zst-abort-transaction \
 	zst-foreach-count \
