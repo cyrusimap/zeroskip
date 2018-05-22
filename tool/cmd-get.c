@@ -77,13 +77,11 @@ int cmd_get(int argc, char **argv, const char *progname)
                 key, vallen);
         for (i = 0; i < vallen; i++)
                 fprintf(stderr, "%c", value[i]);
-        if (value) free(value);
 
         fprintf(stderr, "\n");
 
         ret = EXIT_SUCCESS;
 done:
-        xfree(value);
         if (zsdb_close(db) != ZS_OK) {
                 fprintf(stderr, "ERROR: Could not close DB.\n");
                 ret = EXIT_FAILURE;

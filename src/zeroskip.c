@@ -1039,8 +1039,7 @@ int zsdb_fetch(struct zsdb *db,
                 /* We found the key active records */
                 if (iter->record) {
                         *vallen = iter->record->vallen;
-                        *value = xmalloc(*vallen);
-                        memcpy(*value, iter->record->val, *vallen);
+                        *value = iter->record->val;
                 }
 
                 ret = ZS_OK;
@@ -1053,8 +1052,7 @@ int zsdb_fetch(struct zsdb *db,
                 /* We found the key in finalised records */
                 if (iter->record) {
                         *vallen = iter->record->vallen;
-                        *value = xmalloc(*vallen);
-                        memcpy(*value, iter->record->val, *vallen);
+                        *value = iter->record->val;
                 }
 
                 ret = ZS_OK;
