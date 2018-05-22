@@ -20,6 +20,8 @@ AC_CONFIG_MACRO_DIR([m4])
 # automake initialisation
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
+AC_CANONICAL_HOST
+
 # fix for automake >= 1.12
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
@@ -63,6 +65,61 @@ AC_CHECK_PROGS([MANDOC], [mandoc])
 
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 AM_CONDITIONAL([HAVE_MANDOC], [test -n "$MANDOC"])
+
+# Detect platform
+AC_MSG_CHECKING(platform)
+case "$host_os" in
+        *darwin*)
+                AC_MSG_RESULT(darwin)
+                PLATFORM=darwin
+                ;;
+        *dragonfly*)
+                AC_MSG_RESULT(dragonfly)
+                PLATFORM=dragonfly
+                ;;
+        *linux*)
+                AC_MSG_RESULT(linux)
+                PLATFORM=linux
+                ;;
+        *freebsd*)
+                AC_MSG_RESULT(freebsd)
+                PLATFORM=freebsd
+                ;;
+        *netbsd*)
+                AC_MSG_RESULT(netbsd)
+                PLATFORM=netbsd
+                ;;
+        *openbsd*)
+                AC_MSG_RESULT(openbsd)
+                PLATFORM=openbsd
+                ;;
+        *sunos*)
+                AC_MSG_RESULT(sunos)
+                PLATFORM=sunos
+                ;;
+        *solaris*)
+                AC_MSG_RESULT(sunos)
+                PLATFORM=sunos
+                ;;
+        *cygwin*)
+                AC_MSG_RESULT(cygwin)
+                PLATFORM=cygwin
+                ;;
+        *)
+                AC_MSG_RESULT(unknown)
+                PLATFORM=unknown
+                ;;
+esac
+
+AC_SUBST(PLATFORM)
+AM_CONDITIONAL(IS_DARWIN, test "x$PLATFORM" = xdarwin)
+AM_CONDITIONAL(IS_DRAGONFLY, test "x$PLATFORM" = xdragonfly)
+AM_CONDITIONAL(IS_LINUX, test "x$PLATFORM" = xlinux)
+AM_CONDITIONAL(IS_FREEBSD, test "x$PLATFORM" = xfreebsd)
+AM_CONDITIONAL(IS_NETBSD, test "x$PLATFORM" = xnetbsd)
+AM_CONDITIONAL(IS_OPENBSD, test "x$PLATFORM" = xopenbsd)
+AM_CONDITIONAL(IS_SUNOS, test "x$PLATFORM" = xsunos)
+AM_CONDITIONAL(IS_UNKNOWN, test "x$PLATFORM" = xunknown)
 
 # silent build rules
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
