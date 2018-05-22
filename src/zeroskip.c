@@ -991,6 +991,10 @@ int zsdb_commit(struct zsdb *db, struct txn *txn _unused_)
         if (!priv->dbfiles.factive.is_open)
                 return ZS_NOT_OPEN;
 
+        if (!priv->dbfiles.factive.mf->crc32_data_len &&
+            !priv->dbfiles.factive.dirty)
+                return ret;
+
         ret = zs_active_file_write_commit_record(priv);
         if (ret == ZS_OK)
                 priv->dbfiles.factive.dirty = 0;
