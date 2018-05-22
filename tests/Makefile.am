@@ -5,7 +5,8 @@ noinst_PROGRAMS = \
 	bt-test \
 	zst-abort-transaction \
 	zst-foreach-count \
-	zst-foreach-heirarchy
+	zst-foreach-heirarchy \
+	zst-fetchnext-simple
 
 bt_test_SOURCES = \
 	bt-test.c
@@ -19,3 +20,5 @@ zst_foreach_count_SOURCES = \
 zst_foreach_heirarchy_SOURCES = \
 	zst-foreach-heirarchy.c
 
+zst_fetchnext_simple_SOURCES = \
+	zst-fetchnext-simple.c

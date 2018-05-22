@@ -1120,13 +1120,79 @@ done:
         return ret;
 }
 
-int zsdb_fetchnext(struct zsdb *db _unused_,
-                   const unsigned char *key _unused_, size_t keylen _unused_,
-                   const unsigned char **found _unused_, size_t *foundlen _unused_,
-                   const unsigned char **value _unused_, size_t *vallen _unused_,
-                   struct txn **txn _unused_)
+int zsdb_fetchnext(struct zsdb *db,
+                   const unsigned char *key, size_t keylen,
+                   const unsigned char **found, size_t *foundlen,
+                   const unsigned char **value, size_t *vallen,
+                   struct txn **txn)
 {
-        return ZS_NOTIMPLEMENTED;
+        int ret = ZS_OK;
+        struct zsdb_priv *priv;
+        struct zsdb_iter *tempiter = NULL;
+        int keyfound = 0;
+        struct zsdb_iter_data *data;
+
+        assert(db);
+        assert(db->priv);
+        assert(key);
+        assert(keylen);
+
+        if (db)
+                priv = db->priv;
+
+        if (!priv->open) {
+                zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
+                return ZS_NOT_OPEN;
+        }
+
+        /* Create a new iterator */
+        zs_iterator_new(db, &tempiter);
+
+        ret = zs_iterator_begin_at_key(&tempiter, key, keylen, &keyfound);
+        if (ret != ZS_OK) {
+                goto fail;
+        }
+
+        data = zs_iterator_get(tempiter);
+
+        if (keyfound) {
+                /* If we found the key, we go to the next key in the iterator */
+                zs_iterator_next(tempiter, data);
+                data = zs_iterator_get(tempiter);
+        }
+
+        /* Return data */
+        switch(data->type) {
+        case ZSDB_BE_ACTIVE:
+        case ZSDB_BE_FINALISED:
+                *found = data->data.iter->record->key;
+                *foundlen = data->data.iter->record->keylen;
+                *value = data->data.iter->record->val;
+                *vallen = data->data.iter->record->vallen;
+                break;
+        case ZSDB_BE_PACKED:
+        {
+                struct zsdb_file *f = data->data.f;
+                size_t offset = f->index->data[f->indexpos];
+
+                zs_record_read_key_val_from_offset(f, &offset,
+                                                   found, foundlen,
+                                                   value, vallen);
+        }
+                break;
+        default:
+                abort();
+        }
+
+        if (txn && *txn && (*txn)->alloced)
+                (*txn)->iter = tempiter;
+
+        goto done;
+fail:
+        ret = ZS_ERROR;
+        zs_iterator_end(&tempiter);
+done:
+        return ret;
 }
 
 static int print_btree_rec(struct record *record, void *data _unused_)
@@ -1585,8 +1651,6 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         do {
                 unsigned char *key = NULL, *val = NULL;
                 size_t keylen = 0, vallen = 0;
-                struct zs_key krec;
-                struct zs_val vrec;
 
                 data = zs_iterator_get(tempiter);
                 if (!data)
@@ -1608,15 +1672,9 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
                         struct zsdb_file *f = data->data.f;
                         size_t offset = f->index->data[f->indexpos];
 
-                        zs_read_key_val_record_from_file_offset(f, &offset,
-                                                                &krec, &vrec);
-                        key = krec.data;
-                        keylen = (krec.base.type == REC_TYPE_KEY ||
-                                  krec.base.type == REC_TYPE_DELETED) ?
-                                krec.base.slen : krec.base.llen;
-                        val = vrec.data;
-                        vallen = vrec.base.type == REC_TYPE_VALUE ?
-                                vrec.base.slen : vrec.base.llen;
+                        zs_record_read_key_val_from_offset(f, &offset,
+                                                           &key, &keylen,
+                                                           &val, &vallen);
                 }
                 break;
                 default:
@@ -1650,6 +1708,11 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
         struct zsdb_priv *priv;
         struct zsdb_iter *tempiter = NULL;
         int found = 0;
+        unsigned char *val = NULL;
+        size_t vallen = 0;
+        struct zs_key krec;
+        struct zs_val vrec;
+
 
         assert(db);
         assert(db->priv);
@@ -1679,11 +1742,30 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
                 struct zsdb_iter_data *data;
                 data = zs_iterator_get(tempiter);
 
-                if (!p || p(cbdata, key, keylen, data->data.iter->record->val,
-                            data->data.iter->record->vallen))
-                        ret = cb(cbdata, key, keylen,
-                                 data->data.iter->record->val,
-                                 data->data.iter->record->vallen);
+                switch(data->type) {
+                case ZSDB_BE_ACTIVE:
+                case ZSDB_BE_FINALISED:
+                        val = data->data.iter->record->val;
+                        vallen = data->data.iter->record->vallen;
+                        break;
+                case ZSDB_BE_PACKED:
+                {
+                        struct zsdb_file *f = data->data.f;
+                        size_t offset = f->index->data[f->indexpos];
+
+                        zs_read_key_val_record_from_file_offset(f, &offset,
+                                                                &krec, &vrec);
+                        val = vrec.data;
+                        vallen = vrec.base.type == REC_TYPE_VALUE ?
+                                vrec.base.slen : vrec.base.llen;
+                }
+                break;
+                default:
+                        abort();
+                }
+
+                if (!p || p(cbdata, key, keylen, val, vallen))
+                        ret = cb(cbdata, key, keylen, val, vallen);
 
                 /* We've already got the key we wanted,
                  * iterate to the next item */

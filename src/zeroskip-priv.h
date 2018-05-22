@@ -409,6 +409,13 @@ extern int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
                                                    struct zs_key *key,
                                                    struct zs_val *val);
 
+extern int zs_record_read_key_val_from_offset(struct zsdb_file *f,
+                                              size_t *offset,
+                                              const unsigned char **key,
+                                              size_t *keylen,
+                                              const unsigned char **val,
+                                              size_t *vallen);
+
 /* zeroskip-transaction.c */
 extern int zs_transaction_begin(struct zsdb *db, struct txn **txn);
 extern void zs_transaction_end(struct txn **txn);

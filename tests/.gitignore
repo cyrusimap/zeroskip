@@ -2,4 +2,5 @@ bt-test
 zst-foreach-count
 zst-foreach-heirarchy
 zst-abort-transaction
+zst-fetchnext-simple
 ZSTESTDB
