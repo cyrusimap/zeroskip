@@ -22,6 +22,9 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_CANONICAL_HOST
 
+# Autoconf automatically uses CFLAGS="-O2 -g". So clear CFLAGS
+: ${CFLAGS=""}
+
 # fix for automake >= 1.12
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
@@ -56,6 +59,13 @@ AC_ARG_ENABLE([tests],
 		[Build the tests @<:@default=yes@:>@])],
 	[], [enable_tests=yes])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" = "xyes"])
+
+
+AC_ARG_ENABLE([debug],
+        [AC_HELP_STRING([--enable-debug=@<:@yes/no@:>@],
+                [Enable debug build flags @<:@default=yes@:>@])],
+        [], [enable_debug=yes])
+AM_CONDITIONAL([IS_DEBUG], [test "x$enable_debug" = xyes])
 
 # check for programs
 AC_PROG_CC
