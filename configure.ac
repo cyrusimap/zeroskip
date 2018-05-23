@@ -18,7 +18,10 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 # automake initialisation
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+# NOTE: No -Werror and have no portability (-Wno-portability)
+#       with automake since I wanted to support GNU extensions
+#       for flymake.
+AM_INIT_AUTOMAKE([-Wall -Wno-portability foreign])
 
 AC_CANONICAL_HOST
 

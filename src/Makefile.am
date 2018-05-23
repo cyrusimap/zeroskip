@@ -1,3 +1,5 @@
+include $(top_srcdir)/flymake.mk
+
 AM_CPPFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include
 AM_CFLAGS = $(AM_CPPFLAGS) $(LIBUUID_CFLAGS) $(LIBZLIB_CFLAGS)
 
@@ -91,4 +93,3 @@ revision.h: $(top_srcdir)/revision Makefile.am
 BUILT_SOURCES = revision.h
 EXTRA_DIST = libzeroskip.symbols $(top_srcdir)/revision
 CLEANFILES = libzeroskip.exp revision.h revision-t
-
