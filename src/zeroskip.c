@@ -63,8 +63,8 @@ static int dbfname_cmp(const void *d1, const void *d2, void *cbdata _unused_)
 }
 
 static int load_btree_record_cb(void *data,
-                                unsigned char *key, size_t keylen,
-                                unsigned char *value, size_t vallen)
+                                const unsigned char *key, size_t keylen,
+                                const unsigned char *value, size_t vallen)
 {
         struct btree *memtree = (struct btree *)data;
         struct record *rec;
@@ -76,8 +76,8 @@ static int load_btree_record_cb(void *data,
 }
 
 static int load_deleted_btree_record_cb(void *data,
-                                        unsigned char *key, size_t keylen,
-                                        unsigned char *value, size_t vallen)
+                                        const unsigned char *key, size_t keylen,
+                                        const unsigned char *value, size_t vallen)
 {
         struct btree *memtree = (struct btree *)data;
         struct record *rec;
@@ -89,8 +89,8 @@ static int load_deleted_btree_record_cb(void *data,
 }
 
 static int print_record_cb(void *data _unused_,
-                           unsigned char *key, size_t keylen,
-                           unsigned char *value, size_t vallen)
+                           const unsigned char *key, size_t keylen,
+                           const unsigned char *value, size_t vallen)
 {
         size_t i;
 

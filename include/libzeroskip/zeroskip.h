@@ -83,12 +83,12 @@ struct zsdb {
  * Callbacks
  */
 typedef int foreach_p(void *data,
-                       unsigned char *key, size_t keylen,
-                       unsigned char *value, size_t vallen);
+                       const unsigned char *key, size_t keylen,
+                       const unsigned char *value, size_t vallen);
 
 typedef int foreach_cb(void *data,
-                       unsigned char *key, size_t keylen,
-                       unsigned char *value, size_t vallen);
+                       const unsigned char *key, size_t keylen,
+                       const unsigned char *value, size_t vallen);
 
 /*
  * Zeroskip API

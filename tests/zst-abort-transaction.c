@@ -55,8 +55,8 @@ static struct {
 static int record_count = 0;
 
 static int fe_p(void *data _unused_,
-                unsigned char *key _unused_, size_t keylen _unused_,
-                unsigned char *val _unused_, size_t vallen _unused_)
+                const unsigned char *key _unused_, size_t keylen _unused_,
+                const unsigned char *val _unused_, size_t vallen _unused_)
 {
         record_count++;
 
@@ -64,8 +64,8 @@ static int fe_p(void *data _unused_,
 }
 
 static int fe_cb(void *data _unused_,
-                 unsigned char *key, size_t keylen,
-                 unsigned char *val, size_t vallen)
+                 const unsigned char *key, size_t keylen,
+                 const unsigned char *val, size_t vallen)
 {
         size_t i;
 

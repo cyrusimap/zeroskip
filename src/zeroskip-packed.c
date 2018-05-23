@@ -197,8 +197,8 @@ int zs_packed_file_write_btree_record(struct record *record, void *data)
 }
 
 int zs_packed_file_write_record(void *data,
-                                unsigned char *key, size_t keylen,
-                                unsigned char *value, size_t vallen)
+                                const unsigned char *key, size_t keylen,
+                                const unsigned char *value, size_t vallen)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
@@ -210,8 +210,8 @@ int zs_packed_file_write_record(void *data,
 }
 
 int zs_packed_file_write_delete_record(void *data,
-                                       unsigned char *key, size_t keylen,
-                                       unsigned char *value _unused_,
+                                       const unsigned char *key, size_t keylen,
+                                       const unsigned char *value _unused_,
                                        size_t vallen _unused_)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
