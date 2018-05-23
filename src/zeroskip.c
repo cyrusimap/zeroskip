@@ -1605,7 +1605,7 @@ done:
         return ret;
 }
 
-int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
+int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                  foreach_p *p, foreach_cb *cb, void *cbdata,
                  struct txn **txn)
 {
@@ -1638,7 +1638,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
 
                 if (prefix)
                         ret = zs_iterator_begin_at_key(&tempiter,
-                                                       (unsigned char *)prefix,
+                                                       prefix,
                                                        prefixlen, &found);
                 else
                         zs_iterator_begin(&tempiter);
@@ -1647,7 +1647,7 @@ int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
         }
 
         do {
-                unsigned char *key = NULL, *val = NULL;
+                const unsigned char *key = NULL, *val = NULL;
                 size_t keylen = 0, vallen = 0;
 
                 data = zs_iterator_get(tempiter);

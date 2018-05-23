@@ -139,7 +139,7 @@ static int count_heirarchical_records(struct zsdb *db, struct txn *txn)
                 goto done;
         }
 
-        if (zsdb_foreach(db, (const char *)key, 4, fe_p, fe_cb, NULL, &txn) != ZS_OK) {
+        if (zsdb_foreach(db, key, 4, fe_p, fe_cb, NULL, &txn) != ZS_OK) {
                 zslog(LOGWARNING, "zsdb_foreach() failed!\n");
                 ret = EXIT_FAILURE;
                 goto done;

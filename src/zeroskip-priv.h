@@ -351,7 +351,7 @@ extern int zs_header_validate(struct zsdb_file *f);
 extern int zs_iterator_new(struct zsdb *db, struct zsdb_iter **iter);
 extern int zs_iterator_begin(struct zsdb_iter **iter);
 extern int zs_iterator_begin_at_key(struct zsdb_iter **iter,
-                                    unsigned char *key,
+                                    const unsigned char *key,
                                     size_t keylen,
                                     int *found);
 extern int zs_iterator_begin_for_packed_files(struct zsdb_iter **iter,

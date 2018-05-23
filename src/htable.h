@@ -70,7 +70,7 @@ extern void *htable_get(const struct htable *ht, const void *key,
  * becuase of collision, NULL if there are no duplicate entries. `entry` is
  * where the lookup should start from.
  */
-extern void *htable_get_next(const struct htable *ht, const void *entry);
+extern const void *htable_get_next(const struct htable *ht, const void *entry);
 
 /* htable_put():
  *  adds a entry into the hash table. Allows duplicate entries.

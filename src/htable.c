@@ -145,9 +145,9 @@ void *htable_get(const struct htable *ht, const void *key, const void *keydata)
         return *find_entry(ht, key, keydata);
 }
 
-void *htable_get_next(const struct htable *ht, const void *entry)
+const void *htable_get_next(const struct htable *ht, const void *entry)
 {
-        struct htable_entry *e = ((struct htable_entry *) entry)->next;
+        const struct htable_entry *e = ((const struct htable_entry *) entry)->next;
         for (; e; e = e->next)
                 if (entries_equal(ht, entry, e, NULL))
                         return e;

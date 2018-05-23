@@ -110,7 +110,8 @@ extern int zsdb_fetchnext(struct zsdb *db,
                           const unsigned char **found, size_t *foundlen,
                           const unsigned char **value, size_t *vallen,
                           struct txn **txn);
-extern int zsdb_foreach(struct zsdb *db, const char *prefix, size_t prefixlen,
+extern int zsdb_foreach(struct zsdb *db, const unsigned char *prefix,
+                        size_t prefixlen,
                         foreach_p *p, foreach_cb *cb, void *cbdata,
                         struct txn **txn);
 extern int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,

@@ -426,7 +426,7 @@ int zs_iterator_begin(struct zsdb_iter **iter)
  *  key in that iterator for that back-end.
  */
 int zs_iterator_begin_at_key(struct zsdb_iter **iter,
-                             unsigned char *key,
+                             const unsigned char *key,
                              size_t keylen,
                              int *found)
 {
