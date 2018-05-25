@@ -148,7 +148,7 @@ if pkg-config uuid; then
    LIBUUID_CFLAGS=`pkg-config --cflags uuid`
    LIBUUID_LIBS=`pkg-config --libs uuid`
    AC_DEFINE([HAVE_LIBUUID], [1], [libuuid library])
-   DEPENDENCIES="$DEPENDENCIES libuuid"
+   DEPENDENCIES="$DEPENDENCIES uuid"
 else
    AC_MSG_ERROR("You need libuuid to be able to build libzeroskip")
 fi
@@ -160,7 +160,7 @@ if pkg-config zlib; then
    LIBZLIB_CFLAGS=`pkg-config --cflags zlib`
    LIBZLIB_LIBS=`pkg-config --libs zlib`
    AC_DEFINE([HAVE_LIBZLIB], [1], [libzlib library])
-   DEPENDENCIES="$DEPENDENCIES libzlib"
+   DEPENDENCIES="$DEPENDENCIES zlib"
 else
    AC_MSG_ERROR("You need libzlib to be able to build libzeroskip")
 fi
