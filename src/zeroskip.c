@@ -654,7 +654,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         ret = zsdb_create(db);
                         newdb = 1;
                 } else {
-                        ret = ZS_ERROR;
+                        ret = ZS_NOTFOUND;
                         goto done;
                 }
         } else {
