@@ -1606,7 +1606,7 @@ done:
 }
 
 int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
-                 foreach_p *p, foreach_cb *cb, void *cbdata,
+                 zsdb_foreach_p *p, zsdb_foreach_cb *cb, void *cbdata,
                  struct zsdb_txn **txn)
 {
         int ret = ZS_OK;
@@ -1699,7 +1699,7 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
 }
 
 int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
-                foreach_p *p, foreach_cb *cb, void *cbdata,
+                zsdb_foreach_p *p, zsdb_foreach_cb *cb, void *cbdata,
                 struct zsdb_txn **txn)
 {
         int ret = ZS_OK;

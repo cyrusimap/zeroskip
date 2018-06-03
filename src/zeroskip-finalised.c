@@ -99,7 +99,7 @@ int zs_finalised_file_close(struct zsdb_file **fptr)
 }
 
 int zs_finalised_file_record_foreach(struct zsdb_file *f,
-                                     foreach_cb *cb, foreach_cb *deleted_cb,
+                                     zsdb_foreach_cb *cb, zsdb_foreach_cb *deleted_cb,
                                      void *cbdata)
 {
         int ret = ZS_OK;

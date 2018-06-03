@@ -82,11 +82,11 @@ struct zsdb {
 /*
  * Callbacks
  */
-typedef int foreach_p(void *data,
+typedef int zsdb_foreach_p(void *data,
                        const unsigned char *key, size_t keylen,
                        const unsigned char *value, size_t vallen);
 
-typedef int foreach_cb(void *data,
+typedef int zsdb_foreach_cb(void *data,
                        const unsigned char *key, size_t keylen,
                        const unsigned char *value, size_t vallen);
 
@@ -112,10 +112,10 @@ extern int zsdb_fetchnext(struct zsdb *db,
                           struct zsdb_txn **txn);
 extern int zsdb_foreach(struct zsdb *db, const unsigned char *prefix,
                         size_t prefixlen,
-                        foreach_p *p, foreach_cb *cb, void *cbdata,
+                        zsdb_foreach_p *p, zsdb_foreach_cb *cb, void *cbdata,
                         struct zsdb_txn **txn);
 extern int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
-                       foreach_p *p, foreach_cb *cb, void *cbdata,
+                       zsdb_foreach_p *p, zsdb_foreach_cb *cb, void *cbdata,
                        struct zsdb_txn **txn);
 extern int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn);
 extern int zsdb_consistent(struct zsdb *db, struct zsdb_txn **txn);

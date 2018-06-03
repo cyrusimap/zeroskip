@@ -131,7 +131,7 @@ static int zs_read_val_rec(struct zsdb_file *f, size_t *offset,
 }
 
 static int zs_read_key_val_record_cb(struct zsdb_file *f, size_t *offset,
-                                     foreach_cb *cb, void *cbdata)
+                                     zsdb_foreach_cb *cb, void *cbdata)
 {
         int ret = ZS_OK;
         struct zs_key key;
@@ -163,7 +163,7 @@ static int zs_read_key_val_record_cb(struct zsdb_file *f, size_t *offset,
 }
 
 static int zs_read_deleted_record(struct zsdb_file *f, size_t *offset,
-                                  foreach_cb *cb, void *cbdata)
+                                  zsdb_foreach_cb *cb, void *cbdata)
 {
         struct zs_key key;
         size_t keylen;
@@ -290,7 +290,7 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
  * Reads a record from a given struct zsdb_file
  */
 int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
-                             foreach_cb *cb, foreach_cb *deleted_cb,
+                             zsdb_foreach_cb *cb, zsdb_foreach_cb *deleted_cb,
                              void *cbdata)
 {
         unsigned char *bptr, *fptr;

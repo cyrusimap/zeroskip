@@ -221,7 +221,7 @@ int zs_active_file_write_delete_record(struct zsdb_priv *priv,
 }
 
 int zs_active_file_record_foreach(struct zsdb_priv *priv,
-                                  foreach_cb *cb, foreach_cb *deleted_cb,
+                                  zsdb_foreach_cb *cb, zsdb_foreach_cb *deleted_cb,
                                   void *cbdata)
 {
         int ret = ZS_OK;
