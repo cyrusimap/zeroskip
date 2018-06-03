@@ -12,9 +12,9 @@
 #include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
-int zs_transaction_begin(struct zsdb *db, struct txn **txn)
+int zs_transaction_begin(struct zsdb *db, struct zsdb_txn **txn)
 {
-        struct txn *t = NULL;
+        struct zsdb_txn *t = NULL;
         struct zsdb_priv *priv;
 
         assert(db);
@@ -28,7 +28,7 @@ int zs_transaction_begin(struct zsdb *db, struct txn **txn)
                 return ZS_NOT_OPEN;
         }
 
-        t = xcalloc(1, sizeof(struct txn));
+        t = xcalloc(1, sizeof(struct zsdb_txn));
 
         t->db = db;
         t->iter = NULL;
@@ -39,9 +39,9 @@ int zs_transaction_begin(struct zsdb *db, struct txn **txn)
         return ZS_OK;
 }
 
-void zs_transaction_end(struct txn **txn)
+void zs_transaction_end(struct zsdb_txn **txn)
 {
-        struct txn *t;
+        struct zsdb_txn *t;
 
         if (txn && *txn && (*txn)->alloced) {
                 t = *txn;

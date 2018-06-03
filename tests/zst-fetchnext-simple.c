@@ -42,7 +42,7 @@ static struct {
         { (const unsigned char *)"nokia", 5, (const unsigned char *)"meego", 5 },
 };
 
-static int add_records(struct zsdb *db, struct txn *txn)
+static int add_records(struct zsdb *db, struct zsdb_txn *txn)
 {
         size_t i;
         int ret = ZS_OK;
@@ -91,7 +91,7 @@ int main(int argc _unused_, char **argv _unused_)
 {
         struct zsdb *db = NULL;
         int ret = EXIT_SUCCESS;
-        struct txn *txn = NULL;
+        struct zsdb_txn *txn = NULL;
         const unsigned char *found, *value;
         size_t foundlen = 0, vallen = 0;
 

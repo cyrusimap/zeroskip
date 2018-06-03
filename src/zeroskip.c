@@ -835,7 +835,7 @@ int zsdb_add(struct zsdb *db,
              size_t keylen,
              const unsigned char *value,
              size_t vallen,
-             struct txn **txn _unused_)
+             struct zsdb_txn **txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -927,7 +927,7 @@ done:
 
 int zsdb_remove(struct zsdb *db,
                 const unsigned char *key, size_t keylen,
-                struct txn **txn _unused_)
+                struct zsdb_txn **txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -978,7 +978,7 @@ done:
         return ret;
 }
 
-int zsdb_commit(struct zsdb *db, struct txn *txn _unused_)
+int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn _unused_)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1011,7 +1011,7 @@ int zsdb_fetch(struct zsdb *db,
                size_t keylen,
                unsigned char **value,
                size_t *vallen,
-               struct txn **txn _unused_)
+               struct zsdb_txn **txn _unused_)
 {
         int ret = ZS_NOTFOUND;
         struct zsdb_priv *priv;
@@ -1122,7 +1122,7 @@ int zsdb_fetchnext(struct zsdb *db,
                    const unsigned char *key, size_t keylen,
                    const unsigned char **found, size_t *foundlen,
                    const unsigned char **value, size_t *vallen,
-                   struct txn **txn)
+                   struct zsdb_txn **txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1283,7 +1283,7 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
         return ret;
 }
 
-int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
+int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn _unused_)
 {
         int ret = ZS_NOTIMPLEMENTED;
         struct zsdb_priv *priv;
@@ -1323,7 +1323,7 @@ int zsdb_abort(struct zsdb *db, struct txn **txn _unused_)
         return ret;
 }
 
-int zsdb_consistent(struct zsdb *db, struct txn **txn _unused_)
+int zsdb_consistent(struct zsdb *db, struct zsdb_txn **txn _unused_)
 {
         int ret = ZS_NOTIMPLEMENTED;
 
@@ -1607,7 +1607,7 @@ done:
 
 int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                  foreach_p *p, foreach_cb *cb, void *cbdata,
-                 struct txn **txn)
+                 struct zsdb_txn **txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1700,7 +1700,7 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
 
 int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
                 foreach_p *p, foreach_cb *cb, void *cbdata,
-                struct txn **txn)
+                struct zsdb_txn **txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1782,12 +1782,12 @@ done:
         return ret;
 }
 
-int zsdb_transaction_begin(struct zsdb *db, struct txn **txn)
+int zsdb_transaction_begin(struct zsdb *db, struct zsdb_txn **txn)
 {
         return zs_transaction_begin(db, txn);
 }
 
-void zsdb_transaction_end(struct txn **txn)
+void zsdb_transaction_end(struct zsdb_txn **txn)
 {
         zs_transaction_end(txn);
 }

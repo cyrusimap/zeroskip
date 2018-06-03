@@ -72,7 +72,7 @@ static int fe_cb(void *data _unused_,
         return 0;
 }
 
-static int add_records(struct zsdb *db, struct txn *txn)
+static int add_records(struct zsdb *db, struct zsdb_txn *txn)
 {
         size_t i;
         int ret = ZS_OK;
@@ -117,7 +117,7 @@ done:
         return ret;
 }
 
-static int delete_record(struct zsdb *db, struct txn *txn _unused_)
+static int delete_record(struct zsdb *db, struct zsdb_txn *txn _unused_)
 {
         int ret = ZS_OK;
 
@@ -149,7 +149,7 @@ int main(int argc _unused_, char **argv _unused_)
 {
         struct zsdb *db = NULL;
         int ret = EXIT_SUCCESS;
-        struct txn *txn = NULL;
+        struct zsdb_txn *txn = NULL;
 
         if (zsdb_init(&db) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");

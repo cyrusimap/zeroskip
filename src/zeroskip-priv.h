@@ -260,7 +260,7 @@ enum TxnType {
         TXN_PACKED_ONLY,
 };
 
-struct txn {
+struct zsdb_txn {
         struct zsdb *db;
         struct zsdb_iter *iter;
         int alloced;
@@ -420,8 +420,8 @@ extern int zs_record_read_key_val_from_offset(struct zsdb_file *f,
                                               size_t *vallen);
 
 /* zeroskip-transaction.c */
-extern int zs_transaction_begin(struct zsdb *db, struct txn **txn);
-extern void zs_transaction_end(struct txn **txn);
+extern int zs_transaction_begin(struct zsdb *db, struct zsdb_txn **txn);
+extern void zs_transaction_end(struct zsdb_txn **txn);
 
 CPP_GUARD_END
 #endif  /* _ZEROSKIP_PRIV_H_ */

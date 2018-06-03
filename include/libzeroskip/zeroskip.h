@@ -52,7 +52,7 @@ enum {
 };
 
 /* Transactions */
-struct txn;
+struct zsdb_txn;
 
 /*
  * Operations structure for Zeroskip DB
@@ -99,33 +99,33 @@ extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
 extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, const unsigned char *key, size_t keylen,
                     const unsigned char *value, size_t vallen,
-                    struct txn **txn);
+                    struct zsdb_txn **txn);
 extern int zsdb_remove(struct zsdb *db, const unsigned char *key, size_t keylen,
-                       struct txn **txn);
-extern int zsdb_commit(struct zsdb *db, struct txn *txn);
+                       struct zsdb_txn **txn);
+extern int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn);
 extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
-                      unsigned char **value, size_t *vallen, struct txn **txn);
+                      unsigned char **value, size_t *vallen, struct zsdb_txn **txn);
 extern int zsdb_fetchnext(struct zsdb *db,
                           const unsigned char *key, size_t keylen,
                           const unsigned char **found, size_t *foundlen,
                           const unsigned char **value, size_t *vallen,
-                          struct txn **txn);
+                          struct zsdb_txn **txn);
 extern int zsdb_foreach(struct zsdb *db, const unsigned char *prefix,
                         size_t prefixlen,
                         foreach_p *p, foreach_cb *cb, void *cbdata,
-                        struct txn **txn);
+                        struct zsdb_txn **txn);
 extern int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
                        foreach_p *p, foreach_cb *cb, void *cbdata,
-                       struct txn **txn);
-extern int zsdb_abort(struct zsdb *db, struct txn **txn);
-extern int zsdb_consistent(struct zsdb *db, struct txn **txn);
+                       struct zsdb_txn **txn);
+extern int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn);
+extern int zsdb_consistent(struct zsdb *db, struct zsdb_txn **txn);
 extern int zsdb_dump(struct zsdb *db, DBDumpLevel level);
 extern int zsdb_repack(struct zsdb *db);
 extern int zsdb_info(struct zsdb *db);
 extern int zsdb_finalise(struct zsdb *db);
 
-extern int zsdb_transaction_begin(struct zsdb *db, struct txn **txn);
-extern void zsdb_transaction_end(struct txn **txn);
+extern int zsdb_transaction_begin(struct zsdb *db, struct zsdb_txn **txn);
+extern void zsdb_transaction_end(struct zsdb_txn **txn);
 
 /* locking routines */
 extern int zsdb_write_lock_acquire(struct zsdb *db, long timeout_ms);
