@@ -397,8 +397,10 @@ extern int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
                                               enum record_t *type);
 extern int zs_packed_file_bsearch_index(const unsigned char *key,
                                         const size_t keylen,
-                                        struct zsdb_file *f, uint64_t *location,
-                                        unsigned char **value, size_t *vallen);
+                                        struct zsdb_file *f,
+                                        uint64_t *location,
+                                        const unsigned char **value,
+                                        size_t *vallen);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,

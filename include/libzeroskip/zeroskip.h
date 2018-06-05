@@ -100,11 +100,12 @@ extern int zsdb_close(struct zsdb *db);
 extern int zsdb_add(struct zsdb *db, const unsigned char *key, size_t keylen,
                     const unsigned char *value, size_t vallen,
                     struct zsdb_txn **txn);
-extern int zsdb_remove(struct zsdb *db, const unsigned char *key, size_t keylen,
-                       struct zsdb_txn **txn);
+extern int zsdb_remove(struct zsdb *db, const unsigned char *key,
+                       size_t keylen, struct zsdb_txn **txn);
 extern int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn);
-extern int zsdb_fetch(struct zsdb *db, unsigned char *key, size_t keylen,
-                      unsigned char **value, size_t *vallen, struct zsdb_txn **txn);
+extern int zsdb_fetch(struct zsdb *db, const unsigned char *key, size_t keylen,
+                      const unsigned char **value, size_t *vallen,
+                      struct zsdb_txn **txn);
 extern int zsdb_fetchnext(struct zsdb *db,
                           const unsigned char *key, size_t keylen,
                           const unsigned char **found, size_t *foundlen,

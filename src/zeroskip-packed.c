@@ -529,7 +529,7 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unuse
 
 int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
                                  struct zsdb_file *f, uint64_t *location,
-                                 unsigned char **value, size_t *vallen)
+                                 const unsigned char **value, size_t *vallen)
 {
         uint64_t hi, lo;
 
@@ -538,8 +538,7 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
 
         while (lo < hi) {
                 uint64_t mi;
-                struct zs_key k;
-                struct zs_val v;
+                const unsigned char *k;
                 size_t klen = 0;
                 int res;
                 size_t offset = 0;
@@ -550,33 +549,20 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
                 /* Get key from file */
                 offset = f->index->data[mi];
 
-                res = zs_read_key_val_record_from_file_offset(f,
-                                                   &offset,
-                                                   &k, &v);
+                res = zs_record_read_key_val_from_offset(f, &offset,
+                                                         &k, &klen,
+                                                         value, vallen);
                 assert(res == ZS_OK);
 
                 /* Compare */
-                if (k.base.type == REC_TYPE_KEY ||
-                    k.base.type == REC_TYPE_DELETED) {
-                        klen = k.base.slen;
-                } else if (k.base.type == REC_TYPE_LONG_KEY ||
-                    k.base.type == REC_TYPE_LONG_DELETED) {
-                        klen = k.base.llen;
-                }
-
-                res = memcmp_raw(key, keylen, k.data, klen);
+                res = memcmp_raw(key, keylen, k, klen);
                 if (!res) {
                         /* If found, `location` will contain the
                            offset at which the element can be found.
                          */
                         if (location)
                                 *location = mi;
-                        if (value) {
-                                *vallen = (v.base.type == REC_TYPE_VALUE) ?
-                                        v.base.slen : v.base.llen;
-                                *value = xmalloc(*vallen);
-                                memcpy(*value, v.data, *vallen);
-                        }
+
                         return 1; /* FOUND */
                 }
 
