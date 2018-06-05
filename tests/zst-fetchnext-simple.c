@@ -138,6 +138,8 @@ int main(int argc _unused_, char **argv _unused_)
         assert(memcmp(value, "meego", vallen) == 0);
 
         ret = EXIT_SUCCESS;
+
+        zsdb_commit(db, txn);
 fail1:
         if (zsdb_close(db) != ZS_OK) {
                 zslog(LOGWARNING, "Could not close DB.\n");

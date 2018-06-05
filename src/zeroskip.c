@@ -978,7 +978,7 @@ done:
         return ret;
 }
 
-int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn _unused_)
+int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -992,8 +992,9 @@ int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn _unused_)
                 return ZS_NOT_OPEN;
 
         if (!priv->dbfiles.factive.mf->crc32_data_len &&
-            !priv->dbfiles.factive.dirty)
-                return ret;
+            !priv->dbfiles.factive.dirty) {
+                goto done;
+        }
 
         ret = zs_active_file_write_commit_record(priv);
         if (ret == ZS_OK)
@@ -1003,13 +1004,19 @@ int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn _unused_)
         zs_dotzsdb_update_index_and_offset(priv, priv->dotzsdb.curidx,
                priv->dbfiles.factive.mf->offset);
 
+done:
+        if (txn) {
+                zs_transaction_end(&txn);
+                txn = NULL;
+        }
+
         return ret;
 }
 
 int zsdb_fetch(struct zsdb *db,
-               unsigned char *key,
+               const unsigned char *key,
                size_t keylen,
-               unsigned char **value,
+               const unsigned char **value,
                size_t *vallen,
                struct zsdb_txn **txn _unused_)
 {
@@ -1184,6 +1191,8 @@ int zsdb_fetchnext(struct zsdb *db,
 
         if (txn && *txn && (*txn)->alloced)
                 (*txn)->iter = tempiter;
+        else
+                zs_iterator_end(&tempiter);
 
         goto done;
 fail:
