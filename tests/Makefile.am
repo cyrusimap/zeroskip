@@ -17,7 +17,8 @@ noinst_PROGRAMS = \
 	zst-abort-transaction \
 	zst-foreach-count \
 	zst-foreach-heirarchy \
-	zst-fetchnext-simple
+	zst-fetchnext-simple \
+	zst-multiopen
 
 bt_test_SOURCES = \
 	bt-test.c
@@ -33,3 +34,6 @@ zst_foreach_heirarchy_SOURCES = \
 
 zst_fetchnext_simple_SOURCES = \
 	zst-fetchnext-simple.c
+
+zst_multiopen_SOURCES = \
+	zst-multiopen.c

@@ -308,7 +308,7 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
         }
 
         if (dblock.active) {
-                zslog(LOGDEBUG, "DB update already in progress");
+                zslog(LOGDEBUG, "DB update already in progress\n");
                 return 1;
         }
 

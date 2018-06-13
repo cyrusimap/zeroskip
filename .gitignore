@@ -41,3 +41,4 @@ src/revision.h
 src/libzeroskip.exp
 .libs
 src/libzeroskip.la
+ZSTESTDB
