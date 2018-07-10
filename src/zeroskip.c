@@ -1577,7 +1577,7 @@ int zsdb_finalise(struct zsdb *db)
         }
 
         if (!zsdb_write_lock_is_locked(db)) {
-                zslog(LOGDEBUG, "Need a write lock to add records.\n");
+                zslog(LOGDEBUG, "Need a write lock to finalise records.\n");
                 ret = ZS_ERROR;
                 goto done;
         }
