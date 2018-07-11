@@ -276,7 +276,7 @@ static int for_each_db_file_in_dbdir(char *const path[],
                         snprintf(sbuf, MAX_BUF_PATH, "%s/%s", *path ? *path : buf, bname);
 
                 if (strncmp(bname, ZS_FNAME_PREFIX, ZS_FNAME_PREFIX_LEN) == 0) {
-                        switch(interpret_db_filename(sbuf, strlen(sbuf),
+                        switch(interpret_db_filename(bname, strlen(bname),
                                                      NULL, NULL)) {
                         case DB_FTYPE_ACTIVE:
                                 /* XXX: Shouldn't have more than one active file */
