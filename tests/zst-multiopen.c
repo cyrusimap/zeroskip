@@ -173,6 +173,7 @@ int main(int argc _unused_, char **argv _unused_)
                 goto done;
         }
 
+        zsdb_final(&db1);
 
         ret = EXIT_SUCCESS;
 
