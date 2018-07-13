@@ -842,18 +842,20 @@ int zsdb_add(struct zsdb *db,
         size_t mfsize = 0;
         struct record *rec;
         ino_t inonum;
+        const unsigned char *empty = (const unsigned char *)"";
 
         assert(db);
         assert(db->priv);
         assert(key);
         assert(keylen);
-        assert(value);
-        assert(vallen);
+
+        if (vallen)
+                assert(value);
 
         if (!db)
                 return ZS_NOT_OPEN;
 
-        if (!key || !value)
+        if (!key)
                 return ZS_ERROR;
 
         priv = db->priv;
@@ -907,7 +909,8 @@ int zsdb_add(struct zsdb *db,
                 crc32_begin(&priv->dbfiles.factive.mf);
 
         /* Add the entry to the active file */
-        ret = zs_active_file_write_keyval_record(priv, key, keylen, value,
+        ret = zs_active_file_write_keyval_record(priv, key, keylen,
+                                                 (value ? value : empty),
                                                  vallen);
         if (ret != ZS_OK) {
                 crc32_end(&priv->dbfiles.factive.mf);
