@@ -1046,14 +1046,14 @@ int zsdb_fetch(struct zsdb *db,
         /* Look for the key in the active in-memory btree */
         zslog(LOGDEBUG, "Looking in active records\n");
         if (btree_find(priv->memtree, key, keylen, iter)) {
-                /* We found the key active records */
-                if (iter->record) {
+                /* We found the key in active records */
+                if (iter->record && !iter->record->deleted &&
+                        !iter->record->deleted) {
                         *vallen = iter->record->vallen;
                         *value = iter->record->val;
+                        ret = ZS_OK;
+                        goto done;
                 }
-
-                ret = ZS_OK;
-                goto done;
         }
 
         /* Look for the key in the finalised records */
@@ -1311,7 +1311,7 @@ int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn _unused_)
                 return ZS_NOT_OPEN;
         }
 
-        zslog(LOGWARNING, "Aborting transaction!\n");
+        zslog(LOGDEBUG, "Aborting transaction!\n");
 
         /* Truncate the active file until the last known valid offset as
            stored in priv->dotzsdb.offset
