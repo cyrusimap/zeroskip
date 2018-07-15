@@ -222,7 +222,7 @@ int main(int argc _unused_, char **argv _unused_)
         assert(record_count == (ARRAY_SIZE(kvrecs1) + ARRAY_SIZE(kvrecs2)));
 
         /* Abort transaction */
-        if (zsdb_abort(db, &txn) != ZS_NOTIMPLEMENTED) {
+        if (zsdb_abort(db, &txn) != ZS_OK) {
                 ret = EXIT_FAILURE;
                 goto fail1;
         }
@@ -259,9 +259,7 @@ int main(int argc _unused_, char **argv _unused_)
                 ret = EXIT_FAILURE;
                 goto fail1;
         }
-
         assert(record_count == ARRAY_SIZE(kvrecs1));
-
         ret = EXIT_SUCCESS;
 fail1:
         if (zsdb_close(db) != ZS_OK) {
