@@ -15,6 +15,7 @@ LDADD = $(top_builddir)/src/libzeroskip.la
 noinst_PROGRAMS = \
 	bt-test \
 	zst-abort-transaction \
+	zst-delete \
 	zst-foreach-count \
 	zst-foreach-heirarchy \
 	zst-fetchnext-simple \
@@ -25,6 +26,9 @@ bt_test_SOURCES = \
 
 zst_abort_transaction_SOURCES = \
 	zst-abort-transaction.c
+
+zst_delete_SOURCES = \
+	zst-delete.c
 
 zst_foreach_count_SOURCES = \
 	zst-foreach-count.c

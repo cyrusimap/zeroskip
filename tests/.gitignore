@@ -4,4 +4,5 @@ zst-foreach-heirarchy
 zst-abort-transaction
 zst-fetchnext-simple
 zst-multiopen
+zst-delete
 ZSTESTDB
