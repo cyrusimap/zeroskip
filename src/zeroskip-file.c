@@ -409,6 +409,10 @@ int zs_file_write_delete_record(struct zsdb_file *f,
         size_t dbuflen, mfsize = 0, nbytes;
         int alloced = 0;
 
+
+        if (!f->is_open)
+                return ZS_NOT_OPEN;
+
         ret = zs_prepare_delete_key_buf(key, keylen, &dbuf, &dbuflen, &alloced);
         if (ret != ZS_OK) {
                 return ZS_IOERROR;

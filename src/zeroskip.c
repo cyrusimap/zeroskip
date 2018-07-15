@@ -1047,8 +1047,7 @@ int zsdb_fetch(struct zsdb *db,
         zslog(LOGDEBUG, "Looking in active records\n");
         if (btree_find(priv->memtree, key, keylen, iter)) {
                 /* We found the key in active records */
-                if (iter->record && !iter->record->deleted &&
-                        !iter->record->deleted) {
+                if (iter->record && !iter->record->deleted) {
                         *vallen = iter->record->vallen;
                         *value = iter->record->val;
                         ret = ZS_OK;
