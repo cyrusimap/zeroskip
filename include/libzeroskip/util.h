@@ -286,6 +286,25 @@ static inline int memcmp_raw(const void *s1, size_t l1,
         return ret;
 }
 
+static inline int memcmp_mboxlist(const void *s1, size_t l1,
+                                  const void *s2, size_t l2)
+{
+        int ret;
+
+        ret = memcmp(s1, s2, l1 < l2 ? l1 : l2);
+
+        if (ret < 0) {
+                if (l1 > l2)
+                        ret = 1;
+                else if (l2 > l1)
+                        ret = -1;
+                else
+                        ret = 0;
+        }
+
+        return ret;
+}
+
 static inline int memcmp_natural(const void *s1, size_t l1,
                                  const void *s2, size_t l2)
 {
