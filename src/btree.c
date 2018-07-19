@@ -527,12 +527,12 @@ int btree_lookup(struct btree *btree _unused_,
         return 0;
 }
 
-unsigned int btree_memcmp_natural(unsigned char *key, size_t keylen,
+unsigned int btree_memcmp_natural(const unsigned char *key, size_t keylen,
                                   struct record **recs,
                                   unsigned int count, int *found)
 {
         unsigned int start = 0;
-        unsigned char *k = (unsigned char *) key;
+        const unsigned char *k = key;
 
         while (count) {
                 unsigned int middle = count >> 1;
@@ -598,6 +598,67 @@ unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                 }
                 if (c < 0)
                         goto lessthan;
+                if (c > 0)
+                        goto greaterthan;
+
+        greaterthan:
+                start += middle + 1;
+                count -= middle + 1;
+                continue;
+        equals:
+                *found = 1;
+        lessthan:
+                count = middle;
+                continue;
+        }
+
+        return start;
+}
+
+unsigned int btree_memcmp_mbox(const unsigned char *key, size_t keylen,
+                               struct record **recs,
+                               unsigned int count, int *found)
+{
+        unsigned int start = 0;
+        const unsigned char *k = key;
+
+        while (count) {
+                unsigned int middle = count >> 1;
+                unsigned int pos = start + middle;
+                unsigned char* b;
+                int c = -1;
+                size_t min;
+
+                b = (unsigned char*)recs[pos]->key;
+
+                min = keylen < recs[pos]->keylen ? keylen : recs[pos]->keylen;
+
+                c = memcmp(k, b, min);
+                if (c < 0) {
+                        if (keylen > recs[pos]->keylen)
+                                c = 1;
+                        else if(keylen < recs[pos]->keylen)
+                                c = -1;
+                        else
+                                c = 0;
+                }
+
+                if (c == 0) {
+                        if (keylen > recs[pos]->keylen)
+                                goto greaterthan;
+                        else if (keylen < recs[pos]->keylen)
+                                goto lessthan;
+                        else
+                                goto equals;
+                }
+                if (c < 0) {
+                        if (keylen > recs[pos]->keylen)
+                                goto greaterthan;
+                        else if (keylen < recs[pos]->keylen)
+                                goto lessthan;
+                        else
+                                goto equals;
+                }
                 if (c > 0)
                         goto greaterthan;
 
