@@ -51,6 +51,7 @@ file_unlock
 natural_strcasecmp
 memcmp_raw
 memcmp_natural
+memcmp_mboxlist
 
 zslog
 
@@ -70,6 +71,7 @@ btree_next
 btree_prev
 btree_memcmp_natural
 btree_memcmp_raw
+btree_memcmp_mbox
 btree_destroy
 btree_print_node_data
 record_new

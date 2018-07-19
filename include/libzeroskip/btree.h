@@ -173,7 +173,7 @@ int btree_next(btree_iter_t iter);
 /* btree_memcmp_natural():
    Sorts on natural order
  */
-unsigned int btree_memcmp_natural(unsigned char *key, size_t keylen,
+unsigned int btree_memcmp_natural(const unsigned char *key, size_t keylen,
                                   struct record **recs,
                                   unsigned int count, int *found);
 /* btree_memcmp_raw():
@@ -182,6 +182,14 @@ unsigned int btree_memcmp_natural(unsigned char *key, size_t keylen,
 unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                               struct record **recs,
                               unsigned int count, int *found);
+
+/* btree_memcmp_mbox():
+   Sorts mbox - data with common prefixes are grouped together,
+   cyrus-imapd style
+ */
+unsigned int btree_memcmp_mbox(const unsigned char *key, size_t keylen,
+                               struct record **recs,
+                               unsigned int count, int *found);
 
 int btree_destroy(struct record *record, void *data);
 
