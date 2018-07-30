@@ -151,7 +151,7 @@ int main(int argc _unused_, char **argv _unused_)
         int ret = EXIT_SUCCESS;
         struct zsdb_txn *txn = NULL;
 
-        if (zsdb_init(&db) != ZS_OK) {
+        if (zsdb_init(&db, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

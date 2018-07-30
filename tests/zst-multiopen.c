@@ -70,7 +70,7 @@ int main(int argc _unused_, char **argv _unused_)
         struct zsdb_txn *txn = NULL;
 
         /* Open a new zeroskip DB, this is the first instance of the DB */
-        if (zsdb_init(&db1) != ZS_OK) {
+        if (zsdb_init(&db1, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
@@ -104,7 +104,7 @@ int main(int argc _unused_, char **argv _unused_)
 
 
         /* Open the DB again, this is the second instance of the DB */
-        if (zsdb_init(&db2) != ZS_OK) {
+        if (zsdb_init(&db2, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
@@ -180,7 +180,7 @@ int main(int argc _unused_, char **argv _unused_)
         /* Count records */
         txn = NULL;
 
-        if (zsdb_init(&db1) != ZS_OK) {
+        if (zsdb_init(&db1, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

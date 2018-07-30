@@ -49,7 +49,7 @@ int cmd_new(int argc, char **argv, const char *progname)
 
         cmd_parse_config(config_file);
 
-        if (zsdb_init(&db) != ZS_OK) {
+        if (zsdb_init(&db, NULL) != ZS_OK) {
                 fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

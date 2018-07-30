@@ -529,7 +529,7 @@ done:
 /**
  * Public functions
  */
-int zsdb_init(struct zsdb **pdb)
+int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn cmpfn)
 {
         struct zsdb *db;
         struct zsdb_priv *priv;
@@ -549,6 +549,10 @@ int zsdb_init(struct zsdb **pdb)
                 goto done;
         }
         db->priv = priv;
+
+        if (cmpfn) {
+                priv->compare = cmpfn;
+        }
 
         *pdb = db;
 

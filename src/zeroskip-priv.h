@@ -286,6 +286,8 @@ struct zsdb_priv {
         struct btree *memtree;    /* in-memory B-Tree */
         struct btree *fmemtree;   /* in-memory B-Tree of finalised records */
 
+        zsdb_cmp_fn compare;      /* The comparator */
+
         int open;                 /* is the db open */
         int flags;                /* The flags passed during call to open */
         int dbdirty;              /* Marked dirty when there are changes

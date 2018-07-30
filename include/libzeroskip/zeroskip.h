@@ -21,8 +21,9 @@ typedef enum {
         DB_DUMP_ALL,
 } DBDumpLevel;
 
-#define MODE_RDWR   0           /* Open for reading/writing */
-#define MODE_CREATE 1           /* Mode for creating */
+#define MODE_RDWR     0           /* Open for reading/writing */
+#define MODE_CREATE   1           /* Mode for creating */
+#define MODE_MBOXSORT 2           /* Use MBOX style sort */
 
 /* Return codes */
 enum {
@@ -54,30 +55,8 @@ enum {
 /* Transactions */
 struct zsdb_txn;
 
-/*
- * Operations structure for Zeroskip DB
- */
-struct zsdb_operations {
-        int (*xopen)(void);
-        int (*xclose)(void);
-        int (*xread)(void);
-        int (*xwrite)(void);
-        int (*xlock)(void);
-        int (*xislocked)(void);
-        int (*xcmp)(void *p1, size_t n1, void *p2, size_t n2);
-};
-
-/*
- * Zeroskip DB Iterator
- */
+/* DB Iterator */
 struct zsbd_iter;
-
-struct zsdb {
-        struct zsdb_iter *iter;     /* All open iterators */
-        struct zsdb_operations *op; /* Operations */
-        unsigned int numtrans;      /* Total number of open transactions */
-        void *priv;                 /* Private */
-};
 
 /*
  * Callbacks
@@ -90,10 +69,22 @@ typedef int zsdb_foreach_cb(void *data,
                        const unsigned char *key, size_t keylen,
                        const unsigned char *value, size_t vallen);
 
+typedef int (*zsdb_cmp_fn)(const unsigned char *s1, size_t l1,
+                           const unsigned char *s2, size_t l2);
+
+/*
+ * The main Zeroskip structure
+ */
+struct zsdb {
+        struct zsdb_iter *iter;     /* All open iterators */
+        unsigned int numtrans;      /* Total number of open transactions */
+        void *priv;                 /* Private */
+};
+
 /*
  * Zeroskip API
  */
-extern int zsdb_init(struct zsdb **pdb);
+extern int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn cmpfn);
 extern void zsdb_final(struct zsdb **pdb);
 extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
 extern int zsdb_close(struct zsdb *db);
