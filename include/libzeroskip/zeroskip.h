@@ -21,9 +21,9 @@ typedef enum {
         DB_DUMP_ALL,
 } DBDumpLevel;
 
-#define MODE_RDWR     0           /* Open for reading/writing */
-#define MODE_CREATE   1           /* Mode for creating */
-#define MODE_MBOXSORT 2           /* Use MBOX style sort */
+#define MODE_RDWR         0           /* Open for reading/writing */
+#define MODE_CREATE       1           /* Mode for creating */
+#define MODE_CUSTOMSEARCH 2           /* Use custom search function */
 
 /* Return codes */
 enum {

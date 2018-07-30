@@ -641,6 +641,11 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         priv->dbfiles.ffcount = 0;
         priv->dbfiles.pfcount = 0;
 
+        if (mode & MODE_CUSTOMSEARCH) {
+                /* CUSTOMSEARCH mode needs to have a custom compare function */
+                assert(priv->compare);
+        }
+
         /* Compare functions for the pq for finalised and packed files */
         finalisedpq.cmp = dbfname_cmp;
         packedpq.cmp = dbfname_cmp;
@@ -654,7 +659,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         if (stat(priv->dbdir.buf, &sb) == -1) {
                 zslog(LOGDEBUG, "DB %s doesn't exist\n",
                         priv->dbdir.buf);
-                if (mode == MODE_CREATE) {
+                if (mode & MODE_CREATE) {
                         ret = zsdb_create(db);
                         newdb = 1;
                 } else {
