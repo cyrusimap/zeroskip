@@ -106,6 +106,69 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
                 }
                 printf("\n");
         }
+        printf("------------------------\n");
+        {
+                struct record *trec = record_new((const unsigned char *)"INBOX.a b",
+                                                 strlen("INBOX.a b"),
+                                                 (const unsigned char *)"valINBOX.a b",
+                                                 strlen("valINBOX.a b"),
+                                                 0);
+                ret = btree_insert(tree, trec);
+                if (ret != BTREE_OK) {
+                        fprintf(stderr, "failed inserting INBOX.a b\n");
+                }
+        }
+
+        {
+                struct record *trec = record_new((const unsigned char *)"INBOX.a.b",
+                                                 strlen("INBOX.a.b"),
+                                                 (const unsigned char *)"valINBOX.a.b",
+                                                 strlen("valINBOX.a.b"),
+                                                 0);
+                ret = btree_insert(tree, trec);
+                if (ret != BTREE_OK) {
+                        fprintf(stderr, "failed inserting INBOX.a.b\n");
+                }
+        }
+
+
+        {
+                struct record *trec = record_new((const unsigned char *)"INBOX.a.b.c",
+                                                 strlen("INBOX.a.b.c"),
+                                                 (const unsigned char *)"valINBOX.a.b.c",
+                                                 strlen("valINBOX.a.b.c"),
+                                                 0);
+                ret = btree_insert(tree, trec);
+                if (ret != BTREE_OK) {
+                        fprintf(stderr, "failed inserting INBOX.a.b.c\n");
+                }
+        }
+
+        {
+                struct record *trec = record_new((const unsigned char *)"INBOX.a",
+                                                 strlen("INBOX.a"),
+                                                 (const unsigned char *)"valINBOX.a",
+                                                 strlen("valINBOX.a"),
+                                                 0);
+                ret = btree_insert(tree, trec);
+                if (ret != BTREE_OK) {
+                        fprintf(stderr, "failed inserting INBOX.a\n");
+                }
+        }
+
+        {
+                struct record *trec = record_new((const unsigned char *)"INBOX b",
+                                                 strlen("INBOX.a"),
+                                                 (const unsigned char *)"valINBOX b",
+                                                 strlen("valINBOX.a"),
+                                                 0);
+                ret = btree_insert(tree, trec);
+                if (ret != BTREE_OK) {
+                        fprintf(stderr, "failed inserting INBOX a\n");
+                }
+        }
+
+        printf("------------------------\n");
 
         /* print using an iterator */
         printf("--- iterator print ---\n");
