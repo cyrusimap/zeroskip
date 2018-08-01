@@ -229,7 +229,7 @@ static int zsdb_iter_data_next(struct zsdb_iter *iter,
                                struct zsdb_iter_data *iterdata)
 {
         unsigned char *key = NULL;
-        size_t keylen = 0;
+        uint64_t keylen = 0;
         int ret = 0;
 
         if (!iterdata)
@@ -385,7 +385,7 @@ int zs_iterator_begin(struct zsdb_iter **iter)
                 struct zsdb_iter_data *piterd;
                 struct zsdb_file *f;
                 unsigned char *key;
-                size_t keylen;
+                uint64_t keylen;
                 enum record_t rectype;
 
                 f = list_entry(pos, struct zsdb_file, list);
@@ -464,7 +464,7 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                 struct zsdb_file *f;
                 uint64_t location = 0;
                 unsigned char *nextkey;
-                size_t nextkeylen;
+                uint64_t nextkeylen;
 
                 f = list_entry(pos, struct zsdb_file, list);
                 prio = f->priority;
@@ -561,7 +561,7 @@ int zs_iterator_begin_for_packed_files(struct zsdb_iter **iter,
                 struct zsdb_iter_data *piterd;
                 struct zsdb_file *f;
                 unsigned char *key;
-                size_t keylen;
+                uint64_t keylen;
 
                 f = list_entry(pos, struct zsdb_file, list);
                 piterd = zsdb_iter_data_alloc(ZSDB_BE_PACKED, f->priority,
