@@ -34,32 +34,22 @@ xmkdir
 xunlink
 
 get_filenames_with_matching_prefix
-get_filenames_with_matching_prefix_abs
-get_filenames_with_matching_prefix_rel
 recursive_rm
 
 time_in_us
 time_in_ms
 sleep_ms
 
-round_up
-round_up_bits
-
 file_lock
 file_unlock
 
 natural_strcasecmp
-memcmp_raw
-memcmp_natural
-memcmp_mboxlist
 
 zslog
 
 btree_new
 btree_free
 btree_insert_opt
-btree_insert
-btree_replace
 btree_insert_at
 btree_remove_at
 btree_deref
@@ -71,7 +61,6 @@ btree_next
 btree_prev
 btree_memcmp_natural
 btree_memcmp_raw
-btree_memcmp_mbox
 btree_destroy
 btree_print_node_data
 record_new
