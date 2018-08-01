@@ -102,7 +102,7 @@ int main(int argc _unused_, char **argv _unused_)
         const unsigned char *value = NULL;
         size_t vallen = 0;
 
-        if (zsdb_init(&db, NULL) != ZS_OK) {
+        if (zsdb_init(&db, NULL, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;
@@ -164,7 +164,7 @@ int main(int argc _unused_, char **argv _unused_)
         /* Close and reopen DB */
         zsdb_close(db);
         zsdb_final(&db);
-        if (zsdb_init(&db, NULL) != ZS_OK) {
+        if (zsdb_init(&db, NULL, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

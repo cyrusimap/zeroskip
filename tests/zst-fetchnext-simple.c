@@ -95,7 +95,7 @@ int main(int argc _unused_, char **argv _unused_)
         const unsigned char *found, *value;
         size_t foundlen = 0, vallen = 0;
 
-        if (zsdb_init(&db, NULL) != ZS_OK) {
+        if (zsdb_init(&db, NULL, NULL) != ZS_OK) {
                 zslog(LOGWARNING, "Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

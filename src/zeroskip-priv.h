@@ -269,29 +269,30 @@ struct zsdb_txn {
 
 /** Private data structure **/
 struct zsdb_priv {
-        uuid_t uuid;              /* The UUID for the DB */
-        cstring dotzsdbfname;     /* The filename, with path of .zsdb */
-        struct dotzsdb dotzsdb;   /* .zsdb contents */
-        ino_t dotzsdb_ino;        /* The inode number of of the .zsdb file
-                                   * when opened.
-                                   */
-        cstring dbdir;            /* The directory path */
+        uuid_t uuid;                /* The UUID for the DB */
+        cstring dotzsdbfname;       /* The filename, with path of .zsdb */
+        struct dotzsdb dotzsdb;     /* .zsdb contents */
+        ino_t dotzsdb_ino;          /* The inode number of of the .zsdb file
+                                     * when opened.
+                                     */
+        cstring dbdir;              /* The directory path */
 
         struct zsdb_files dbfiles;
 
         /* Locks */
-        struct file_lock wlk;     /* Lock when writing */
-        struct file_lock plk;     /* Lock when packing */
+        struct file_lock wlk;       /* Lock when writing */
+        struct file_lock plk;       /* Lock when packing */
 
-        struct btree *memtree;    /* in-memory B-Tree */
-        struct btree *fmemtree;   /* in-memory B-Tree of finalised records */
+        struct btree *memtree;      /* in-memory B-Tree */
+        struct btree *fmemtree;     /* in-memory B-Tree of finalised records */
 
-        zsdb_cmp_fn compare;      /* The comparator */
+        zsdb_cmp_fn dbcompare;       /* The db comparator */
+        btree_search_cb_t btcompare; /* Th btree comparator */
 
-        int open;                 /* is the db open */
-        int flags;                /* The flags passed during call to open */
-        int dbdirty;              /* Marked dirty when there are changes
-                                   * (add/remove/pack) to the db */
+        int open;                    /* is the db open */
+        int flags;                   /* The flags passed during call to open */
+        int dbdirty;                 /* Marked dirty when there are changes
+                                      * (add/remove/pack) to the db */
 };
 
 

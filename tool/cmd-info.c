@@ -40,7 +40,7 @@ int cmd_info(int argc, char **argv, const char *progname)
 
         dbname = argv[optind];
 
-        if (zsdb_init(&db, NULL) != ZS_OK) {
+        if (zsdb_init(&db, NULL, NULL) != ZS_OK) {
                 fprintf(stderr, "ERROR: Failed initialising DB.\n");
                 ret = EXIT_FAILURE;
                 goto done;

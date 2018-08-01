@@ -529,7 +529,8 @@ done:
 /**
  * Public functions
  */
-int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn cmpfn)
+int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn dbcmpfn,
+              btree_search_cb_t btcmpfn)
 {
         struct zsdb *db;
         struct zsdb_priv *priv;
@@ -550,9 +551,11 @@ int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn cmpfn)
         }
         db->priv = priv;
 
-        if (cmpfn) {
-                priv->compare = cmpfn;
-        }
+        if (dbcmpfn)
+                priv->dbcompare = dbcmpfn;
+
+        if (btcmpfn)
+                priv->btcompare = btcmpfn;
 
         *pdb = db;
 
@@ -643,7 +646,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 
         if (mode & MODE_CUSTOMSEARCH) {
                 /* CUSTOMSEARCH mode needs to have a custom compare function */
-                assert(priv->compare);
+                assert(priv->dbcompare);
+                assert(priv->btcompare);
         }
 
         /* Compare functions for the pq for finalised and packed files */

@@ -10,6 +10,7 @@
 #define _ZEROSKIP_H_
 
 #include <libzeroskip/macros.h>
+#include <libzeroskip/btree.h>
 
 #include <stdio.h>
 #include <stdint.h>
@@ -84,7 +85,8 @@ struct zsdb {
 /*
  * Zeroskip API
  */
-extern int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn cmpfn);
+extern int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn dbcmpfn,
+                     btree_search_cb_t btcmpfn);
 extern void zsdb_final(struct zsdb **pdb);
 extern int zsdb_open(struct zsdb *db, const char *dbdir, int mode);
 extern int zsdb_close(struct zsdb *db);
