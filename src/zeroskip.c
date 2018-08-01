@@ -596,8 +596,10 @@ void zsdb_final(struct zsdb **pdb)
 static int zsdb_create(struct zsdb *db)
 {
         struct zsdb_priv *priv = db->priv;
-        struct stat sb = { 0 };
+        struct stat sb;
         mode_t mode = 0777;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         zslog(LOGDEBUG, "Creating a new DB %s!\n", priv->dbdir.buf);
         /* Create the dbdir */
@@ -629,8 +631,10 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 {
         struct zsdb_priv *priv;
         int ret = ZS_OK;
-        struct stat sb = { 0 };
+        struct stat sb;
         int newdb = 0;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         assert(db);
         assert(db->priv);

@@ -82,7 +82,9 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         struct mappedfile *mf;
         int ret = 1;
         size_t nbytes = 0;
-        struct stat sb = { 0 };
+        struct stat sb;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         memset(&stackbuf, 0, DOTZSDB_SIZE);
         sptr = stackbuf;
@@ -168,7 +170,9 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         size_t mfsize;
         struct dotzsdb *dothdr;
         int ret = 1;
-        struct stat sb = { 0 };
+        struct stat sb;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
                 zslog(LOGDEBUG, "Could not open %s!\n",
@@ -276,7 +280,9 @@ done:
 ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv)
 {
         cstring dotzsdbfname = CSTRING_INIT;
-        struct stat sb = { 0 };
+        struct stat sb;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         /* The filename */
         cstring_dup(&priv->dbdir, &dotzsdbfname);
