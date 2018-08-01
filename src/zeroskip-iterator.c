@@ -250,7 +250,7 @@ static int zsdb_iter_data_next(struct zsdb_iter *iter,
         case ZSDB_BE_PACKED:
         {
                 struct zsdb_file *f = iterdata->data.f;
-                enum record_t rectype;
+                enum record_t rectype = REC_TYPE_UNUSED;
                 f->indexpos++;
                 if (f->indexpos < f->index->count)
                         zs_packed_file_get_key_from_offset(f, &key,
