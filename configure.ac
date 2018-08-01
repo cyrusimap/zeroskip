@@ -196,8 +196,7 @@ AX_APPEND_COMPILE_FLAGS([ \
 	-Wmissing-declarations \
 	-Wno-unused-parameter \
         -fstack-protector \
-])
-
+],,[-Werror])
 
 # versioning
 AC_SUBST([ZS_VERSION],[zs_version])
