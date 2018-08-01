@@ -183,13 +183,48 @@ unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                               struct record **recs,
                               unsigned int count, int *found);
 
-/* btree_memcmp_mbox():
-   Sorts mbox - data with common prefixes are grouped together,
-   cyrus-imapd style
- */
-unsigned int btree_memcmp_mbox(const unsigned char *key, size_t keylen,
-                               struct record **recs,
-                               unsigned int count, int *found);
+#define btree_memcmp_fn(_name, _minlen, _cmpfn)                        \
+        unsigned int btree_memcmp_##_name(const unsigned char *key,     \
+                                          size_t keylen,                \
+                                          struct record **recs,         \
+                                          unsigned int count,           \
+                                          int *found)                   \
+        {                                                               \
+                unsigned int start = 0;                                 \
+                const unsigned char *k = key;                           \
+                while (count) {                                         \
+                        unsigned int middle = count >> 1;               \
+                        unsigned int pos = start + middle;              \
+                        unsigned char *b;                               \
+                        int c = -1;                                     \
+                                                                        \
+                        b = (unsigned char *)recs[pos]->key;            \
+                        _minlen;                                        \
+                        {                                               \
+                                c = _cmpfn;                             \
+                                if (c == 0) {                           \
+                                        if (keylen > recs[pos]->keylen) \
+                                                goto greaterthan;       \
+                                        else if (keylen < recs[pos]->keylen) \
+                                                goto lessthan;          \
+                                        else                            \
+                                                goto equals;            \
+                                }                                       \
+                                if (c < 0) goto lessthan;               \
+                                if (c > 0) goto greaterthan;            \
+                        }                                               \
+                greaterthan:                                            \
+                        start += middle + 1;                            \
+                        count -= middle + 1;                            \
+                        continue;                                       \
+                equals:                                                 \
+                        *found = 1;                                     \
+                lessthan:                                               \
+                        count = middle;                                 \
+                        continue;                                       \
+                }                                                       \
+                 return start;                                          \
+        }
 
 int btree_destroy(struct record *record, void *data);
 
