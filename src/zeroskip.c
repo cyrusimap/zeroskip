@@ -1197,8 +1197,7 @@ int zsdb_fetchnext(struct zsdb *db,
         if (keylen)
                 assert(key);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1289,8 +1288,7 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
         assert(db);
         assert(db->priv);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1359,8 +1357,7 @@ int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn _unused_)
         assert(db);
         assert(db->priv);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1706,8 +1703,7 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
         assert(db);
         assert(db->priv);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1853,8 +1849,7 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
         assert(key);
         assert(keylen);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
