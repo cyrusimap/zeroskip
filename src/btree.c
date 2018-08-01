@@ -571,7 +571,7 @@ unsigned int btree_memcmp_natural(const unsigned char *key, size_t keylen,
 
 btree_memcmp_fn(
         raw,
-        size_t min = keylen < recs[pos]->keylen ? keylen : recs[pos]->keylen,
+        size_t min = keylen < blen ? keylen : blen,
         memcmp(k, b, min)
         )
 

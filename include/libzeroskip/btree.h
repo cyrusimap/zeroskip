@@ -196,16 +196,18 @@ unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                         unsigned int middle = count >> 1;               \
                         unsigned int pos = start + middle;              \
                         unsigned char *b;                               \
+                        size_t blen = 0;                                \
                         int c = -1;                                     \
                                                                         \
                         b = (unsigned char *)recs[pos]->key;            \
+                        blen = recs[pos]->keylen;                       \
                         _minlen;                                        \
                         {                                               \
                                 c = _cmpfn;                             \
                                 if (c == 0) {                           \
-                                        if (keylen > recs[pos]->keylen) \
+                                        if (keylen > blen)              \
                                                 goto greaterthan;       \
-                                        else if (keylen < recs[pos]->keylen) \
+                                        else if (keylen < blen) \
                                                 goto lessthan;          \
                                         else                            \
                                                 goto equals;            \
