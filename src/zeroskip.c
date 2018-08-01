@@ -31,6 +31,7 @@
 
 #include <libgen.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE
@@ -1615,7 +1616,7 @@ int zsdb_info(struct zsdb *db)
                 list_for_each_forward(pos, &priv->dbfiles.fflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
-                        fprintf(stderr, "\t * [%3lu] %s\n",
+                        fprintf(stderr, "\t * [%3" PRIu64 "] %s\n",
                                 f->priority, basename(f->fname.buf));
                 }
         }
@@ -1625,7 +1626,7 @@ int zsdb_info(struct zsdb *db)
                 list_for_each_forward(pos, &priv->dbfiles.pflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
-                        fprintf(stderr, "\t * [%3lu] %s\n",
+                        fprintf(stderr, "\t * [%3" PRIu64 "] %s\n",
                                 f->priority, basename(f->fname.buf));
                 }
         }
