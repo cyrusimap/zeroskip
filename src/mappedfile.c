@@ -359,8 +359,10 @@ int mappedfile_write_iov(struct mappedfile **mfp, const struct iovec *iov,
 int mappedfile_size(struct mappedfile **mfp, size_t *psize)
 {
         struct mappedfile *mf = *mfp;
-        struct stat stbuf = { 0 };
+        struct stat stbuf;
         int err = 0;
+
+        memset(&stbuf, 0, sizeof(struct stat));
 
         if (!mf)
             return EINVAL;
