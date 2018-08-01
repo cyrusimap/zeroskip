@@ -21,7 +21,10 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
         struct btree *tree = NULL;
         struct record *recs[NUMRECS];
         int j, ret;
-        btree_iter_t iter = { 0 }, iter1 = { 0 };
+        btree_iter_t iter, iter1;
+
+        memset(&iter, 0, sizeof(btree_iter_t));
+        memset(&iter1, 0, sizeof(btree_iter_t));
 
         tree = btree_new(NULL, NULL);
 
