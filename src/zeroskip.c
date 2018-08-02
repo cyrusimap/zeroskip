@@ -1168,8 +1168,9 @@ int zsdb_fetchnext(struct zsdb *db,
 
         assert(db);
         assert(db->priv);
-        assert(key);
-        assert(keylen);
+
+        if (keylen)
+                assert(key);
 
         if (db)
                 priv = db->priv;
@@ -1191,7 +1192,11 @@ int zsdb_fetchnext(struct zsdb *db,
 
         if (keyfound) {
                 /* If we found the key, we go to the next key in the iterator */
-                zs_iterator_next(tempiter, data);
+                if (!zs_iterator_next(tempiter, data)) {
+                        ret = ZS_NOTFOUND;
+                        goto done;
+                }
+
                 data = zs_iterator_get(tempiter);
         }
 
