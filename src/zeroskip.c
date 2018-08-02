@@ -5,6 +5,12 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
+#ifdef DARWIN
+#ifndef _DARWIN_C_SOURCE
+#define _DARWIN_C_SOURCE
+#endif
+#endif
+
 #include "cstring.h"
 #include "htable.h"
 #include "pqueue.h"
