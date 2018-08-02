@@ -645,7 +645,7 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         priv->dbfiles.pfcount = 0;
 
         if (mode & MODE_CUSTOMSEARCH) {
-                /* CUSTOMSEARCH mode needs to have a custom compare function */
+                /* CUSTOMSEARCH mode needs to have custom compare functions */
                 assert(priv->dbcompare);
                 assert(priv->btcompare);
         }
@@ -687,8 +687,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         }
 
         /* In-memory tree */
-        priv->memtree = btree_new(NULL, NULL);
-        priv->fmemtree = btree_new(NULL, NULL);
+        priv->memtree = btree_new(NULL, priv->btcompare);
+        priv->fmemtree = btree_new(NULL, priv->btcompare);
 
         if (newdb) {
                 if (zsdb_write_lock_acquire(db, 0 /*timeout*/) < 0) {
@@ -1106,10 +1106,17 @@ int zsdb_fetch(struct zsdb *db,
                       f->index->data[0]);
                 zs_record_read_key_from_file_offset(f, f->index->data[0],
                                                     &temp_key);
-                cmp_ret = memcmp_raw(key, keylen, temp_key.data,
-                                     (temp_key.base.type == REC_TYPE_KEY ||
-                                      temp_key.base.type == REC_TYPE_DELETED) ?
-                                     temp_key.base.slen : temp_key.base.slen);
+                if (priv->dbcompare) {
+                        cmp_ret = priv->dbcompare(key, keylen, temp_key.data,
+                                                  (temp_key.base.type == REC_TYPE_KEY ||
+                                                   temp_key.base.type == REC_TYPE_DELETED) ?
+                                                  temp_key.base.slen : temp_key.base.slen);
+                } else {
+                        cmp_ret = memcmp_raw(key, keylen, temp_key.data,
+                                             (temp_key.base.type == REC_TYPE_KEY ||
+                                              temp_key.base.type == REC_TYPE_DELETED) ?
+                                             temp_key.base.slen : temp_key.base.slen);
+                }
                 if (cmp_ret < 0)
                         continue;
 
@@ -1118,15 +1125,22 @@ int zsdb_fetch(struct zsdb *db,
                 zs_record_read_key_from_file_offset(f,
                                                     f->index->data[f->index->count - 1],
                                                     &temp_key);
-                cmp_ret = memcmp_raw(key, keylen, temp_key.data,
-                                     (temp_key.base.type == REC_TYPE_KEY ||
-                                      temp_key.base.type == REC_TYPE_DELETED) ?
-                                     temp_key.base.slen : temp_key.base.slen);
+                if (priv->dbcompare) {
+                        cmp_ret = priv->dbcompare(key, keylen, temp_key.data,
+                                                  (temp_key.base.type == REC_TYPE_KEY ||
+                                                   temp_key.base.type == REC_TYPE_DELETED) ?
+                                                  temp_key.base.slen : temp_key.base.slen);
+                } else {
+                        cmp_ret = memcmp_raw(key, keylen, temp_key.data,
+                                             (temp_key.base.type == REC_TYPE_KEY ||
+                                              temp_key.base.type == REC_TYPE_DELETED) ?
+                                             temp_key.base.slen : temp_key.base.slen);
+                }
                 if (cmp_ret > 0)
                         continue;
 
-                if (zs_packed_file_bsearch_index(key, keylen, f,
-                                                 &location, value, vallen)) {
+                if (zs_packed_file_bsearch_index(key, keylen, f, &location,
+                                                 value, vallen, priv->dbcompare)) {
                         zslog(LOGDEBUG, "Record found at location %ld\n",
                               location);
                         ret = ZS_OK;
@@ -1720,7 +1734,14 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
 
                 /* If there is a prefix, then ensure we match it */
                 if (prefixlen) {
-                        if (memcmp_raw(key, prefixlen, prefix, prefixlen))
+                        int r;
+
+                        if (priv->dbcompare)
+                                r = priv->dbcompare(key, prefixlen, prefix, prefixlen);
+                        else
+                                r = memcmp_raw(key, prefixlen, prefix, prefixlen);
+
+                        if (r)
                                 break;
                 }
 

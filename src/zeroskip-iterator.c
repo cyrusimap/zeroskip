@@ -54,9 +54,9 @@ static int iter_htable_entry_cmpfn(const void *unused1 _unused_,
         return memcmp_raw(e1->key, e1->keylen, e2->key, e2->keylen);
 }
 
-static void iter_htable_init(struct iter_htable *ht)
+static void iter_htable_init(struct iter_htable *ht, const void *cmpfndata)
 {
-        htable_init(&ht->table, iter_htable_entry_cmpfn, NULL, 0);
+        htable_init(&ht->table, iter_htable_entry_cmpfn, cmpfndata, 0);
 }
 
 static void *iter_htable_get(struct iter_htable *ht, unsigned char *key,
@@ -66,7 +66,7 @@ static void *iter_htable_get(struct iter_htable *ht, unsigned char *key,
         struct iter_htable_entry *e;
 
         if (!ht->table.size)
-                iter_htable_init(ht);
+                iter_htable_init(ht, ht->table.cmpfndata);
 
         htable_entry_init(&k, bufhash(key, keylen));
         k.key = (unsigned char *)key;
@@ -82,7 +82,7 @@ static void iter_htable_put(struct iter_htable *ht, unsigned char *key,
         struct iter_htable_entry *e;
 
         if (!ht->table.size)
-                iter_htable_init(ht);
+                iter_htable_init(ht, ht->table.cmpfndata);
 
         e = alloc_iter_htable_entry(key, keylen, value);
         htable_entry_init(e, bufhash(key, keylen));
@@ -96,7 +96,7 @@ static void *iter_htable_remove(struct iter_htable *ht, const unsigned char *key
         struct iter_htable_entry e;
 
         if (!ht->table.size)
-                iter_htable_init(ht);
+                iter_htable_init(ht, ht->table.cmpfndata);
 
         htable_entry_init(&e, bufhash(key, keylen));
 
@@ -140,14 +140,21 @@ static void free_iter_key_data(struct iter_key_data **data)
         }
 }
 
-static int iter_pq_cmp(const void *d1, const void *d2, void *cbdata _unused_)
+static int iter_pq_cmp(const void *d1, const void *d2, void *cbdata)
 {
         const struct iter_key_data *e1, *e2;
+        struct zsdb_priv *priv = cbdata;
+        int ret = -1;
 
         e1 = (const struct iter_key_data *)d1;
         e2 = (const struct iter_key_data *)d2;
 
-        return memcmp_raw(e1->key, e1->len, e2->key, e2->len);
+        if (priv && priv->dbcompare)
+                ret = priv->dbcompare(e1->key, e1->len, e2->key, e2->len);
+        else
+                ret = memcmp_raw(e1->key, e1->len, e2->key, e2->len);
+
+        return ret;
 }
 
 /* struct zsdb_iter_data handling */
@@ -329,7 +336,8 @@ int zs_iterator_new(struct zsdb *db, struct zsdb_iter **iter)
 
         t->db = db;
         t->pq.cmp = iter_pq_cmp;
-        iter_htable_init(&t->ht);
+        t->pq.cmpfndata = priv;
+        iter_htable_init(&t->ht, priv);
         t->datav = NULL;
         t->iter_data_count = 0;
         t->iter_data_alloc = 0;
@@ -466,8 +474,8 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                       f->index->count);
 
                 if (zs_packed_file_bsearch_index(key, keylen, f,
-                                                 &location,
-                                                 NULL, 0)) {
+                                                 &location, NULL, 0,
+                                                 priv->dbcompare)) {
                         zslog(LOGDEBUG, "Record found at location %ld\n",
                               location);
                         *found = 1;

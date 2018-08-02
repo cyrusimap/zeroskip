@@ -393,7 +393,7 @@ extern int zs_packed_file_write_delete_record(void *data,
 extern int zs_packed_file_write_commit_record(struct zsdb_file *f);
 extern int zs_packed_file_write_final_commit_record(struct zsdb_file *f);
 extern int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
-                                    void *cbdata);
+                                    zsdb_cmp_fn cmpfn, void *cbdata);
 extern int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
                                               unsigned char **key,
                                               uint64_t *len,
@@ -403,7 +403,8 @@ extern int zs_packed_file_bsearch_index(const unsigned char *key,
                                         struct zsdb_file *f,
                                         uint64_t *location,
                                         const unsigned char **value,
-                                        size_t *vallen);
+                                        size_t *vallen,
+                                        zsdb_cmp_fn cmpfn);
 
 /* zeroskip-record.c */
 extern int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,

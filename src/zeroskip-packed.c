@@ -481,7 +481,8 @@ int zs_packed_file_get_key_from_offset(struct zsdb_file *f,
         return ZS_OK;
 }
 
-int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unused_)
+int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
+                             zsdb_cmp_fn cmpfn, void *cbdata _unused_)
 {
         const struct zsdb_file *f1, *f2;
         uint64_t off1, off2;
@@ -524,12 +525,18 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2, void *cbdata _unuse
                  key2.base.type == REC_TYPE_DELETED)
                 len2 = key2.base.llen;
 
-        return memcmp_raw(key1.data, len1, key2.data, len2);
+        if (cmpfn)
+                ret = cmpfn(key1.data, len1, key2.data, len2);
+        else
+                ret = memcmp_raw(key1.data, len1, key2.data, len2);
+
+        return ret;
 }
 
 int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
                                  struct zsdb_file *f, uint64_t *location,
-                                 const unsigned char **value, size_t *vallen)
+                                 const unsigned char **value, size_t *vallen,
+                                 zsdb_cmp_fn cmpfn)
 {
         uint64_t hi, lo;
 
@@ -555,7 +562,10 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
                 assert(res == ZS_OK);
 
                 /* Compare */
-                res = memcmp_raw(key, keylen, k, klen);
+                if (cmpfn)
+                        res = cmpfn(key, keylen, k, klen);
+                else
+                        res = memcmp_raw(key, keylen, k, klen);
                 if (!res) {
                         /* If found, `location` will contain the
                            offset at which the element can be found.
