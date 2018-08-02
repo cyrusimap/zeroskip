@@ -102,7 +102,9 @@ char *xstrdup(const char *s)
 int xmkdir(const char *path, mode_t mode)
 {
         int ret;
-        struct stat sb = {0};
+        struct stat sb;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         return mkdir(path, mode);
         ret = stat(path, &sb);

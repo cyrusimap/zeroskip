@@ -77,6 +77,7 @@ static int _zslog(int level, const char *msg)
         return ret;
 }
 
+__attribute__((__format__ (__printf__, 2, 0)))
 int zslog(int level, const char *fmt, ...)
 {
         va_list ap;

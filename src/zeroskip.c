@@ -5,6 +5,12 @@
  * it under the terms of the MIT license. See LICENSE for details.
  *
  */
+#ifdef DARWIN
+#ifndef _DARWIN_C_SOURCE
+#define _DARWIN_C_SOURCE
+#endif
+#endif
+
 #include "cstring.h"
 #include "htable.h"
 #include "pqueue.h"
@@ -25,6 +31,7 @@
 
 #include <libgen.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE
@@ -585,8 +592,10 @@ void zsdb_final(struct zsdb **pdb)
 static int zsdb_create(struct zsdb *db)
 {
         struct zsdb_priv *priv = db->priv;
-        struct stat sb = { 0 };
+        struct stat sb;
         mode_t mode = 0777;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         zslog(LOGDEBUG, "Creating a new DB %s!\n", priv->dbdir.buf);
         /* Create the dbdir */
@@ -618,8 +627,10 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
 {
         struct zsdb_priv *priv;
         int ret = ZS_OK;
-        struct stat sb = { 0 };
+        struct stat sb;
         int newdb = 0;
+
+        memset(&sb, 0, sizeof(struct stat));
 
         assert(db);
         assert(db->priv);
@@ -1174,8 +1185,7 @@ int zsdb_fetchnext(struct zsdb *db,
         if (keylen)
                 assert(key);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1266,8 +1276,7 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
         assert(db);
         assert(db->priv);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1336,8 +1345,7 @@ int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn _unused_)
         assert(db);
         assert(db->priv);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1591,7 +1599,7 @@ int zsdb_info(struct zsdb *db)
                 list_for_each_forward(pos, &priv->dbfiles.fflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
-                        fprintf(stderr, "\t * [%3lu] %s\n",
+                        fprintf(stderr, "\t * [%3" PRIu64 "] %s\n",
                                 f->priority, basename(f->fname.buf));
                 }
         }
@@ -1601,7 +1609,7 @@ int zsdb_info(struct zsdb *db)
                 list_for_each_forward(pos, &priv->dbfiles.pflist) {
                         struct zsdb_file *f;
                         f = list_entry(pos, struct zsdb_file, list);
-                        fprintf(stderr, "\t * [%3lu] %s\n",
+                        fprintf(stderr, "\t * [%3" PRIu64 "] %s\n",
                                 f->priority, basename(f->fname.buf));
                 }
         }
@@ -1679,8 +1687,7 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
         assert(db);
         assert(db->priv);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
@@ -1784,8 +1791,7 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
         assert(key);
         assert(keylen);
 
-        if (db)
-                priv = db->priv;
+        priv = db->priv;
 
         if (!priv->open) {
                 zslog(LOGWARNING, "DB `%s` not open!\n", priv->dbdir.buf);
