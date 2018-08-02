@@ -14,18 +14,16 @@
 
 #include <string.h>
 
-const char *null_data[] = { NULL };
-
 void str_array_init(struct str_array *arr)
 {
-        arr->datav = null_data;
+        arr->datav = NULL;
         arr->count = 0;
         arr->alloc = 0;
 }
 
 void str_array_clear(struct str_array *arr)
 {
-        if (arr->datav != null_data) {
+        if (arr->datav) {
                 int i;
                 for (i = 0; i < arr->count; i++) {
                         char *data = (char *)arr->datav[i];
@@ -45,9 +43,6 @@ void str_array_clear(struct str_array *arr)
  */
 void str_array_add(struct str_array *arr, const char *str)
 {
-        if (arr->datav == null_data)
-                arr->datav = NULL;
-
         ALLOC_GROW(arr->datav, arr->count + 2, arr->alloc);
         arr->datav[arr->count++] = xstrdup(str);
         arr->datav[arr->count] = NULL;
@@ -109,12 +104,12 @@ void str_array_from_strsplit(struct str_array *arr, const char *str,
 /* str_array_detach():
  * Returns the data, caller needs to free.
  */
-const char **str_array_detach(struct str_array *arr)
+char **str_array_detach(struct str_array *arr)
 {
-        if (arr->datav == null_data)
-                return xcalloc(1, sizeof(const char *));
+        if (arr->datav == NULL)
+                return xcalloc(1, sizeof(char *));
         else {
-                const char **ret = arr->datav;
+                char **ret = arr->datav;
                 str_array_init(arr);
                 return ret;
         }
