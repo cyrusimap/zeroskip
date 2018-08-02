@@ -433,6 +433,7 @@ static int zsdb_reload(struct zsdb_priv *priv)
         /* Close active */
         zs_active_file_close(priv);
 
+        /* Close finalised file */
         list_for_each_forward_safe(pos, p, &priv->dbfiles.fflist) {
                 struct zsdb_file *f;
                 list_del(pos);
@@ -441,6 +442,7 @@ static int zsdb_reload(struct zsdb_priv *priv)
                 priv->dbfiles.ffcount--;
         }
 
+        /* Close packed files */
         list_for_each_forward_safe(pos, p, &priv->dbfiles.pflist) {
                 struct zsdb_file *f;
                 list_del(pos);
@@ -460,8 +462,8 @@ static int zsdb_reload(struct zsdb_priv *priv)
         }
 
         /* Allocate In-memory tree */
-        priv->memtree = btree_new(NULL, NULL);
-        priv->fmemtree = btree_new(NULL, NULL);
+        priv->memtree = btree_new(NULL, priv->btcompare);
+        priv->fmemtree = btree_new(NULL, priv->btcompare);
 
         /** Reopen/Reload all files */
         ret = for_each_db_file_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH,
