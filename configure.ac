@@ -195,6 +195,7 @@ AX_APPEND_COMPILE_FLAGS([ \
 	-Wmissing-prototypes \
 	-Wmissing-declarations \
 	-Wno-unused-parameter \
+        -fstack-protector \
 ])
 
 
