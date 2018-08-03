@@ -265,14 +265,6 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
                 mappedfile_truncate(&f->mf, mfsize);
         }
 
-        /* Flush the change to disk */
-        ret = mappedfile_flush(&f->mf);
-        if (ret) {
-                zslog(LOGDEBUG, "Error flushing data to disk.\n");
-                ret = ZS_IOERROR;
-                goto done;
-        }
-
 done:
         if (kalloced) xfree(keybuf);
         if (valloced) xfree(valbuf);
@@ -440,14 +432,6 @@ int zs_file_write_delete_record(struct zsdb_file *f,
          * the original size we had before updating */
         if (ret != ZS_OK) {
                 mappedfile_truncate(&f->mf, mfsize);
-        }
-
-        /* Flush the change to disk */
-        ret = mappedfile_flush(&f->mf);
-        if (ret) {
-                zslog(LOGDEBUG, "delete: Error flushing data to disk.\n");
-                ret = ZS_IOERROR;
-                goto done;
         }
 
 done:
