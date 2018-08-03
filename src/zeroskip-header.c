@@ -29,9 +29,13 @@
 int zs_header_write(struct zsdb_file *f)
 {
         int ret = ZS_OK;
-        struct zs_header hdr;
         size_t nbytes;
         uint32_t crc;
+        unsigned char stackbuf[ZS_HDR_SIZE];
+        unsigned char *sptr;
+
+        memset(&stackbuf, 0, DOTZSDB_SIZE);
+        sptr = stackbuf;
 
         if (!f->is_open) {
                 return ZS_ERROR;
@@ -39,20 +43,39 @@ int zs_header_write(struct zsdb_file *f)
 
         crc = crc32(0L, Z_NULL, 0);
 
-        /* XXX: The copying should be done to an unsigned char buffer */
-        hdr.signature = hton64(f->header.signature);
-        hdr.version = hton32(f->header.version);
-        memcpy(hdr.uuid, f->header.uuid, sizeof(uuid_t));
-        hdr.startidx = htonl(f->header.startidx);
-        hdr.endidx = htonl(f->header.endidx);
+        /* Signature */
+        memcpy(sptr, &f->header.signature, sizeof(uint64_t));
+        sptr += sizeof(uint64_t);
+
+        /* Version */
+        *((uint32_t *)sptr) = hton32(f->header.version);
+        sptr += sizeof(uint32_t);
+
+        /* UUID */
+        memcpy(sptr, f->header.uuid, sizeof(uuid_t));
+        sptr += sizeof(uuid_t);
+
+        /* Start Index */
+        *((uint32_t *)sptr) = hton32(f->header.startidx);
+        sptr += sizeof(uint32_t);
+
+        /* End Index */
+        *((uint32_t *)sptr) = hton32(f->header.endidx);
+        sptr += sizeof(uint32_t);
 
         /* compute the crc32 of the the fields of the header minus the
            crc32 field */
-        crc = crc32(crc, (void *)&f->header,
-                    sizeof(f->header) - sizeof(f->header.crc32));
-        hdr.crc32 = htonl(crc);
 
-        ret = mappedfile_write(&f->mf, (void *)&hdr, sizeof(hdr), &nbytes);
+        crc = crc32(0L, Z_NULL, 0);
+        crc = crc32(crc, (void *)&f->header.signature, sizeof(uint64_t));
+        crc = crc32(crc, (void *)&f->header.version, sizeof(uint32_t));
+        crc = crc32(crc, (void *)&f->header.uuid, sizeof(uuid_t));
+        crc = crc32(crc, (void *)&f->header.startidx, sizeof(uint32_t));
+        crc = crc32(crc, (void *)&f->header.endidx, sizeof(uint32_t));
+        *((uint32_t *)sptr) = hton32(crc);
+        sptr += sizeof(uint32_t);
+
+        ret = mappedfile_write(&f->mf, &stackbuf, ZS_HDR_SIZE, &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing header\n");
                 goto done;
@@ -100,14 +123,14 @@ int zs_header_validate(struct zsdb_file *f)
         phdr = (struct zs_header *)f->mf->ptr;
 
         /* Signature */
-        if (phdr->signature != hton64(ZS_SIGNATURE)) {
+        if (phdr->signature != ZS_SIGNATURE) {
                 zslog(LOGDEBUG, "Invalid signature on Zeroskip DB!\n");
                 return ZS_INVALID_DB;
         }
-        f->header.signature = ntoh64(phdr->signature);
+        f->header.signature = phdr->signature;
 
         /* Version */
-        version = ntohl(phdr->version);
+        version = ntoh32(phdr->version);
         #if 0
         if (version == 1) {
                 zslog(LOGDEBUG, "Valid zeroskip DB file(%s). Version: %d\n",
@@ -127,12 +150,18 @@ int zs_header_validate(struct zsdb_file *f)
 
         /* CRC32 */
         f->header.crc32 = ntoh32(phdr->crc32);
+
         /* Check CRC32 */
         crc = crc32(0L, Z_NULL, 0);
-        crc = crc32(crc, (void *)&f->header,
-                    sizeof(struct zs_header) - sizeof(uint32_t));
+        crc = crc32(crc, (void *)&f->header.signature, sizeof(uint64_t));
+        crc = crc32(crc, (void *)&f->header.version, sizeof(uint32_t));
+        crc = crc32(crc, (void *)&f->header.uuid, sizeof(uuid_t));
+        crc = crc32(crc, (void *)&f->header.startidx, sizeof(uint32_t));
+        crc = crc32(crc, (void *)&f->header.endidx, sizeof(uint32_t));
+
         if (crc != f->header.crc32) {
-                zslog(LOGDEBUG, "Checksum failed for zeroskip header.\n");
+                zslog(LOGDEBUG, "Checksum failed for zeroskip header: %u, expected: %u.\n",
+                      crc, f->header.crc32);
                 return ZS_INVALID_DB;
         }
 

@@ -29,9 +29,10 @@ static struct mappedfile *zsdbfile;
  */
 static void cleanup_lockfile(void)
 {
-        if (dblock.fd)
-                close(dblock.fd);
-        mappedfile_close(&zsdbfile);
+        if (zsdbfile) {
+                mappedfile_close(&zsdbfile);
+                zsdbfile = NULL;
+        }
 
         file_lock_release(&dblock);
 }
