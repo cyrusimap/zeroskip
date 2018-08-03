@@ -34,7 +34,7 @@ int zs_header_write(struct zsdb_file *f)
         unsigned char stackbuf[ZS_HDR_SIZE];
         unsigned char *sptr;
 
-        memset(&stackbuf, 0, DOTZSDB_SIZE);
+        memset(&stackbuf, 0, ZS_HDR_SIZE);
         sptr = stackbuf;
 
         if (!f->is_open) {
