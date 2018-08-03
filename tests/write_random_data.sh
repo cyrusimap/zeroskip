@@ -31,7 +31,7 @@ gen_key_val()
         local vlen=$(gen_length)
         VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
 
-        RET=$(../tools/zeroskip set $dbdir "$KEY" "$VAL")
+        RET=$(../tool/zeroskip set $dbdir "$KEY" "$VAL")
     done
 }
 
