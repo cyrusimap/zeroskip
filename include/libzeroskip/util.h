@@ -42,6 +42,7 @@ void *xmalloc(size_t size);
 void *xrealloc(void *ptr, size_t size);
 void *xcalloc(size_t nmemb, size_t size);
 char *xstrdup(const char *s);
+unsigned char *xucharbufdup(const unsigned char *s, size_t len);
 #define xfree(ptr) do {                                 \
                 if (ptr) { free(ptr); ptr = NULL; }     \
         } while (0)

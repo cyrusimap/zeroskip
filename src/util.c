@@ -94,6 +94,15 @@ char *xstrdup(const char *s)
         return ptr;
 }
 
+unsigned char *xucharbufdup(const unsigned char *s, size_t len)
+{
+        unsigned char *ptr = xmalloc(len);
+
+        memcpy(ptr, s, len);
+
+        return ptr;
+}
+
 /*
   xmkdir(): creates a directory if it doesn't exist.
   returns 0 on success, -1 otherwise. Check errno for
