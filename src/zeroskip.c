@@ -579,6 +579,7 @@ void zsdb_final(struct zsdb **pdb)
 
                 xfree(priv);
                 xfree(db);
+                *pdb = NULL;
         }
 }
 
