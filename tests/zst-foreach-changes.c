@@ -57,35 +57,6 @@ static struct {
 };
 
 
-static int print_cb(void *data,
-                    const unsigned char *key, size_t keylen,
-                    const unsigned char *val, size_t vallen)
-{
-        size_t i;
-        struct ffrock *fr = NULL;
-
-        if (data) {
-                fr = (struct ffrock *)data;
-        }
-
-        for (i = 0; i < keylen; i++)
-                printf("%c", key[i]);
-
-        printf(" : ");
-
-        for (i = 0; i < vallen; i++)
-                printf("%c", val[i]);
-
-        if (fr) {
-                printf(" : ** %d **", fr->state);
-                fr->state += 1;
-        }
-
-        printf("\n");
-
-        return 0;
-}
-
 static int fe_cb(void *data,
                  const unsigned char *key, size_t keylen,
                  const unsigned char *val _unused_,
@@ -284,16 +255,6 @@ int main(int argc _unused_, char **argv _unused_)
         rock.state = 0;
         rock.tid = &txn;
 
-#if 0
-        ret = zsdb_foreach(db, NULL, 0, NULL, print_cb, &rock, &txn);
-        if (ret != ZS_OK) {
-                zslog(LOGWARNING, "Failed running `zsdb_foreach() on %s",
-                      DBNAME);
-                ret = EXIT_FAILURE;
-                goto fail1;
-        }
-#endif
-
         ret = zsdb_foreach(db, NULL, 0, NULL, fe_cb, &rock, &txn);
         if (ret != ZS_OK) {
                 zslog(LOGWARNING, "Failed running `zsdb_foreach() on %s",
@@ -303,6 +264,18 @@ int main(int argc _unused_, char **argv _unused_)
         }
         assert(ret == ZS_OK);
         assert(rock.state == 7);
+
+
+        /* Commit the transaction */
+        zsdb_write_lock_acquire(db, 0);
+        if (zsdb_commit(db, txn) != ZS_OK) {
+                zslog(LOGWARNING, "Failed committing transaction!\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+        zsdb_write_lock_release(db);
+        zsdb_transaction_end(&txn);
+
 
         ret = EXIT_SUCCESS;
 fail1:
