@@ -524,6 +524,8 @@ static int zsdb_reload(struct zsdb_priv *priv)
         mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
         if (mfsize)
                 mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
+
+        priv->dbdirty = 1;
 done:
         return ret;
 }
@@ -934,10 +936,12 @@ int zsdb_add(struct zsdb *db,
                 goto done;
         }
         priv->dbfiles.factive.dirty = 1;
+        priv->dbdirty = 1;
 
         rec = record_new(key, keylen, value, vallen, 0);
         btree_replace(priv->memtree, rec);
 
+        #if 0
         /* If we are in a transaction, we need to make sure that the
          * iterator reflects the newly added key. */
         if (txn && *txn && (*txn)->iter) {
@@ -972,7 +976,7 @@ int zsdb_add(struct zsdb *db,
                         temp_keylen = 0;
                 }
         }
-
+        #endif
 
         zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
                 priv->dbfiles.factive.fname.buf);
@@ -1023,13 +1027,13 @@ int zsdb_remove(struct zsdb *db,
                 goto done;
         }
         priv->dbfiles.factive.dirty = 1;
-
-        zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
+        priv->dbdirty = 1;
 
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, NULL, 0, 1);
         btree_replace(priv->memtree, rec);
 
+        zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
 done:
         return ret;
 }
@@ -1053,8 +1057,10 @@ int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn)
         }
 
         ret = zs_active_file_write_commit_record(priv);
-        if (ret == ZS_OK)
+        if (ret == ZS_OK) {
                 priv->dbfiles.factive.dirty = 0;
+                priv->dbdirty = 0;
+        }
 
         /* Update the index and offset in the .zsdb file */
         zs_dotzsdb_update_index_and_offset(priv, priv->dotzsdb.curidx,
@@ -1535,6 +1541,8 @@ int zsdb_repack(struct zsdb *db)
 
                 cstring_release(&fname);
 
+                priv->dbdirty = 1;
+
                 /* Done, for now. */
                 goto done;
         }
@@ -1588,6 +1596,8 @@ int zsdb_repack(struct zsdb *db)
                         zs_packed_file_close(&tempf);
                         priv->dbfiles.pfcount--;
                 }
+
+                priv->dbdirty = 1;
 
                 /* Done, for now. */
                 goto done;
@@ -1739,10 +1749,17 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                 assert(prefix);
         }
 
-        if (txn && *txn && (*txn)->iter) {  /* Existing transaction */
-                tempiter = (*txn)->iter;
-        } else {                /* New transaction */
-                zs_transaction_begin(db, txn);
+        if (txn) {
+                if (*txn && (*txn)->iter) { /* Existing transaction */
+                        tempiter = (*txn)->iter;
+                } else {                    /* New transaction */
+                        zs_transaction_begin(db, txn);
+                        newtxn = 1;
+                }
+        }
+
+        /* Create an iterator */
+        if (!tempiter) {
                 zs_iterator_new(db, &tempiter);
 
                 if (prefix)
@@ -1752,13 +1769,17 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                 else
                         zs_iterator_begin(&tempiter);
 
-                (*txn)->iter = tempiter;
-                newtxn = 1;
+                if (txn) {
+                        (*txn)->iter = tempiter;
+                }
         }
 
         do {
                 const unsigned char *key = NULL, *val = NULL;
                 size_t keylen = 0, vallen = 0;
+                unsigned char *tkey = NULL;
+                size_t tkeylen = 0;
+
 
                 data = zs_iterator_get(tempiter);
                 if (!data)
@@ -1802,19 +1823,16 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                                 break;
                 }
 
-                /* Save the key that we've found, in the transaction */
-                if ((*txn)->curkey) {
-                        free((*txn)->curkey);
-                }
-                (*txn)->curkey = xucharbufdup(key, keylen);
-                (*txn)->curkeylen = keylen;
-
+                /* Save the key  */
+                tkey = xucharbufdup(key, keylen);
+                tkeylen = keylen;
 
                 if (!p || p(cbdata, key, keylen, val, vallen)) {
                         if (cb(cbdata, key, keylen, val, vallen))
                                 break;
                 }
 
+                #if 0
                 /*
                  * The transaction might have been updated in the
                  * callback, so update the temptiter;
@@ -1823,11 +1841,32 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                         data = zs_iterator_get((*txn)->iter);
                         tempiter = (*txn)->iter;
                 }
+                #endif
+
+                if (priv->dbdirty) {
+                        zs_iterator_end(&tempiter);
+                        if (txn && *txn)
+                                (*txn)->iter = NULL;
+                        tempiter = NULL;
+
+                        zs_iterator_new(db, &tempiter);
+
+                        zs_iterator_begin_at_key(&tempiter,
+                                                 tkey, tkeylen, &found);
+                        data = zs_iterator_get(tempiter);
+
+                        if (txn && *txn)
+                                (*txn)->iter = tempiter;
+                }
+
+                free(tkey);
+                tkey = NULL;
 
          } while (zs_iterator_next(tempiter, data));
 
+        zs_iterator_end(&tempiter);
+
         if (newtxn) {
-                zs_iterator_end(&tempiter);
                 (*txn)->iter = NULL;
                 zs_transaction_end(txn);
         }

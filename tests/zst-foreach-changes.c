@@ -255,7 +255,7 @@ int main(int argc _unused_, char **argv _unused_)
         rock.state = 0;
         rock.tid = &txn;
 
-        ret = zsdb_foreach(db, NULL, 0, NULL, fe_cb, &rock, &txn);
+        ret = zsdb_foreach(db, NULL, 0, NULL, fe_cb, &rock, rock.tid);
         if (ret != ZS_OK) {
                 zslog(LOGWARNING, "Failed running `zsdb_foreach() on %s",
                       DBNAME);
