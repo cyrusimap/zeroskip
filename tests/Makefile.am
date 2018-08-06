@@ -16,6 +16,7 @@ noinst_PROGRAMS = \
 	bt-test \
 	zst-abort-transaction \
 	zst-delete \
+	zst-foreach-changes \
 	zst-foreach-count \
 	zst-foreach-heirarchy \
 	zst-fetchnext-simple \
@@ -30,6 +31,9 @@ zst_abort_transaction_SOURCES = \
 
 zst_delete_SOURCES = \
 	zst-delete.c
+
+zst_foreach_changes_SOURCES = \
+	zst-foreach-changes.c
 
 zst_foreach_count_SOURCES = \
 	zst-foreach-count.c

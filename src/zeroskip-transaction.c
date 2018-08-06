@@ -32,6 +32,8 @@ int zs_transaction_begin(struct zsdb *db, struct zsdb_txn **txn)
 
         t->db = db;
         t->iter = NULL;
+        t->curkey = NULL;
+        t->curkeylen = 0;
         t->alloced = 1;
 
         *txn = t;
@@ -51,8 +53,16 @@ void zs_transaction_end(struct zsdb_txn **txn)
                         zs_iterator_end(&t->iter);
                         t->iter = NULL;
                 }
+
+                if (t->curkey) {
+                        free(t->curkey);
+                        t->curkey = NULL;
+                        t->curkeylen = 0;
+                }
+
                 t->alloced = 0;
 
-                xfree(t);
+                free(t);
+                t = NULL;
         }
 }

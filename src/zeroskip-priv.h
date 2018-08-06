@@ -252,6 +252,7 @@ struct zsdb_iter {
         int iter_data_alloc;
 
         int forone_iter;
+        int foreach_iter;
 };
 
 /** Transactions **/
@@ -263,6 +264,8 @@ enum TxnType {
 struct zsdb_txn {
         struct zsdb *db;
         struct zsdb_iter *iter;
+        unsigned char *curkey;
+        size_t curkeylen;
         int alloced;
 };
 

@@ -851,7 +851,7 @@ int zsdb_add(struct zsdb *db,
              size_t keylen,
              const unsigned char *value,
              size_t vallen,
-             struct zsdb_txn **txn _unused_)
+             struct zsdb_txn **txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -859,6 +859,7 @@ int zsdb_add(struct zsdb *db,
         struct record *rec;
         ino_t inonum;
         const unsigned char *empty = (const unsigned char *)"";
+        struct zsdb_iter_data *data = NULL;
 
         assert(db);
         assert(db->priv);
@@ -892,10 +893,11 @@ int zsdb_add(struct zsdb *db,
                    time it has been opened. We need to reload the DB */
                 ret = zsdb_reload(priv);
                 if (ret != ZS_OK) {
-                        zslog(LOGWARNING, "Failed reoloading DB!\n");
+                        zslog(LOGWARNING, "Failed reloading DB!\n");
                         goto done;
                 }
-                zslog(LOGDEBUG, "Reloaded DB!\n");
+
+                zslog(LOGDEBUG, "zsdb_add: Reloaded DB!\n");
         }
 
         /* check file size and finalise if necessary */
@@ -936,6 +938,42 @@ int zsdb_add(struct zsdb *db,
 
         rec = record_new(key, keylen, value, vallen, 0);
         btree_replace(priv->memtree, rec);
+
+        /* If we are in a transaction, we need to make sure that the
+         * iterator reflects the newly added key. */
+        if (txn && *txn && (*txn)->iter) {
+                struct zsdb_iter *iter;
+                unsigned char *temp_key = NULL;
+                size_t temp_keylen = 0;
+
+                iter = (*txn)->iter;
+
+                temp_key = xucharbufdup((*txn)->curkey,
+                                        (*txn)->curkeylen);
+                temp_keylen = (*txn)->curkeylen;
+
+                /* Reload transaction */
+                if (temp_key) {
+                        int found = 0;
+
+                        zs_iterator_end(&iter);
+                        (*txn)->iter = NULL;
+                        zs_transaction_end(txn);
+                        *txn = NULL;
+                        iter = NULL;
+
+                        zs_transaction_begin(db, txn);
+                        zs_iterator_new(db, &iter);
+                        zs_iterator_begin_at_key(&iter, temp_key, temp_keylen,
+                                                 &found);
+                        (*txn)->iter = iter;
+
+                        free(temp_key);
+                        temp_key = NULL;
+                        temp_keylen = 0;
+                }
+        }
+
 
         zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
                 priv->dbfiles.factive.fname.buf);
@@ -1037,12 +1075,13 @@ int zsdb_fetch(struct zsdb *db,
                size_t keylen,
                const unsigned char **value,
                size_t *vallen,
-               struct zsdb_txn **txn _unused_)
+               struct zsdb_txn **txn)
 {
         int ret = ZS_NOTFOUND;
         struct zsdb_priv *priv;
         btree_iter_t iter;
         struct list_head *pos;
+        ino_t inonum;
 
         assert(db);
         assert(db->priv);
@@ -1058,6 +1097,15 @@ int zsdb_fetch(struct zsdb *db,
 
         if (!key)
                 return ZS_ERROR;
+
+        inonum = zs_dotzsdb_get_ino(priv);
+        if (inonum != priv->dotzsdb_ino) {
+                zslog(LOGDEBUG, "DB `%s` has been updated!\n", priv->dbdir.buf);
+        }
+
+        if (txn && *txn && (*txn)->iter) {
+                zslog(LOGDEBUG, "zsdb_fetch: has transaction\n");
+        }
 
         /* Look for the key in the active in-memory btree */
         zslog(LOGDEBUG, "Looking in active records\n");
@@ -1695,6 +1743,7 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
         if (txn && *txn && (*txn)->iter) {  /* Existing transaction */
                 tempiter = (*txn)->iter;
         } else {                /* New transaction */
+                zs_transaction_begin(db, txn);
                 zs_iterator_new(db, &tempiter);
 
                 if (prefix)
@@ -1704,6 +1753,7 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                 else
                         zs_iterator_begin(&tempiter);
 
+                (*txn)->iter = tempiter;
                 newtxn = 1;
         }
 
@@ -1753,15 +1803,35 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                                 break;
                 }
 
+                /* Save the key that we've found, in the transaction */
+                if ((*txn)->curkey) {
+                        free((*txn)->curkey);
+                }
+                (*txn)->curkey = xucharbufdup(key, keylen);
+                (*txn)->curkeylen = keylen;
+
+
                 if (!p || p(cbdata, key, keylen, val, vallen)) {
                         if (cb(cbdata, key, keylen, val, vallen))
                                 break;
                 }
 
-        } while (zs_iterator_next(tempiter, data));
+                /*
+                 * The transaction might have been updated in the
+                 * callback, so update the temptiter;
+                 */
+                if (tempiter != (*txn)->iter) {
+                        data = zs_iterator_get((*txn)->iter);
+                        tempiter = (*txn)->iter;
+                }
 
-        if (newtxn)
+         } while (zs_iterator_next(tempiter, data));
+
+        if (newtxn) {
                 zs_iterator_end(&tempiter);
+                (*txn)->iter = NULL;
+                zs_transaction_end(txn);
+        }
 
         return ret;
 }
