@@ -859,7 +859,6 @@ int zsdb_add(struct zsdb *db,
         struct record *rec;
         ino_t inonum;
         const unsigned char *empty = (const unsigned char *)"";
-        struct zsdb_iter_data *data = NULL;
 
         assert(db);
         assert(db->priv);
