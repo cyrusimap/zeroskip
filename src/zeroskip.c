@@ -553,6 +553,7 @@ int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn dbcmpfn,
                 ret = ZS_NOMEM;
                 goto done;
         }
+        priv->dbdirty = 0;
         db->priv = priv;
 
         if (dbcmpfn)
@@ -1059,7 +1060,6 @@ int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn)
         ret = zs_active_file_write_commit_record(priv);
         if (ret == ZS_OK) {
                 priv->dbfiles.factive.dirty = 0;
-                priv->dbdirty = 0;
         }
 
         /* Update the index and offset in the .zsdb file */
@@ -1068,6 +1068,7 @@ int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn)
 
 done:
         if (txn) {
+                priv->dbdirty = 0;
                 zs_transaction_end(&txn);
                 txn = NULL;
         }
@@ -1857,6 +1858,8 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
 
                         if (txn && *txn)
                                 (*txn)->iter = tempiter;
+
+                        priv->dbdirty = 0;
                 }
 
                 free(tkey);
