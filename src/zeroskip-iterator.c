@@ -637,7 +637,10 @@ void zs_iterator_end(struct zsdb_iter **iter)
 
                 titer = *iter;
                 *iter = NULL;
-                priv = titer->db->priv;
+                if (titer->db && titer->db->priv)
+                        priv = titer->db->priv;
+                else
+                        goto done;
                 /* Reset the index positions of all the packed files */
                 list_for_each_forward(pos, &priv->dbfiles.pflist) {
                         struct zsdb_file *f;
@@ -648,6 +651,7 @@ void zs_iterator_end(struct zsdb_iter **iter)
                 titer->db = NULL;
                 priv = NULL;
 
+        done:
                 while ((idata = pqueue_get(&titer->pq)))
                         free_iter_key_data(&idata);
 

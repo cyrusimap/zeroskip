@@ -12,7 +12,7 @@
 #include <libzeroskip/zeroskip.h>
 
 int cmd_show(int argc, char **argv, const char *progname);
-#define cmd_show_usage "show "
+#define cmd_show_usage "show [--config CONFIGFILE] DB <prefix>"
 
 int cmd_get(int argc, char **argv, const char *progname);
 #define cmd_get_usage "get [--config CONFIGFILE] DB <key>"
