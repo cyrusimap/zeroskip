@@ -32,6 +32,8 @@ struct htable_entry {
         unsigned int hash;
 };
 
+#define HTABLE_ENTRY_INIT  { .next = NULL, .hash = 0 }
+
 struct htable {
         struct htable_entry **table;
 

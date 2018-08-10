@@ -230,6 +230,7 @@ struct iter_htable_entry {
         size_t keylen;
         void *value;
 };
+#define ITER_HTABLE_ENTRY_INIT  { .entry = HTABLE_ENTRY_INIT, .key = NULL, .keylen = 0, .value = NULL };
 
 struct zsdb_iter_data {
         zsdb_be_t type;

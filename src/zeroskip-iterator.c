@@ -90,15 +90,16 @@ static void iter_htable_put(struct iter_htable *ht, unsigned char *key,
         htable_put(&ht->table, e);
 }
 
-static void *iter_htable_remove(struct iter_htable *ht, const unsigned char *key,
+static void *iter_htable_remove(struct iter_htable *ht,
+                                const unsigned char *key,
                                 size_t keylen)
 {
-        struct iter_htable_entry e;
+        struct iter_htable_entry e = ITER_HTABLE_ENTRY_INIT;
+
+        htable_entry_init(&e, bufhash(key, keylen));
 
         if (!ht->table.size)
                 iter_htable_init(ht, ht->table.cmpfndata);
-
-        htable_entry_init(&e, bufhash(key, keylen));
 
         return htable_remove(&ht->table, &e, key);
 }
