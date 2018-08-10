@@ -84,8 +84,6 @@ int cmd_show(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        zsdb_transaction_begin(db, &txn);
-
         if (zsdb_forone(db, (const unsigned char *)prefix,
                         prefixlen, NULL, print_cb, NULL, &txn) != ZS_OK) {
                 fprintf(stderr, "ERROR: forone failed!\n");
