@@ -115,7 +115,7 @@ static int process_active_file(const char *path, void *data)
         int ret = ZS_OK;
 
         if (!data) {
-                zslog(LOGDEBUG, "Internal error when preocessing active file.\n");
+                zslog(LOGDEBUG, "Internal error when processing active file.\n");
                 ret = ZS_INTERNAL;
                 goto done;
         }
@@ -942,46 +942,8 @@ int zsdb_add(struct zsdb *db,
         rec = record_new(key, keylen, value, vallen, 0);
         btree_replace(priv->memtree, rec);
 
-        #if 0
-        /* If we are in a transaction, we need to make sure that the
-         * iterator reflects the newly added key. */
-        if (txn && *txn && (*txn)->iter) {
-                struct zsdb_iter *iter;
-                unsigned char *temp_key = NULL;
-                size_t temp_keylen = 0;
-
-                iter = (*txn)->iter;
-
-                temp_key = xucharbufdup((*txn)->curkey,
-                                        (*txn)->curkeylen);
-                temp_keylen = (*txn)->curkeylen;
-
-                /* Reload transaction */
-                if (temp_key) {
-                        int found = 0;
-
-                        zs_iterator_end(&iter);
-                        (*txn)->iter = NULL;
-                        zs_transaction_end(txn);
-                        *txn = NULL;
-                        iter = NULL;
-
-                        zs_transaction_begin(db, txn);
-                        zs_iterator_new(db, &iter);
-                        zs_iterator_begin_at_key(&iter, temp_key, temp_keylen,
-                                                 &found);
-                        (*txn)->iter = iter;
-
-                        free(temp_key);
-                        temp_key = NULL;
-                        temp_keylen = 0;
-                }
-        }
-        #endif
-
         zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
                 priv->dbfiles.factive.fname.buf);
-
 done:
         return ret;
 }
@@ -1832,17 +1794,6 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
                         if (cb(cbdata, key, keylen, val, vallen))
                                 break;
                 }
-
-                #if 0
-                /*
-                 * The transaction might have been updated in the
-                 * callback, so update the temptiter;
-                 */
-                if (tempiter != (*txn)->iter) {
-                        data = zs_iterator_get((*txn)->iter);
-                        tempiter = (*txn)->iter;
-                }
-                #endif
 
                 if (priv->dbdirty) {
                         zs_iterator_end(&tempiter);

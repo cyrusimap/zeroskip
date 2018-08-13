@@ -70,10 +70,6 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
                 goto done;
         }
 
-        /* Check CRC of an existing file */
-        if (!create) {
-        }
-
         /* Seek to location after header */
         mf_size = ZS_HDR_SIZE;
         mappedfile_seek(&priv->dbfiles.factive.mf, mf_size, NULL);
