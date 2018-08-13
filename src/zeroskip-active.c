@@ -89,12 +89,12 @@ int zs_active_file_close(struct zsdb_priv *priv)
                 return ZS_ERROR;
 
         if (priv->dbfiles.factive.dirty) {
+                /* XXX: If not committed, just ignore. */
                 ret = zs_active_file_write_commit_record(priv);
                 if (ret == ZS_OK)
                         priv->dbfiles.factive.dirty = 0;
         }
 
-        mappedfile_flush(&priv->dbfiles.factive.mf);
         mappedfile_close(&priv->dbfiles.factive.mf);
 
         cstring_release(&priv->dbfiles.factive.fname);
