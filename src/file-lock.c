@@ -150,6 +150,7 @@ int file_lock_release(struct file_lock *lk)
         remove_lock_file(lk->fname.buf);
         cstring_release(&lk->fname);
         lk->locked = 0;
+        lk->active = 0;
 
         return ret ? -1 : 0;
 }
