@@ -189,11 +189,8 @@ struct zsdb_file {
         struct mappedfile *mf;
         struct vecu64 *index;
         struct stat st;
-        /* TODO: Fix the indexpos type int to uint64_t.
-           Here and in struct vecu64 (count)
-         */
-        int indexpos;           /* Position in the index vec */
         int is_open;
+        uint64_t indexpos;      /* Position in the index vec */
         uint64_t priority;      /* Higher the number, higher the priority */
         int dirty;
 };
