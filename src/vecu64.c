@@ -17,10 +17,10 @@
  */
 static void ensure_alloc(struct vecu64 *v, uint64_t newsize)
 {
-        uint64_t alloced = v->alloc;
+        /* uint64_t alloced = v->alloc; */
 
         ALLOC_GROW(v->data, newsize, v->alloc);
-        memset(v->data + alloced, 0, sizeof(uint64_t) * (newsize - alloced));
+        /* memset(v->data + alloced, 0, sizeof(uint64_t) * (newsize - alloced)); */
 }
 
 /**
@@ -58,8 +58,9 @@ uint64_t vecu64_append(struct vecu64 *v, uint64_t n)
                 exit(EXIT_FAILURE);
         }
 
+        pos = v->count++;
         ensure_alloc(v, v->count + 1);
-        pos = v->count + 1;
+
         v->data[pos] = n;
 
         return pos;

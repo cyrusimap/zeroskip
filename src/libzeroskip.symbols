@@ -65,3 +65,12 @@ btree_destroy
 btree_print_node_data
 record_new
 record_free
+
+vecu64_new
+vecu64_free
+vecu64_append
+vecu64_insert
+vecu64_remove
+vecu64_find
+vecu64_size
+vecu64_foreach

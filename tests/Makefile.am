@@ -14,6 +14,7 @@ LDADD = $(top_builddir)/src/libzeroskip.la
 
 noinst_PROGRAMS = \
 	bt-test \
+	vecu64-test \
 	zst-abort-transaction \
 	zst-delete \
 	zst-foreach-changes \
@@ -25,6 +26,9 @@ noinst_PROGRAMS = \
 
 bt_test_SOURCES = \
 	bt-test.c
+
+vecu64_test_SOURCES = \
+	vecu64-test.c
 
 zst_abort_transaction_SOURCES = \
 	zst-abort-transaction.c
