@@ -483,10 +483,16 @@ int zs_file_check_stat(struct zsdb_file *f)
                 status |= ZSDB_FILE_GID_CHANGED;
         if ((st.st_size |= f->st.st_size))
                 status |= ZSDB_FILE_SIZE_CHANGED;
+#ifdef MACOSX
         if ((st.st_mtimensec |= f->st.st_mtimensec))
                 status |= ZSDB_FILE_MTIM_CHANGED;
         if ((st.st_ctimensec |= f->st.st_ctimensec))
                 status |= ZSDB_FILE_CTIM_CHANGED;
-
+#else  /* Linux */
+        if ((st.st_mtim.tv_nsec |= f->st.st_mtim.tv_nsec))
+                status |= ZSDB_FILE_MTIM_CHANGED;
+        if ((st.st_ctim.tv_nsec |= f->st.st_ctim.tv_nsec))
+                status |= ZSDB_FILE_CTIM_CHANGED;
+#endif
         return status;
 }
