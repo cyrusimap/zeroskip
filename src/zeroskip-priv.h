@@ -273,9 +273,9 @@ struct zsdb_priv {
         uuid_t uuid;                /* The UUID for the DB */
         cstring dotzsdbfname;       /* The filename, with path of .zsdb */
         struct dotzsdb dotzsdb;     /* .zsdb contents */
-        ino_t dotzsdb_ino;          /* The inode number of of the .zsdb file
-                                     * when opened.
-                                     */
+        struct stat dotzsdb_st;     /* The stat() info of the file .zsdb file
+                                     * when it was opened.*/
+
         cstring dbdir;              /* The directory path */
 
         struct zsdb_files dbfiles;
@@ -324,6 +324,7 @@ extern int zs_dotzsdb_update_index_and_offset(struct zsdb_priv *priv,
                                               uint32_t idx,
                                               uint64_t offset);
 extern ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv);
+extern int zs_dotzsdb_check_stat(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_begin(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_end(struct zsdb_priv *priv);
 

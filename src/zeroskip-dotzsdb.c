@@ -82,9 +82,6 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         struct mappedfile *mf;
         int ret = 1;
         size_t nbytes = 0;
-        struct stat sb;
-
-        memset(&sb, 0, sizeof(struct stat));
 
         memset(&stackbuf, 0, DOTZSDB_SIZE);
         sptr = stackbuf;
@@ -144,11 +141,10 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
 
         zslog(LOGDEBUG, "Created db with UUID %s\n", priv->dotzsdb.uuidstr);
 
-        /* stat() the .zsdb file to get the inode number. The .zsdb file is
+        /* stat() the .zsdb file to get the status. The .zsdb file is
          * used for synchronisation among various processes.
          */
-        stat(priv->dotzsdbfname.buf, &sb);
-        priv->dotzsdb_ino = sb.st_ino;
+        stat(priv->dotzsdbfname.buf, &priv->dotzsdb_st);
 fail2:
         mappedfile_close(&mf);
 
@@ -170,9 +166,6 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
         size_t mfsize;
         struct dotzsdb *dothdr;
         int ret = 1;
-        struct stat sb;
-
-        memset(&sb, 0, sizeof(struct stat));
 
         if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
                 zslog(LOGDEBUG, "Could not open %s!\n",
@@ -181,11 +174,10 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                 goto fail1;
         }
 
-        /* stat() the .zsdb file to get the inode number. The .zsdb file is
+        /* stat() the .zsdb file to get the status. The .zsdb file is
          * used for synchronisation among various processes.
          */
-        stat(priv->dotzsdbfname.buf, &sb);
-        priv->dotzsdb_ino = sb.st_ino;
+        stat(priv->dotzsdbfname.buf, &priv->dotzsdb_st);
 
         mappedfile_size(&mf, &mfsize);
         if (mfsize < DOTZSDB_SIZE) {
@@ -297,6 +289,54 @@ ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv)
         cstring_release(&dotzsdbfname);
 
         return sb.st_ino;
+}
+
+int zs_dotzsdb_check_stat(struct zsdb_priv *priv)
+{
+        cstring dotzsdbfname = CSTRING_INIT;
+        struct stat st;
+        int status = 0;
+
+        memset(&st, 0, sizeof(struct stat));
+
+        /* The filename */
+        cstring_dup(&priv->dbdir, &dotzsdbfname);
+        cstring_addch(&dotzsdbfname, '/');
+        cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
+
+        /* stat() the .zsdb file. The .zsdb file is
+         * used for synchronisation among various processes.
+         */
+        if (stat(dotzsdbfname.buf, &st) != 0) {
+                status = -1;
+                goto done;
+        }
+
+        if (st.st_ino != priv->dotzsdb_st.st_ino)
+                status |= ZSDB_FILE_INO_CHANGED;
+        if (st.st_mode != priv->dotzsdb_st.st_mode)
+                status |= ZSDB_FILE_MODE_CHANGED;
+        if (st.st_uid != priv->dotzsdb_st.st_uid)
+                status |= ZSDB_FILE_UID_CHANGED;
+        if (st.st_gid != priv->dotzsdb_st.st_gid)
+                status |= ZSDB_FILE_GID_CHANGED;
+        if (st.st_size != priv->dotzsdb_st.st_size)
+                status |= ZSDB_FILE_SIZE_CHANGED;
+#ifdef MACOSX
+        if (st.st_mtimensec != priv->dotzsdb_st.st_mtimensec)
+                status |= ZSDB_FILE_MTIM_CHANGED;
+        if (st.st_ctimensec != priv->dotzsdb_st.st_ctimensec)
+                status |= ZSDB_FILE_CTIM_CHANGED;
+#else  /* Linux */
+        if (st.st_mtim.tv_nsec != priv->dotzsdb_st.st_mtim.tv_nsec)
+                status |= ZSDB_FILE_MTIM_CHANGED;
+        if (st.st_ctim.tv_nsec != priv->dotzsdb_st.st_ctim.tv_nsec)
+                status |= ZSDB_FILE_CTIM_CHANGED;
+#endif
+
+done:
+        cstring_release(&dotzsdbfname);
+        return status;
 }
 
 /*

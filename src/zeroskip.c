@@ -871,7 +871,6 @@ int zsdb_add(struct zsdb *db,
         struct zsdb_priv *priv;
         size_t mfsize = 0;
         struct record *rec;
-        ino_t inonum;
         const unsigned char *empty = (const unsigned char *)"";
 
         assert(db);
@@ -900,10 +899,9 @@ int zsdb_add(struct zsdb *db,
                 goto done;
         }
 
-        inonum = zs_dotzsdb_get_ino(priv);
-        if (inonum != priv->dotzsdb_ino) {
-                /* If the inode number differ, the db has changed since the
-                   time it has been opened. We need to reload the DB */
+        if (zs_dotzsdb_check_stat(priv) > 0) {
+                /* The db has changed since the time it has been opened.
+                   We need to reload the DB */
                 ret = zsdb_reload(priv);
                 if (ret != ZS_OK) {
                         zslog(LOGWARNING, "Failed reloading DB!\n");
@@ -1060,7 +1058,6 @@ int zsdb_fetch(struct zsdb *db,
         struct zsdb_priv *priv;
         btree_iter_t iter;
         struct list_head *pos;
-        ino_t inonum;
 
         assert(db);
         assert(db->priv);
@@ -1077,8 +1074,7 @@ int zsdb_fetch(struct zsdb *db,
         if (!key)
                 return ZS_ERROR;
 
-        inonum = zs_dotzsdb_get_ino(priv);
-        if (inonum != priv->dotzsdb_ino) {
+        if (zs_dotzsdb_check_stat(priv) > 0) {
                 zslog(LOGDEBUG, "DB `%s` has been updated!\n", priv->dbdir.buf);
         }
 
@@ -1432,7 +1428,6 @@ int zsdb_repack(struct zsdb *db)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
-        ino_t inonum;
         uint32_t startidx, endidx;
         cstring fname = CSTRING_INIT;
         struct list_head *pos, *p;
@@ -1454,10 +1449,9 @@ int zsdb_repack(struct zsdb *db)
                 goto done;
         }
 
-        inonum = zs_dotzsdb_get_ino(priv);
-        if (inonum != priv->dotzsdb_ino) {
-                /* If the inode numbers differ, the db has changed, since the
-                   time it has been opened. We need to reload the DB */
+        if (zs_dotzsdb_check_stat(priv) > 0) {
+                /* The db has changed, since the time it has been opened.
+                   We need to reload the DB */
                 ret = zsdb_reload(priv);
                 if (ret != ZS_OK) {
                         zslog(LOGWARNING, "Failed reoloading DB!\n");
@@ -1642,7 +1636,6 @@ int zsdb_finalise(struct zsdb *db)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
-        ino_t inonum;
 
         assert(db);
         assert(db->priv);
@@ -1662,10 +1655,9 @@ int zsdb_finalise(struct zsdb *db)
                 goto done;
         }
 
-        inonum = zs_dotzsdb_get_ino(priv);
-        if (inonum != priv->dotzsdb_ino) {
-                /* If the inode number differ, the db has changed since the
-                   time it has been opened. We need to reload the DB */
+        if (zs_dotzsdb_check_stat(priv) > 0) {
+                /* The db has changed since the time it has been opened.
+                   We need to reload the DB */
                 ret = zsdb_reload(priv);
                 if (ret != ZS_OK) {
                         zslog(LOGWARNING, "Failed reoloading DB!\n");
