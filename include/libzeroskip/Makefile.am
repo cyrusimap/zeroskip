@@ -5,4 +5,5 @@ libzeroskip_HEADERS = \
 	macros.h \
 	strarray.h \
 	util.h \
+	vecu64.h \
 	zeroskip.h

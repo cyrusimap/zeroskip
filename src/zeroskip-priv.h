@@ -17,11 +17,11 @@
 #include "list.h"
 #include "mappedfile.h"
 #include "pqueue.h"
-#include "vecu64.h"
 
 #include <libzeroskip/btree.h>
 #include <libzeroskip/macros.h>
 #include <libzeroskip/util.h>
+#include <libzeroskip/vecu64.h>
 #include <libzeroskip/zeroskip.h>
 
 #include <sys/stat.h>

@@ -10,7 +10,7 @@
 
 #include <libzeroskip/log.h>
 #include <libzeroskip/util.h>
-#include "vecu64.h"
+#include <libzeroskip/vecu64.h>
 
 /**
  * Private functions

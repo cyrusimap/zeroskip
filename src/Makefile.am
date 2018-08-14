@@ -54,7 +54,7 @@ libzeroskip_la_SOURCES = \
 	pqueue.h pqueue.c \
 	strarray.c \
 	util.c \
-	vecu64.h vecu64.c \
+	vecu64.c \
 	zeroskip-priv.h \
 	zeroskip.c \
 	zeroskip-active.c \
