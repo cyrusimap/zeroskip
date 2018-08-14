@@ -477,21 +477,21 @@ int zs_file_check_stat(struct zsdb_file *f)
                 status |= ZSDB_FILE_INO_CHANGED;
         if (st.st_mode != f->st.st_mode)
                 status |= ZSDB_FILE_MODE_CHANGED;
-        if ((st.st_uid |= f->st.st_uid))
+        if (st.st_uid != f->st.st_uid)
                 status |= ZSDB_FILE_UID_CHANGED;
-        if ((st.st_gid |= f->st.st_gid))
+        if (st.st_gid != f->st.st_gid)
                 status |= ZSDB_FILE_GID_CHANGED;
-        if ((st.st_size |= f->st.st_size))
+        if (st.st_size != f->st.st_size)
                 status |= ZSDB_FILE_SIZE_CHANGED;
 #ifdef MACOSX
-        if ((st.st_mtimensec |= f->st.st_mtimensec))
+        if (st.st_mtimensec != f->st.st_mtimensec)
                 status |= ZSDB_FILE_MTIM_CHANGED;
-        if ((st.st_ctimensec |= f->st.st_ctimensec))
+        if (st.st_ctimensec != f->st.st_ctimensec)
                 status |= ZSDB_FILE_CTIM_CHANGED;
 #else  /* Linux */
-        if ((st.st_mtim.tv_nsec |= f->st.st_mtim.tv_nsec))
+        if (st.st_mtim.tv_nsec != f->st.st_mtim.tv_nsec)
                 status |= ZSDB_FILE_MTIM_CHANGED;
-        if ((st.st_ctim.tv_nsec |= f->st.st_ctim.tv_nsec))
+        if (st.st_ctim.tv_nsec != f->st.st_ctim.tv_nsec)
                 status |= ZSDB_FILE_CTIM_CHANGED;
 #endif
         return status;
