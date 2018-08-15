@@ -38,6 +38,9 @@ uuid_* functions. The build system uses `pkg-config` to determine the
 
 On `Solaris`(`Triton`) it is: `PKG_CONFIG_PATH=/opt/local/lib/pkgconfig`.
 
+On `MacOS`, please install the package `ossp-uuid` for `libuuid`.
+
+
 ### Licence
 
 Zeroskip is free software, released under the MIT licence as specified
