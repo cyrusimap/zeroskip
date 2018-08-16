@@ -12,6 +12,13 @@
 
 #include "cmds.h"
 
+static void usage_and_die(const char *progname)
+{
+         fprintf(stderr, "Usage: %s %s\n", progname, cmd_damage_usage);
+
+        exit(EXIT_FAILURE);
+}
+
 int cmd_damage(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
@@ -23,7 +30,8 @@ int cmd_damage(int argc, char **argv, const char *progname)
         int option_index;
         const char *config_file = NULL;
 
-        while((option = getopt_long(argc, argv, "c:h", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "c:h", long_options,
+                                    &option_index)) != -1) {
                 switch (option) {
                 case 'c':
                         config_file = optarg;
@@ -31,7 +39,7 @@ int cmd_damage(int argc, char **argv, const char *progname)
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_damage_usage);
+                        usage_and_die(progname);
                 };
         }
 

@@ -14,6 +14,14 @@
 #include "cmds.h"
 #include <libzeroskip/zeroskip.h>
 
+static void usage_and_die(const char *progname)
+{
+         fprintf(stderr, "Usage: %s %s\n", progname, cmd_finalise_usage);
+
+
+        exit(EXIT_FAILURE);
+}
+
 int cmd_finalise(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
@@ -28,7 +36,8 @@ int cmd_finalise(int argc, char **argv, const char *progname)
         char *dbname = NULL;
         int ret;
 
-        while((option = getopt_long(argc, argv, "", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "c:h?", long_options,
+                                    &option_index)) != -1) {
                 switch (option) {
                 case 'c':       /* Config file */
                         config_file = optarg;
@@ -36,12 +45,12 @@ int cmd_finalise(int argc, char **argv, const char *progname)
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_finalise_usage);
+                        usage_and_die(progname);
                 };
         }
 
         if (argc - optind != 1) {
-                cmd_die_usage(progname, cmd_finalise_usage);
+                usage_and_die(progname);
         }
 
         dbname = argv[optind];

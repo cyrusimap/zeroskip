@@ -13,6 +13,13 @@
 #include "cmds.h"
 #include <libzeroskip/zeroskip.h>
 
+static void usage_and_die(const char *progname)
+{
+         fprintf(stderr, "Usage: %s %s\n", progname, cmd_dump_usage);
+
+
+        exit(EXIT_FAILURE);
+}
 int cmd_dump(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
@@ -29,7 +36,8 @@ int cmd_dump(int argc, char **argv, const char *progname)
         int ret;
         DBDumpLevel level = DB_DUMP_ACTIVE;
 
-        while((option = getopt_long(argc, argv, "r", long_options, &option_index)) != -1) {
+        while((option = getopt_long(argc, argv, "r:c:h?", long_options,
+                                    &option_index)) != -1) {
                 switch (option) {
                 case 'r':       /* level of detail */
                         level = parse_dump_level_string(optarg);
@@ -40,12 +48,12 @@ int cmd_dump(int argc, char **argv, const char *progname)
                 case 'h':
                 case '?':
                 default:
-                        cmd_die_usage(progname, cmd_dump_usage);
+                        usage_and_die(progname);
                 };
         }
 
         if (argc - optind != 1) {
-                cmd_die_usage(progname, cmd_dump_usage);
+                usage_and_die(progname);
         }
 
         dbname = argv[optind];
