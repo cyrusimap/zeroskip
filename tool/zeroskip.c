@@ -23,6 +23,7 @@ static struct {
         int (*cmd)(int, char **, const char *);
 } commands[] = {
         DBCMD(batch),
+        DBCMD(bindump),
         DBCMD(consistent),
         DBCMD(damage),
         DBCMD(delete),

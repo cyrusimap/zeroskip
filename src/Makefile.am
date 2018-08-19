@@ -50,7 +50,7 @@ libzeroskip_la_SOURCES = \
 	htable.h htable.c \
 	list.h \
 	log.c \
-	mappedfile.h mappedfile.c \
+	mappedfile.c \
 	pqueue.h pqueue.c \
 	strarray.c \
 	util.c \

@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
-#include "mappedfile.h"
+#include <libzeroskip/mappedfile.h>
 #include <libzeroskip/util.h>
 
 static struct mappedfile mf_init = {NULL, -1, MAP_FAILED, 0, 0, 0, 0, 0, 0, 0, 0, 0};

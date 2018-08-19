@@ -66,6 +66,19 @@ btree_print_node_data
 record_new
 record_free
 
+mappedfile_open
+mappedfile_close
+mappedfile_read
+mappedfile_write
+mappedfile_write_iov
+mappedfile_size
+mappedfile_stat
+mappedfile_truncate
+mappedfile_flush
+mappedfile_seek
+crc32_begin
+crc32_end
+
 vecu64_new
 vecu64_free
 vecu64_append

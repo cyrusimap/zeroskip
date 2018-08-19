@@ -15,11 +15,11 @@
 #include "file-lock.h"
 #include "htable.h"
 #include "list.h"
-#include "mappedfile.h"
 #include "pqueue.h"
 
 #include <libzeroskip/btree.h>
 #include <libzeroskip/macros.h>
+#include <libzeroskip/mappedfile.h>
 #include <libzeroskip/util.h>
 #include <libzeroskip/vecu64.h>
 #include <libzeroskip/zeroskip.h>

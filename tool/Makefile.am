@@ -43,6 +43,7 @@ zeroskip_SOURCES = \
 	cmds.h \
 	cmd.c \
 	cmd-batch.c \
+	cmd-bindump.c \
 	cmd-consistent.c \
 	cmd-damage.c \
 	cmd-delete.c \

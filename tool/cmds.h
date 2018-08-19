@@ -14,6 +14,9 @@
 extern int cmd_batch(int argc, char **argv, const char *progname);
 #define cmd_batch_usage "batch "
 
+extern int cmd_bindump(int argc, char **argv, const char *progname);
+#define cmd_bindump_usage "bindump -f <db-file>"
+
 extern int cmd_consistent(int argc, char **argv, const char *progname);
 #define cmd_consistent_usage "consistent "
 
