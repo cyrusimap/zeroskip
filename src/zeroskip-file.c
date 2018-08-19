@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include <libzeroskip/log.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
@@ -230,15 +231,15 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
                 return ZS_IOERROR;
         }
 
-        /* Get the current mappedfile size */
-        ret = mappedfile_size(&f->mf, &mfsize);
+        /* Get the current mfile size */
+        ret = mfile_size(&f->mf, &mfsize);
         if (ret) {
-                zslog(LOGDEBUG, "Could not get mappedfile size: %s\n", f->fname.buf);
+                zslog(LOGDEBUG, "Could not get mfile size: %s\n", f->fname.buf);
                 goto done;
         }
 
         /* write key buffer */
-        ret = mappedfile_write(&f->mf, (void *)keybuf,
+        ret = mfile_write(&f->mf, (void *)keybuf,
                                keybuflen, &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing key\n");
@@ -249,7 +250,7 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         /* assert(nbytes == keybuflen); */
 
         /* write value buffer */
-        ret = mappedfile_write(&f->mf, (void *)valbuf,
+        ret = mfile_write(&f->mf, (void *)valbuf,
                                valbuflen, &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing key\n");
@@ -262,7 +263,7 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         /* If we failed writing the value buffer, then restore the db file to
          * the original size we had before updating */
         if (ret != ZS_OK) {
-                mappedfile_truncate(&f->mf, mfsize);
+                mfile_truncate(&f->mf, mfsize);
         }
 
 done:
@@ -371,7 +372,7 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 buflen = ZS_SHORT_COMMIT_REC_SIZE;
         }
 
-        ret = mappedfile_write(&f->mf, (void *)buf,
+        ret = mfile_write(&f->mf, (void *)buf,
                                buflen, &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing commit record.\n");
@@ -382,7 +383,7 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
         /* assert(nbytes == buflen); */
 
         /* Flush the change to disk */
-        ret = mappedfile_flush(&f->mf);
+        ret = mfile_flush(&f->mf);
         if (ret) {
                 zslog(LOGDEBUG, "Error flushing commit record to disk.\n");
                 ret = ZS_IOERROR;
@@ -410,15 +411,15 @@ int zs_file_write_delete_record(struct zsdb_file *f,
                 return ZS_IOERROR;
         }
 
-        /* Get the current mappedfile size */
-        ret = mappedfile_size(&f->mf, &mfsize);
+        /* Get the current mfile size */
+        ret = mfile_size(&f->mf, &mfsize);
         if (ret) {
-                zslog(LOGDEBUG, "delete: Could not get mappedfile size\n");
+                zslog(LOGDEBUG, "delete: Could not get mfile size\n");
                 goto done;
         }
 
         /* write delete buffer */
-        ret = mappedfile_write(&f->mf, (void *)dbuf,
+        ret = mfile_write(&f->mf, (void *)dbuf,
                                dbuflen, &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing delete key\n");
@@ -431,7 +432,7 @@ int zs_file_write_delete_record(struct zsdb_file *f,
         /* If we failed writing the delete buffer, then restore the db file to
          * the original size we had before updating */
         if (ret != ZS_OK) {
-                mappedfile_truncate(&f->mf, mfsize);
+                mfile_truncate(&f->mf, mfsize);
         }
 
 done:
@@ -452,7 +453,7 @@ int zs_file_update_stat(struct zsdb_file *f)
 
         memset(&f->st, 0, sizeof(struct stat));
 
-        return mappedfile_stat(&f->mf, &f->st) == 0 ? ZS_OK : ZS_ERROR;
+        return mfile_stat(&f->mf, &f->st) == 0 ? ZS_OK : ZS_ERROR;
 }
 
 /* zs_file_check_stat():
@@ -468,7 +469,7 @@ int zs_file_check_stat(struct zsdb_file *f)
         if (!f->is_open)
                 return ZS_INTERNAL;
 
-        if (mappedfile_stat(&f->mf, &st) != 0) {
+        if (mfile_stat(&f->mf, &st) != 0) {
                 zslog(LOGWARNING, "Cannot stat %s.\n", f->fname.buf);
                 return ZS_ERROR;
         }

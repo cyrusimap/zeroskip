@@ -13,6 +13,7 @@
 #include <libzeroskip/btree.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/macros.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>
 #include <libzeroskip/vecu64.h>
 #include <libzeroskip/zeroskip.h>
@@ -32,7 +33,7 @@ static int zs_packed_file_write_index_count(struct zsdb_file *f,
         memset(buf, 0, sizeof(buf));
 
         write_be64(buf, count);
-        ret = mappedfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
+        ret = mfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing index count\n");
                 ret = ZS_IOERROR;
@@ -50,7 +51,7 @@ static int zs_packed_file_write_index(void *data, uint64_t offset)
 
         write_be64(buf, offset);
 
-        ret = mappedfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
+        ret = mfile_write(&f->mf, (void *)buf, sizeof(uint64_t), &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing index\n");
                 ret = ZS_IOERROR;
@@ -243,7 +244,7 @@ int zs_packed_file_open(const char *path,
         struct zsdb_file *f;
         size_t mf_size = 0;
         size_t offset, temp, crc_offset = 0;
-        int mappedfile_flags = MAPPEDFILE_RD;
+        int mfile_flags = MFILE_RD;
         uint32_t crc, stored_crc = 0, reccrc = 0;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
@@ -252,8 +253,8 @@ int zs_packed_file_open(const char *path,
         cstring_addstr(&f->fname, path);
 
         /* Open the filename for use */
-        ret = mappedfile_open(f->fname.buf,
-                              mappedfile_flags, &f->mf);
+        ret = mfile_open(f->fname.buf,
+                              mfile_flags, &f->mf);
         if (ret) {
                 zslog(LOGDEBUG, "Could not open %s in read-only mode.\n",
                         f->fname.buf);
@@ -263,7 +264,7 @@ int zs_packed_file_open(const char *path,
 
         f->is_open = 1;
 
-        mappedfile_size(&f->mf, &mf_size);
+        mfile_size(&f->mf, &mf_size);
         if (mf_size <= ZS_HDR_SIZE) {
                 ret = ZS_INVALID_FILE;
                 zslog(LOGDEBUG, "%s is not a valid packed file.\n",
@@ -347,7 +348,7 @@ int zs_packed_file_close(struct zsdb_file **fptr)
         f = *fptr;
         fptr = NULL;
 
-        mappedfile_close(&f->mf);
+        mfile_close(&f->mf);
         cstring_release(&f->fname);
         vecu64_free(&f->index);
         xfree(f);
@@ -382,7 +383,7 @@ int zs_packed_file_new_from_memtree(const char *path,
         f->header.endidx = endidx;
         f->header.crc32 = 0;
 
-        ret = mappedfile_open(f->fname.buf, MAPPEDFILE_RW_CR, &f->mf);
+        ret = mfile_open(f->fname.buf, MFILE_RW_CR, &f->mf);
         if (ret) {
                 ret = ZS_IOERROR;
                 goto fail;
@@ -402,14 +403,14 @@ int zs_packed_file_new_from_memtree(const char *path,
         crc32_begin(&f->mf);
 
         /* Seek to location after header */
-        mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
+        mfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
         /* Write records into packed files */
         btree_walk_forward(priv->fmemtree,
                            zs_packed_file_write_btree_record,
                            (void *)f);
 
-        ret = mappedfile_flush(&f->mf);
+        ret = mfile_flush(&f->mf);
         if (ret) {
                 zslog(LOGDEBUG, "Error flushing data to disk.\n");
                 ret = ZS_IOERROR;
@@ -442,7 +443,7 @@ int zs_packed_file_new_from_memtree(const char *path,
         goto done;
 fail:
         xunlink(f->fname.buf);
-        mappedfile_close(&f->mf);
+        mfile_close(&f->mf);
         cstring_release(&f->fname);
         xfree(f);
 
@@ -624,7 +625,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
         f->header.endidx = endidx;
         f->header.crc32 = 0;
 
-        ret = mappedfile_open(f->fname.buf, MAPPEDFILE_RW_CR, &f->mf);
+        ret = mfile_open(f->fname.buf, MFILE_RW_CR, &f->mf);
         if (ret) {
                 ret = ZS_IOERROR;
                 goto fail;
@@ -644,7 +645,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
         crc32_begin(&f->mf);
 
         /* Seek to location after header */
-        mappedfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
+        mfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
         ret = zs_iterator_begin_for_packed_files(iter, flist);
         if (ret != ZS_OK) {
@@ -678,7 +679,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
                 count++;
         } while (zs_iterator_next(*iter, data));
 
-        ret = mappedfile_flush(&f->mf);
+        ret = mfile_flush(&f->mf);
         if (ret) {
                 zslog(LOGDEBUG, "Error flushing data to disk.\n");
                 ret = ZS_IOERROR;
@@ -711,7 +712,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
         goto done;
 fail:
         xunlink(f->fname.buf);
-        mappedfile_close(&f->mf);
+        mfile_close(&f->mf);
         cstring_release(&f->fname);
         xfree(f);
 

@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #include "cmds.h"
-#include <libzeroskip/mappedfile.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
 
 static void usage_and_die(const char *progname)
@@ -25,7 +25,7 @@ static void usage_and_die(const char *progname)
          exit(EXIT_FAILURE);
 }
 
-static int bindump(struct mappedfile *mf)
+static int bindump(struct mfile *mf)
 {
         size_t pos = 0;
 
@@ -48,7 +48,7 @@ int cmd_bindump(int argc, char **argv, const char *progname)
         int option;
         int option_index;
         const char *dbfname = NULL;
-        struct mappedfile *mf = NULL;
+        struct mfile *mf = NULL;
         int ret;
 
         while((option = getopt_long(argc, argv, "f:h?", long_options,
@@ -68,7 +68,7 @@ int cmd_bindump(int argc, char **argv, const char *progname)
                 usage_and_die(progname);
 
 
-        if (mappedfile_open(dbfname, MAPPEDFILE_RD, &mf) != 0) {
+        if (mfile_open(dbfname, MFILE_RD, &mf) != 0) {
                 fprintf(stderr, "ERROR: Error opening %s.\n",
                       dbfname);
                 ret = EXIT_FAILURE;
@@ -84,7 +84,7 @@ int cmd_bindump(int argc, char **argv, const char *progname)
 
         ret = EXIT_SUCCESS;
 done:
-        mappedfile_close(&mf);
+        mfile_close(&mf);
 
         exit(ret);
 }

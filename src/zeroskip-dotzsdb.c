@@ -9,6 +9,7 @@
  */
 
 #include <libzeroskip/log.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
@@ -22,7 +23,7 @@
 typedef void (*sigfunc)(int);
 
 static struct file_lock dblock;
-static struct mappedfile *zsdbfile;
+static struct mfile *zsdbfile;
 
 /**
  * Internal/Private functions
@@ -30,7 +31,7 @@ static struct mappedfile *zsdbfile;
 static void cleanup_lockfile(void)
 {
         if (zsdbfile) {
-                mappedfile_close(&zsdbfile);
+                mfile_close(&zsdbfile);
                 zsdbfile = NULL;
         }
 
@@ -79,7 +80,7 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         unsigned char stackbuf[DOTZSDB_SIZE];
         uuid_t uuid;
         unsigned char *sptr;
-        struct mappedfile *mf;
+        struct mfile *mf;
         int ret = 1;
         size_t nbytes = 0;
 
@@ -123,21 +124,21 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         sptr += sizeof(uint32_t);
 
         /* Write to file */
-        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RW_CR, &mf) != 0) {
+        if (mfile_open(priv->dotzsdbfname.buf, MFILE_RW_CR, &mf) != 0) {
                 zslog(LOGDEBUG, "Could not create %s!\n",
                       priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail1;
         }
 
-        if (mappedfile_write(&mf, &stackbuf, DOTZSDB_SIZE, &nbytes) != 0) {
+        if (mfile_write(&mf, &stackbuf, DOTZSDB_SIZE, &nbytes) != 0) {
                 zslog(LOGDEBUG, "Could not write to file %s!",
                       priv->dotzsdbfname.buf);
                 ret = 0;
                 goto fail2;
         }
 
-        mappedfile_flush(&mf);
+        mfile_flush(&mf);
 
         zslog(LOGDEBUG, "Created db with UUID %s\n", priv->dotzsdb.uuidstr);
 
@@ -146,7 +147,7 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
          */
         stat(priv->dotzsdbfname.buf, &priv->dotzsdb_st);
 fail2:
-        mappedfile_close(&mf);
+        mfile_close(&mf);
 
 fail1:
         return ret;
@@ -162,12 +163,12 @@ fail1:
  */
 int zs_dotzsdb_validate(struct zsdb_priv *priv)
 {
-        struct mappedfile *mf;
+        struct mfile *mf;
         size_t mfsize;
         struct dotzsdb *dothdr;
         int ret = 1;
 
-        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD, &mf) != 0) {
+        if (mfile_open(priv->dotzsdbfname.buf, MFILE_RD, &mf) != 0) {
                 zslog(LOGDEBUG, "Could not open %s!\n",
                       priv->dotzsdbfname.buf);
                 ret = 0;
@@ -179,7 +180,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
          */
         stat(priv->dotzsdbfname.buf, &priv->dotzsdb_st);
 
-        mappedfile_size(&mf, &mfsize);
+        mfile_size(&mf, &mfsize);
         if (mfsize < DOTZSDB_SIZE) {
                 zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);
@@ -234,7 +235,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
 
         zslog(LOGDEBUG, "Opening DB with UUID %s\n", priv->dotzsdb.uuidstr);
 fail2:
-        mappedfile_close(&mf);
+        mfile_close(&mf);
 fail1:
         return ret;
 }
@@ -360,7 +361,7 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
         }
 
         /* Open .zsdb file in RO mode */
-        if (mappedfile_open(priv->dotzsdbfname.buf, MAPPEDFILE_RD,
+        if (mfile_open(priv->dotzsdbfname.buf, MFILE_RD,
                             &zsdbfile) != 0) {
                 zslog(LOGDEBUG, "Could not open %s!\n", priv->dotzsdbfname.buf);
                 ret = 0;
@@ -369,7 +370,7 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
         }
 
         /* Read .dotzsdb file and update priv->dotzsdb */
-        mappedfile_size(&zsdbfile, &mfsize);
+        mfile_size(&zsdbfile, &mfsize);
         if (mfsize < DOTZSDB_SIZE) {
                 /* XXX: This should *never* happen here, since the db must have
                  * been successfully opened by the time we've got here.
@@ -435,7 +436,7 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
         goto done;
 
 fail1:
-        mappedfile_close(&zsdbfile);
+        mfile_close(&zsdbfile);
         file_lock_release(&dblock);
 done:
         return ret;

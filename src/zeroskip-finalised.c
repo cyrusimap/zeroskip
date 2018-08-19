@@ -6,6 +6,7 @@
  *
  */
 #include <libzeroskip/log.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>
 
 #include <libzeroskip/zeroskip.h>
@@ -20,7 +21,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
         int ret = ZS_OK;
         struct zsdb_file *f;
         size_t mf_size = 0;
-        int mappedfile_flags = MAPPEDFILE_RD;
+        int mfile_flags = MFILE_RD;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
         f->type = DB_FTYPE_FINALISED;
@@ -28,8 +29,8 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
         cstring_addstr(&f->fname, path);
 
       /* Open the filename for use */
-        ret = mappedfile_open(f->fname.buf,
-                              mappedfile_flags, &f->mf);
+        ret = mfile_open(f->fname.buf,
+                              mfile_flags, &f->mf);
         if (ret) {
                 zslog(LOGDEBUG, "Could not open %s in read-only mode.\n",
                         f->fname.buf);
@@ -41,7 +42,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
 
         /* XXX: No need to check for size here, since zs_header_valid()
            will do it */
-        mappedfile_size(&f->mf, &mf_size);
+        mfile_size(&f->mf, &mf_size);
         if (mf_size <= ZS_HDR_SIZE) {
                 ret = ZS_INVALID_FILE;
                 zslog(LOGDEBUG, "%s is not a valid finalised file.\n",
@@ -58,7 +59,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
 
        /* Seek to location after header */
         mf_size = ZS_HDR_SIZE;
-        mappedfile_seek(&f->mf, mf_size, NULL);
+        mfile_seek(&f->mf, mf_size, NULL);
 
         *fptr = f;
 
@@ -66,7 +67,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
 
 fail:                           /* Jump here on failure */
         zslog(LOGDEBUG, "Failed opening finalised file %s\n", path);
-        mappedfile_close(&f->mf);
+        mfile_close(&f->mf);
         cstring_release(&f->fname);
         xfree(f);
 
@@ -88,8 +89,8 @@ int zs_finalised_file_close(struct zsdb_file **fptr)
         if (!f->is_open)
                 return ZS_ERROR;
 
-        mappedfile_flush(&f->mf);
-        mappedfile_close(&f->mf);
+        mfile_flush(&f->mf);
+        mfile_close(&f->mf);
         cstring_release(&f->fname);
         f->is_open = 0;
 
@@ -105,7 +106,7 @@ int zs_finalised_file_record_foreach(struct zsdb_file *f,
         int ret = ZS_OK;
         size_t mfsize = 0, offset = ZS_HDR_SIZE;
 
-        mappedfile_size(&f->mf, &mfsize);
+        mfile_size(&f->mf, &mfsize);
         if (mfsize == 0 || mfsize < ZS_HDR_SIZE) {
                 zslog(LOGDEBUG, "Not a valid finalised DB file.\n");
                 return ZS_INVALID_DB;

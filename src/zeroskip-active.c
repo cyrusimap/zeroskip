@@ -8,6 +8,7 @@
  */
 
 #include <libzeroskip/log.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>
 #include "zeroskip-priv.h"
 
@@ -28,7 +29,7 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
 {
         int ret = ZS_OK;
         size_t mf_size = 0;
-        int mappedfile_flags = MAPPEDFILE_RW;
+        int mfile_flags = MFILE_RW;
 
         zs_filename_generate_active(priv, &priv->dbfiles.factive.fname);
 
@@ -41,11 +42,11 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
         memcpy(priv->dbfiles.factive.header.uuid, priv->uuid, sizeof(uuid_t));
 
         if (create)
-                mappedfile_flags |= MAPPEDFILE_CREATE;
+                mfile_flags |= MFILE_CREATE;
 
         /* Open the active filename for use */
-        ret = mappedfile_open(priv->dbfiles.factive.fname.buf,
-                              mappedfile_flags, &priv->dbfiles.factive.mf);
+        ret = mfile_open(priv->dbfiles.factive.fname.buf,
+                              mfile_flags, &priv->dbfiles.factive.mf);
         if (ret) {
                 ret = ZS_IOERROR;
                 goto done;
@@ -53,26 +54,26 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
 
         priv->dbfiles.factive.is_open = 1;
 
-        mappedfile_size(&priv->dbfiles.factive.mf, &mf_size);
+        mfile_size(&priv->dbfiles.factive.mf, &mf_size);
         /* The filesize is zero, it is a new file. */
         if (mf_size == 0) {
                 ret = zs_header_write(&priv->dbfiles.factive);
                 if (ret) {
                         zslog(LOGDEBUG, "Could not write zeroskip header.\n");
-                        mappedfile_close(&priv->dbfiles.factive.mf);
+                        mfile_close(&priv->dbfiles.factive.mf);
                         goto done;
                 }
         }
 
         if (zs_header_validate(&priv->dbfiles.factive)) {
                 ret = ZS_INVALID_DB;
-                mappedfile_close(&priv->dbfiles.factive.mf);
+                mfile_close(&priv->dbfiles.factive.mf);
                 goto done;
         }
 
         /* Seek to location after header */
         mf_size = ZS_HDR_SIZE;
-        mappedfile_seek(&priv->dbfiles.factive.mf, mf_size, NULL);
+        mfile_seek(&priv->dbfiles.factive.mf, mf_size, NULL);
 done:
         return ret;
 }
@@ -91,7 +92,7 @@ int zs_active_file_close(struct zsdb_priv *priv)
                         priv->dbfiles.factive.dirty = 0;
         }
 
-        mappedfile_close(&priv->dbfiles.factive.mf);
+        mfile_close(&priv->dbfiles.factive.mf);
 
         cstring_release(&priv->dbfiles.factive.fname);
 
@@ -119,8 +120,8 @@ int zs_active_file_finalise(struct zsdb_priv *priv)
         if (ret != ZS_OK)
                 goto done;
 
-        mappedfile_flush(&priv->dbfiles.factive.mf);
-        mappedfile_close(&priv->dbfiles.factive.mf);
+        mfile_flush(&priv->dbfiles.factive.mf);
+        mfile_close(&priv->dbfiles.factive.mf);
 
 
         /* Rename the current active db file */
@@ -144,7 +145,7 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
 {
         int ret = ZS_OK;
         size_t mfsize = 0;
-        int mappedfile_flags = MAPPEDFILE_RW | MAPPEDFILE_CREATE;
+        int mfile_flags = MFILE_RW | MFILE_CREATE;
 
         /* Update the index and offset in .zsdb */
         zs_dotzsdb_update_index_and_offset(priv, idx, ZS_HDR_SIZE);
@@ -159,8 +160,8 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
         priv->dbfiles.factive.header.crc32 = 0;
 
        /* Open the active filename for use */
-        ret = mappedfile_open(priv->dbfiles.factive.fname.buf,
-                              mappedfile_flags, &priv->dbfiles.factive.mf);
+        ret = mfile_open(priv->dbfiles.factive.fname.buf,
+                              mfile_flags, &priv->dbfiles.factive.mf);
         if (ret) {
                 ret = ZS_IOERROR;
                 goto done;
@@ -168,13 +169,13 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
 
         priv->dbfiles.factive.is_open = 1;
 
-        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
+        mfile_size(&priv->dbfiles.factive.mf, &mfsize);
         /* The filesize is zero, it is a new file. */
         if (mfsize == 0) {
                 ret = zs_header_write(&priv->dbfiles.factive);
                 if (ret) {
                         zslog(LOGDEBUG, "Could not write zeroskip header.\n");
-                        mappedfile_close(&priv->dbfiles.factive.mf);
+                        mfile_close(&priv->dbfiles.factive.mf);
                         goto done;
                 }
         }
@@ -183,13 +184,13 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
 
         if (zs_header_validate(&priv->dbfiles.factive)) {
                 ret = ZS_INVALID_DB;
-                mappedfile_close(&priv->dbfiles.factive.mf);
+                mfile_close(&priv->dbfiles.factive.mf);
                 goto done;
         }
 
         /* Seek to location after header */
         mfsize = ZS_HDR_SIZE;
-        mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
+        mfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
 done:
         return ret;
 }
@@ -223,7 +224,7 @@ int zs_active_file_record_foreach(struct zsdb_priv *priv,
         int ret = ZS_OK;
         size_t dbsize = 0, offset = ZS_HDR_SIZE;
 
-        mappedfile_size(&priv->dbfiles.factive.mf, &dbsize);
+        mfile_size(&priv->dbfiles.factive.mf, &dbsize);
         if (dbsize == 0 || dbsize < ZS_HDR_SIZE) {
                 zslog(LOGDEBUG, "Not a valid active file.\n");
                 return ZS_INVALID_DB;

@@ -19,7 +19,7 @@
 
 #include <libzeroskip/btree.h>
 #include <libzeroskip/macros.h>
-#include <libzeroskip/mappedfile.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>
 #include <libzeroskip/vecu64.h>
 #include <libzeroskip/zeroskip.h>
@@ -186,7 +186,7 @@ struct zsdb_file {
         enum db_ftype_t type;
         struct zs_header header;
         cstring fname;
-        struct mappedfile *mf;
+        struct mfile *mf;
         struct vecu64 *index;
         struct stat st;
         int is_open;

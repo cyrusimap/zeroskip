@@ -1,5 +1,5 @@
 /*
- * mappedfile.c
+ * mfile.c
  *
  * This file is part of zeroskip.
  *
@@ -21,23 +21,23 @@
 #include <unistd.h>
 #include <zlib.h>
 
-#include <libzeroskip/mappedfile.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>
 
-static struct mappedfile mf_init = {NULL, -1, MAP_FAILED, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static struct mfile mf_init = {NULL, -1, MAP_FAILED, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 #define OPEN_MODE 0644
 
 /*
-  mappedfile_open():
+  mfile_open():
 
   * Return:
     - On Success: returns 0
     - On Failure: returns non 0
  */
-int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
+int mfile_open(const char *fname, uint32_t flags, struct mfile **mfp)
 {
-        struct mappedfile *mf;
+        struct mfile *mf;
         int mflags, oflags;
         struct stat st;
         int ret = 0;
@@ -47,7 +47,7 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
                 return -1;
         }
 
-        mf = xcalloc(1, sizeof(struct mappedfile));
+        mf = xcalloc(1, sizeof(struct mfile));
 
         mf->filename = xstrdup(fname);
         mf->flags = flags;
@@ -60,13 +60,13 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
         }
 
         /* Flags */
-        if (flags & MAPPEDFILE_RW) {
+        if (flags & MFILE_RW) {
                 mflags = PROT_READ | PROT_WRITE;
                 oflags = O_RDWR;
-        } else if (flags & MAPPEDFILE_WR) {
+        } else if (flags & MFILE_WR) {
                 mflags = PROT_READ | PROT_WRITE;
                 oflags = O_WRONLY;
-        } else if (flags & MAPPEDFILE_RD) {
+        } else if (flags & MFILE_RD) {
                 mflags = PROT_READ;
                 oflags = O_RDONLY;
         } else {                /* defaults to RDONLY */
@@ -74,22 +74,22 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
                 oflags = O_RDONLY;
         }
 
-        if (flags & MAPPEDFILE_CREATE)
+        if (flags & MFILE_CREATE)
                 oflags |= O_CREAT;
 
-        if (flags & MAPPEDFILE_EXCL)
+        if (flags & MFILE_EXCL)
                 oflags |= O_EXCL;
 
         mf->fd = open(fname, oflags, OPEN_MODE);
         if (mf->fd < 0) {
-                perror("mappedfile_open:open");
+                perror("mfile_open:open");
                 return errno;
         }
 
         if (fstat(mf->fd, &st) != 0) {
                 int err = errno;
                 close(mf->fd);
-                perror("mappedfile_open:fstat");
+                perror("mfile_open:fstat");
                 return err;
         }
 
@@ -112,19 +112,19 @@ int mappedfile_open(const char *fname, uint32_t flags, struct mappedfile **mfp)
 }
 
 /*
-  XXX: At a later point in time, mappedfile_open() will be split into 2
+  XXX: At a later point in time, mfile_open() will be split into 2
   operations. The first one would be to open() the file and get a valid fd.
-  And then the mappedfile_map() to actually map it in memory.
+  And then the mfile_map() to actually map it in memory.
  */
 #if 0
 /*
- * mappedfile_map()
+ * mfile_map()
  *
  */
-int mappedfile_map(struct mappedfile **mfp)
+int mfile_map(struct mfile **mfp)
 {
         if (mfp && *mfp) {
-                struct mappedfile *mf = *mfp;
+                struct mfile *mf = *mfp;
 
                 if (mf == &mf_init)
                         return 0;
@@ -146,13 +146,13 @@ int mappedfile_map(struct mappedfile **mfp)
 #endif
 
 /*
- * mappedfile_close()
+ * mfile_close()
  *
  */
-int mappedfile_close(struct mappedfile **mfp)
+int mfile_close(struct mfile **mfp)
 {
         if (mfp && *mfp) {
-                struct mappedfile *mf = *mfp;
+                struct mfile *mf = *mfp;
 
                 if (mf == &mf_init)
                         return 0;
@@ -179,7 +179,7 @@ int mappedfile_close(struct mappedfile **mfp)
 /*
  * mapfile_read():
  *
- *        mfp    - a pointer to a struct mappedfile object
+ *        mfp    - a pointer to a struct mfile object
  *        obuf   - buffer to read into
  *        osize  - bize of the buffer being read into
  *        nbytes - total number of bytes read
@@ -188,10 +188,10 @@ int mappedfile_close(struct mappedfile **mfp)
  *   Success : 0
  *   Failre  : non zero
  */
-int mappedfile_read(struct mappedfile **mfp, void *obuf,
+int mfile_read(struct mfile **mfp, void *obuf,
                     size_t obufsize, size_t *nbytes)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
         size_t n = 0;
 
         if (!mf)
@@ -217,7 +217,7 @@ int mappedfile_read(struct mappedfile **mfp, void *obuf,
 /*
  * mapfile_write():
  *
- *        mfp    - a pointer to a struct mappedfile object
+ *        mfp    - a pointer to a struct mfile object
  *        ibuf   - buffer to write from
  *        ibufsize  - size of the buffer written
  *        nbytes - total number of bytes written
@@ -226,10 +226,10 @@ int mappedfile_read(struct mappedfile **mfp, void *obuf,
  *   Success : 0
  *   Failre  : non zero
  */
-int mappedfile_write(struct mappedfile **mfp, void *ibuf, size_t ibufsize,
+int mfile_write(struct mfile **mfp, void *ibuf, size_t ibufsize,
                      size_t *nbytes)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
 
         if (!mf)
             return EINVAL;
@@ -237,10 +237,10 @@ int mappedfile_write(struct mappedfile **mfp, void *ibuf, size_t ibufsize,
         if (mf == &mf_init || mf->ptr == MAP_FAILED)
                 return EINVAL;
 
-        if (!(mf->flags & MAPPEDFILE_WR)    ||
-            !(mf->flags & MAPPEDFILE_WR_CR) ||
-            !(mf->flags & MAPPEDFILE_RW)    ||
-            !(mf->flags & MAPPEDFILE_RW_CR))
+        if (!(mf->flags & MFILE_WR)    ||
+            !(mf->flags & MFILE_WR_CR) ||
+            !(mf->flags & MFILE_RW)    ||
+            !(mf->flags & MFILE_RW_CR))
                 return EACCES;
 
         if (mf->size < (mf->offset + ibufsize)) {
@@ -283,16 +283,16 @@ int mappedfile_write(struct mappedfile **mfp, void *ibuf, size_t ibufsize,
 }
 
 /*
- * mappedfile_write_iov():
+ * mfile_write_iov():
  *
  * Return:
  *   Success : 0
  *   Failre  : non zero
  */
-int mappedfile_write_iov(struct mappedfile **mfp, const struct iovec *iov,
+int mfile_write_iov(struct mfile **mfp, const struct iovec *iov,
                          unsigned int iov_cnt, size_t *nbytes)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
         unsigned int i;
         size_t total_bytes = 0;
 
@@ -302,10 +302,10 @@ int mappedfile_write_iov(struct mappedfile **mfp, const struct iovec *iov,
         if (mf == &mf_init || mf->ptr == MAP_FAILED)
                 return EINVAL;
 
-        if (!(mf->flags & MAPPEDFILE_WR)    ||
-            !(mf->flags & MAPPEDFILE_WR_CR) ||
-            !(mf->flags & MAPPEDFILE_RW)    ||
-            !(mf->flags & MAPPEDFILE_RW_CR))
+        if (!(mf->flags & MFILE_WR)    ||
+            !(mf->flags & MFILE_WR_CR) ||
+            !(mf->flags & MFILE_RW)    ||
+            !(mf->flags & MFILE_RW_CR))
                 return EACCES;
 
         for (i = 0; i < iov_cnt; i++) {
@@ -350,15 +350,15 @@ int mappedfile_write_iov(struct mappedfile **mfp, const struct iovec *iov,
 }
 
 /*
-  mappedfile_size():
+  mfile_size():
 
   * Return:
     - On Success: returns 0
     - On Failure: returns non 0
  */
-int mappedfile_size(struct mappedfile **mfp, size_t *psize)
+int mfile_size(struct mfile **mfp, size_t *psize)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
         struct stat stbuf;
         int err = 0;
 
@@ -407,15 +407,15 @@ int mappedfile_size(struct mappedfile **mfp, size_t *psize)
 }
 
 /*
-  mappedfile_stat():
+  mfile_stat():
 
   * Return:
     - On Success: returns 0
     - On Failure: returns non 0
  */
-int mappedfile_stat(struct mappedfile **mfp, struct stat *stbuf)
+int mfile_stat(struct mfile **mfp, struct stat *stbuf)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
 
         if (!mf)
             return EINVAL;
@@ -433,15 +433,15 @@ int mappedfile_stat(struct mappedfile **mfp, struct stat *stbuf)
 }
 
 /*
-  mappedfile_truncate()
+  mfile_truncate()
 
   * Return:
     - On Success: returns 0
     - On Failure: returns non 0
  */
-int mappedfile_truncate(struct mappedfile **mfp, size_t len)
+int mfile_truncate(struct mfile **mfp, size_t len)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
         int err = 0;
 
         if (!mf)
@@ -473,15 +473,15 @@ int mappedfile_truncate(struct mappedfile **mfp, size_t len)
 }
 
 /*
-  mappedfile_flush()
+  mfile_flush()
 
   * Return:
   - On Success: returns 0
   - On Failure: returns non 0
 */
-int mappedfile_flush(struct mappedfile **mfp)
+int mfile_flush(struct mfile **mfp)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
 
         if (!mf)
             return EINVAL;
@@ -496,15 +496,15 @@ int mappedfile_flush(struct mappedfile **mfp)
 }
 
 /*
-  mappedfile_seek()
+  mfile_seek()
 
   * Return:
   - On Success: returns 0
   - On Failure: returns non 0
 */
-int mappedfile_seek(struct mappedfile **mfp, size_t offset, size_t *newoffset)
+int mfile_seek(struct mfile **mfp, size_t offset, size_t *newoffset)
 {
-        struct mappedfile *mf = *mfp;
+        struct mfile *mf = *mfp;
 
         if (!mf)
             return EINVAL;
@@ -523,7 +523,7 @@ int mappedfile_seek(struct mappedfile **mfp, size_t offset, size_t *newoffset)
 }
 
 
-void crc32_begin(struct mappedfile **mfp)
+void crc32_begin(struct mfile **mfp)
 {
         (*mfp)->crc32 = crc32(0L, Z_NULL, 0);
         (*mfp)->compute_crc = 1;
@@ -531,7 +531,7 @@ void crc32_begin(struct mappedfile **mfp)
         (*mfp)->crc32_data_len = 0;
 }
 
-uint32_t crc32_end(struct mappedfile **mfp)
+uint32_t crc32_end(struct mfile **mfp)
 {
         if ((*mfp)->compute_crc) {
                 (*mfp)->crc32_data_len = (*mfp)->offset - (*mfp)->crc32_begin_offset;

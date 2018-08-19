@@ -528,9 +528,9 @@ static int zsdb_reload(struct zsdb_priv *priv)
         /* Seek to the end of the file, that's where the
            records need to appended to.
         */
-        mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
+        mfile_size(&priv->dbfiles.factive.mf, &mfsize);
         if (mfsize)
-                mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
+                mfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
 
         priv->dbdirty = 1;
 done:
@@ -789,9 +789,9 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 /* Seek to the end of the file, that's where the
                    records need to appended to.
                 */
-                mappedfile_size(&priv->dbfiles.factive.mf, &mfsize);
+                mfile_size(&priv->dbfiles.factive.mf, &mfsize);
                 if (mfsize)
-                        mappedfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
+                        mfile_seek(&priv->dbfiles.factive.mf, mfsize, NULL);
 
                 zslog(LOGDEBUG, "Found %d files in %s.\n",
                       priv->dbfiles.afcount +
@@ -912,7 +912,7 @@ int zsdb_add(struct zsdb *db,
         }
 
         /* check file size and finalise if necessary */
-        if (mappedfile_size(&priv->dbfiles.factive.mf, &mfsize) != 0) {
+        if (mfile_size(&priv->dbfiles.factive.mf, &mfsize) != 0) {
                 zslog(LOGWARNING, "Failed getting size for %s\n",
                         priv->dbfiles.factive.fname.buf);
                 ret = ZS_ERROR;
@@ -1370,7 +1370,7 @@ int zsdb_abort(struct zsdb *db, struct zsdb_txn **txn _unused_)
         /* Truncate the active file until the last known valid offset as
            stored in priv->dotzsdb.offset
         */
-        if (mappedfile_truncate(&priv->dbfiles.factive.mf,
+        if (mfile_truncate(&priv->dbfiles.factive.mf,
                                 priv->dotzsdb.offset) != 0) {
                 zslog(LOGWARNING, "Failed truncating file %s to offset %lu",
                       priv->dbfiles.factive.fname.buf, priv->dotzsdb.offset);

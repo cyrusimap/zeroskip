@@ -3,7 +3,7 @@ libzeroskip_HEADERS = \
 	btree.h \
 	log.h \
 	macros.h \
-	mappedfile.h \
+	mfile.h \
 	strarray.h \
 	util.h \
 	vecu64.h \

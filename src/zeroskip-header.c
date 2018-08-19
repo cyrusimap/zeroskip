@@ -9,6 +9,7 @@
  */
 
 #include <libzeroskip/log.h>
+#include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
 
@@ -75,13 +76,13 @@ int zs_header_write(struct zsdb_file *f)
         *((uint32_t *)sptr) = hton32(crc);
         sptr += sizeof(uint32_t);
 
-        ret = mappedfile_write(&f->mf, &stackbuf, ZS_HDR_SIZE, &nbytes);
+        ret = mfile_write(&f->mf, &stackbuf, ZS_HDR_SIZE, &nbytes);
         if (ret) {
                 zslog(LOGDEBUG, "Error writing header\n");
                 goto done;
         }
 
-        ret = mappedfile_flush(&f->mf);
+        ret = mfile_flush(&f->mf);
         if (ret) {
                 /* TODO: try again before giving up */
                 zslog(LOGDEBUG, "Error flushing data to disk.\n");
@@ -112,9 +113,9 @@ int zs_header_validate(struct zsdb_file *f)
                 return ZS_ERROR;
 
         /* Seek to the beginning of the mapped file */
-        mappedfile_seek(&f->mf, 0, 0);
+        mfile_seek(&f->mf, 0, 0);
 
-        mappedfile_size(&f->mf, &mfsize);
+        mfile_size(&f->mf, &mfsize);
         if (mfsize < ZS_HDR_SIZE) {
                 zslog(LOGDEBUG, "File too small to be a zeroskip DB\n");
                 return ZS_INVALID_DB;
