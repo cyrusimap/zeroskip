@@ -50,14 +50,6 @@ static void cleanup_lockfile_on_signal(int signum)
         raise(signum);
 }
 
-static void register_signal_handlers(sigfunc f)
-{
-        signal(SIGTERM, f);
-        signal(SIGQUIT, f);
-        signal(SIGINT, f);
-        signal(SIGHUP, f);
-}
-
 /**
  * Public functions
  */
@@ -431,7 +423,6 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
         /* Open .zsdb.lock file in RW and EXCL mode */
         file_lock_acquire(&dblock, priv->dbdir.buf, DOTZSDB_FNAME, 0);
 
-        register_signal_handlers(cleanup_lockfile_on_signal);
         atexit(cleanup_lockfile_on_exit);
         goto done;
 
