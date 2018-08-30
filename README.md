@@ -14,6 +14,7 @@ top-level directory:
 ```
     $ ./configure
     $ make
+    $ make check
     $ make install
 ```
 
@@ -40,6 +41,9 @@ On `Solaris`(`Triton`) it is: `PKG_CONFIG_PATH=/opt/local/lib/pkgconfig`.
 
 On `MacOS`, please install the package `ossp-uuid` for `libuuid`.
 
+For unit tests, [libcheck](https://libcheck.github.io/check/) is used.
+Please find instructions about installing `libcheck` on your
+platform [here](https://libcheck.github.io/check/web/install.html).
 
 ### Licence
 
