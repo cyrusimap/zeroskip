@@ -1010,7 +1010,7 @@ done:
         return ret;
 }
 
-int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn)
+int zsdb_commit(struct zsdb *db, struct zsdb_txn **txn)
 {
         int ret = ZS_OK;
         struct zsdb_priv *priv;
@@ -1040,8 +1040,7 @@ int zsdb_commit(struct zsdb *db, struct zsdb_txn *txn)
 done:
         if (txn) {
                 priv->dbdirty = 0;
-                zs_transaction_end(&txn);
-                txn = NULL;
+                zs_transaction_end(txn);
         }
 
         return ret;

@@ -43,9 +43,8 @@ int zs_transaction_begin(struct zsdb *db, struct zsdb_txn **txn)
 
 void zs_transaction_end(struct zsdb_txn **txn)
 {
-        struct zsdb_txn *t;
-
         if (txn && *txn && (*txn)->alloced) {
+                struct zsdb_txn *t;
                 t = *txn;
                 *txn = NULL;
                 t->db = NULL;

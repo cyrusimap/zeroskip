@@ -101,7 +101,7 @@ static int add_records(struct zsdb *db, struct zsdb_txn *txn)
         }
 
         /* Commit the add records transaction */
-        if (zsdb_commit(db, txn) != ZS_OK) {
+        if (zsdb_commit(db, &txn) != ZS_OK) {
                 zslog(LOGWARNING, "Failed committing transaction!\n");
                 ret = EXIT_FAILURE;
                 goto done;
@@ -132,7 +132,7 @@ static int delete_record(struct zsdb *db, struct zsdb_txn *txn _unused_)
         }
 
         /* Commit after deleting record */
-        if (zsdb_commit(db, txn) != ZS_OK) {
+        if (zsdb_commit(db, &txn) != ZS_OK) {
                 zslog(LOGWARNING, "Failed committing transaction!\n");
                 ret = EXIT_FAILURE;
                 goto done;
