@@ -23,6 +23,10 @@ int main(int argc, char **argv)
         srunner_add_suite(sr, vecu64_suite());
         srunner_add_suite(sr, memtree_suite());
 
+        /* Log to stdout by default, change this eventually and make
+         * it an option */
+        srunner_set_log(sr, "-");
+
         srunner_run_all(sr, CK_NORMAL);
         num_failed = srunner_ntests_failed(sr);
         srunner_free(sr);
