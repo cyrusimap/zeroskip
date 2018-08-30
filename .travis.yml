@@ -4,6 +4,7 @@ group: edge
 addons:
   apt:
     packages:
+      - check
       - pkg-config
       - uuid-dev
       - zlib1g-dev
