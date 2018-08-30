@@ -63,6 +63,7 @@ AC_ARG_ENABLE([tests],
 	[], [enable_tests=yes])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" = "xyes"])
 
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.6])
 
 AC_ARG_ENABLE([debug],
         [AC_HELP_STRING([--enable-debug=@<:@yes/no@:>@],

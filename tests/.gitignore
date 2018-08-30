@@ -9,3 +9,7 @@ zst-multiopen
 zst-many
 zst-delete
 ZSTESTDB
+test-suite.log
+unit.log
+unit.trs
+unit
