@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/cyrusimap/zeroskip.svg?branch=master)](https://travis-ci.org/cyrusimap/zeroskip)
-
 # Zeroskip
+
+[![Build Status](https://travis-ci.org/cyrusimap/zeroskip.svg?branch=master)](https://travis-ci.org/cyrusimap/zeroskip)
 
 Zeroskip is an append only key-value database format. This repository
 provides the library to create and use Zeroskip databases.

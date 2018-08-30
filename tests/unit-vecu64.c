@@ -38,7 +38,7 @@ START_TEST(test_vecu64_create)
     ck_assert_int_eq(arr->alloc, 0);
     ck_assert_int_eq(arr->count, 0);
 }
-END_TEST
+END_TEST                        /* test_vecu64_create */
 
 static int print_cb(void *data _unused_, uint64_t num)
 {
@@ -61,7 +61,7 @@ START_TEST(test_vecu64_foreach)
         ck_assert_int_eq(arr->count, 101);
         ck_assert_int_eq(count, 101);
 }
-END_TEST
+END_TEST                        /* test_vecu64_foreach */
 
 
 Suite *vecu64_suite(void)
