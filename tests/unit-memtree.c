@@ -140,6 +140,10 @@ struct mboxkvrec {
         { (const unsigned char *)MBK5, MBK5L, (const unsigned char *)MBV1, VL },
 };
 
+#if CHECK_MINOR_VERSION < 11
+#define ck_assert_mem_eq(a,b,c) assert(0 == memcmp(a,b,c))
+#endif
+
 START_TEST(test_memtree_mbox_name)
 {
         size_t i;
