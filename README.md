@@ -1,4 +1,4 @@
-[![Build Status:master](https://api.travis-ci.org/cyrusimap/zeroskip.svg?branch=master)](https://travis-ci.org/cyrusimap/zeroskip)
+[![Build Status](https://travis-ci.org/cyrusimap/zeroskip.svg?branch=master)](https://travis-ci.org/cyrusimap/zeroskip)
 
 # Zeroskip
 
