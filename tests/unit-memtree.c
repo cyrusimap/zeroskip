@@ -141,6 +141,7 @@ struct mboxkvrec {
 };
 
 #if CHECK_MINOR_VERSION < 11
+#include <assert.h>
 #define ck_assert_mem_eq(a,b,c) assert(0 == memcmp(a,b,c))
 #endif
 
