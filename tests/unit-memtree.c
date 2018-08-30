@@ -105,8 +105,74 @@ START_TEST(test_memtree_insert_duplicate_record)
 }
 END_TEST                        /* test_memtree_insert_duplicate_record */
 
+#define MBK1 "INBOX.a b"
+#define MBK1L 9
+#define MBV1 "val1"
+
+#define MBK2 "INBOX.a.b"
+#define MBK2L 9
+#define MBV2 "val2"
+
+#define MBK3 "INBOX.a.b.c"
+#define MBK3L 11
+#define MBV3 "val3"
+
+#define MBK4 "INBOX.a"
+#define MBK4L 7
+#define MBV4 "val4"
+
+#define MBK5 "INBOX b"
+#define MBK5L 7
+#define MBV5 "val5"
+
+#define VL 4
+
+struct mboxkvrec {
+        const unsigned char *k;
+        size_t klen;
+        const unsigned char *v;
+        size_t vlen;
+} mbkv[] = {
+        { (const unsigned char *)MBK1, MBK1L, (const unsigned char *)MBV1, VL },
+        { (const unsigned char *)MBK2, MBK2L, (const unsigned char *)MBV1, VL },
+        { (const unsigned char *)MBK3, MBK3L, (const unsigned char *)MBV1, VL },
+        { (const unsigned char *)MBK4, MBK4L, (const unsigned char *)MBV1, VL },
+        { (const unsigned char *)MBK5, MBK5L, (const unsigned char *)MBV1, VL },
+};
+
 START_TEST(test_memtree_mbox_name)
 {
+        size_t i;
+        int ret;
+        btree_iter_t iter;
+
+        /* Add records */
+        for (i = 0; i < ARRAY_SIZE(mbkv); i++) {
+                struct record *trec = record_new(mbkv[i].k, mbkv[i].klen,
+                                                 mbkv[i].v, mbkv[i].vlen, 0);
+                ret = btree_insert(tree, trec);
+                ck_assert_int_eq(ret, BTREE_OK);
+        }
+
+        ck_assert_int_eq(tree->count, ARRAY_SIZE(mbkv));
+
+        i = 0;
+        memset(&iter, 0, sizeof(btree_iter_t));
+        for (btree_begin(tree, iter); btree_next(iter);) {
+
+                if (i == 0)
+                        ck_assert_mem_eq(iter->record->key, MBK5, MBK5L);
+                if (i == 1)
+                        ck_assert_mem_eq(iter->record->key, MBK4, MBK4L);
+                if (i == 2)
+                        ck_assert_mem_eq(iter->record->key, MBK1, MBK1L);
+                if (i == 3)
+                        ck_assert_mem_eq(iter->record->key, MBK2, MBK2L);
+                if (i == 4)
+                        ck_assert_mem_eq(iter->record->key, MBK3, MBK3L);
+
+                i++;
+        }
 }
 END_TEST                        /* test_memtree_mbox_name */
 
