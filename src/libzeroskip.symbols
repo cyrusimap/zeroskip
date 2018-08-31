@@ -32,6 +32,7 @@ file_exists
 xrename
 xmkdir
 xunlink
+xstrdup
 
 get_filenames_with_matching_prefix
 recursive_rm
