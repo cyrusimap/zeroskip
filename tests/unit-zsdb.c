@@ -83,8 +83,6 @@ static char *get_basedir(void)
 static void setup(void)
 {
         int ret;
-        size_t i;
-        struct zsdb_txn *txn = NULL;
 
         basedir = get_basedir();
 
@@ -93,6 +91,37 @@ static void setup(void)
 
         ret = zsdb_open(db, basedir, MODE_CREATE);
         ck_assert_int_eq(ret, ZS_OK);
+}
+
+static void teardown(void)
+{
+        int ret;
+        ret = zsdb_close(db);
+        ck_assert_int_eq(ret, ZS_OK);
+        zsdb_final(&db);
+        recursive_rm(basedir);
+        free(basedir);
+}
+
+static int record_count = 0;
+
+static int count_fe_p(void *data _unused_,
+                      const unsigned char *key _unused_, size_t keylen _unused_,
+                      const unsigned char *val _unused_, size_t vallen _unused_)
+{
+        record_count++;
+
+        return 0;
+}
+
+START_TEST(test_abort_transaction)
+{
+        struct zsdb_txn *txn;
+        size_t i;
+        int ret;
+
+        txn = NULL;
+        record_count = 0;
 
         /* Begin transaction */
         ret = zsdb_transaction_begin(db, &txn);
@@ -115,40 +144,9 @@ static void setup(void)
         zsdb_write_lock_release(db);
 
         zsdb_transaction_end(&txn);
-}
-
-static void teardown(void)
-{
-        int ret;
-        ret = zsdb_close(db);
-        ck_assert_int_eq(ret, ZS_OK);
-        zsdb_final(&db);
-        recursive_rm(basedir);
-        free(basedir);
-}
-
-static int record_count = 0;
-
-static int abort_fe_p(void *data _unused_,
-                      const unsigned char *key _unused_, size_t keylen _unused_,
-                      const unsigned char *val _unused_, size_t vallen _unused_)
-{
-        record_count++;
-
-        return 0;
-}
-
-START_TEST(test_abort_transaction)
-{
-        struct zsdb_txn *txn;
-        size_t i;
-        int ret;
-
-        txn = NULL;
-        record_count = 0;
 
         /* Count records */
-        ret = zsdb_foreach(db, NULL, 0, abort_fe_p, NULL, NULL, &txn);
+        ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
         ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecs1));
 
@@ -174,7 +172,7 @@ START_TEST(test_abort_transaction)
 
         /* Count records, again */
         record_count = 0;
-        ret = zsdb_foreach(db, NULL, 0, abort_fe_p, NULL, NULL, &txn);
+        ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
         ck_assert_int_eq(record_count, (ARRAY_SIZE(kvrecs1) + ARRAY_SIZE(kvrecs2)));
 
@@ -197,9 +195,56 @@ START_TEST(test_abort_transaction)
 
         /* Count records */
         record_count = 0;
-        ret = zsdb_foreach(db, NULL, 0, abort_fe_p, NULL, NULL, &txn);
+        ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
         ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecs1));
+}
+END_TEST
+
+START_TEST(test_many_records)
+{
+        struct zsdb_txn *txn;
+        size_t i, NUM_RECS;
+        int ret;
+
+        NUM_RECS = 4096;
+
+        txn = NULL;
+
+        /* Begin transaction */
+        ret = zsdb_transaction_begin(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        /* Add 4096 records */
+        for (i = 0; i < NUM_RECS; i++) {
+                unsigned char key[24], val[24];
+
+                snprintf((char *)key, 8, "key%zu", i);
+                snprintf((char *)val, 8, "val%zu", i);
+
+                ret = zsdb_add(db, key, strlen((char *)key), val,
+                               strlen((char *)val), &txn);
+                ck_assert_int_eq(ret, ZS_OK);
+        }
+
+        /* Commit the add records transaction */
+        zsdb_commit(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+        zsdb_transaction_end(&txn);
+
+        /* Count records */
+        record_count = 0;
+        txn = NULL;
+        ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+        ck_assert_int_eq(record_count, NUM_RECS);
 }
 END_TEST
 
@@ -207,15 +252,23 @@ Suite *zsdb_suite(void)
 {
         Suite *s;
         TCase *tc_abort;
+        TCase *tc_many;
 
         s = suite_create("zeroskip");
 
         /* abort */
-        tc_abort = tcase_create("core");
+        tc_abort = tcase_create("abort");
         tcase_add_checked_fixture(tc_abort, setup, teardown);
 
         tcase_add_test(tc_abort, test_abort_transaction);
         suite_add_tcase(s, tc_abort);
+
+        /* many records */
+        tc_many = tcase_create("many");
+        tcase_add_checked_fixture(tc_many, setup, teardown);
+
+        tcase_add_test(tc_many, test_many_records);
+        suite_add_tcase(s, tc_many);
 
         return s;
 }
