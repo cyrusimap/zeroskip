@@ -266,6 +266,11 @@ Suite *zsdb_suite(void)
         /* many records */
         tc_many = tcase_create("many");
         tcase_add_checked_fixture(tc_many, setup, teardown);
+        /* The default time out is 4 seconds and while this is perfectly fine on
+         * on my machine, the tc_many test fails when running on travis. So
+         * bumping up the timeout to 50 seconds.
+         */
+        tcase_set_timeout(tc_many, 50);
 
         tcase_add_test(tc_many, test_many_records);
         suite_add_tcase(s, tc_many);
