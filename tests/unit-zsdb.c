@@ -23,12 +23,14 @@
 
 Suite *zsdb_suite(void);
 
-static struct {
+struct kvrecs {
         const unsigned char *k;
         size_t klen;
         const unsigned char *v;
         size_t vlen;
-} kvrecs1[] = {
+};
+
+static struct kvrecs kvrecs1[] = {
         { (const unsigned char *)"123", 3, (const unsigned char *)"456", 3 },
         { (const unsigned char *)"foo", 3, (const unsigned char *)"bar", 3 },
         { (const unsigned char *)"abc", 3, (const unsigned char *)"def", 3 },
@@ -45,14 +47,15 @@ static struct {
         { (const unsigned char *)"nokia", 5, (const unsigned char *)"meego", 5 },
 };
 
-static struct {
-        const unsigned char *k;
-        size_t klen;
-        const unsigned char *v;
-        size_t vlen;
-} kvrecs2[] = {
+static struct kvrecs kvrecs2[] = {
         { (const unsigned char *)"Australia.Sydney", 4, (const unsigned char *)"2000", 3 },
         { (const unsigned char *)"Australia.Melbourne", 5, (const unsigned char *)"3000", 5 },
+};
+
+static struct kvrecs kvrecsdel[] = {
+        { (const unsigned char *)"buzzes", 6, (const unsigned char *)"afro timur funky cents hewitt", 29 },
+        { (const unsigned char *)"galas", 5, (const unsigned char *)"assad goering flemish brynner heshvan", 37 },
+        { (const unsigned char *)"bathes", 6, (const unsigned char *)"flax corm naipaul enable herrera fating", 39 },
 };
 
 struct zsdb *db = NULL;
@@ -190,7 +193,7 @@ START_TEST(test_abort_transaction)
         ret = zsdb_init(&db, NULL, NULL);
         ck_assert_int_eq(ret, ZS_OK);
 
-        ret = zsdb_open(db, basedir, MODE_CREATE);
+        ret = zsdb_open(db, basedir, MODE_RDWR);
         ck_assert_int_eq(ret, ZS_OK);
 
         /* Count records */
@@ -198,6 +201,118 @@ START_TEST(test_abort_transaction)
         ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
         ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecs1));
+}
+END_TEST
+
+START_TEST(test_delete)
+{
+        struct zsdb_txn *txn;
+        size_t i;
+        int ret;
+        const unsigned char *value = NULL;
+        size_t vallen = 0;
+
+        txn = NULL;
+        record_count = 0;
+
+        /** ADD RECORDS **/
+        /* Begin transaction */
+        ret = zsdb_transaction_begin(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        for (i = 0; i < ARRAY_SIZE(kvrecsdel); i++) {
+                ret = zsdb_add(db, kvrecsdel[i].k, kvrecsdel[i].klen,
+                               kvrecsdel[i].v, kvrecsdel[i].vlen, &txn);
+                ck_assert_int_eq(ret, ZS_OK);
+        }
+
+        /* Commit the add records transaction */
+        zsdb_commit(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+
+        /** DELETE RECORDS **/
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        /* Delete a record */
+        ret = zsdb_remove(db, kvrecsdel[1].k, kvrecsdel[1].klen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+        /* Fetch key2  - should not be found*/
+        ret = zsdb_fetch(db, kvrecsdel[1].k, kvrecsdel[1].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_NOTFOUND);
+
+
+        /* Fetch key1 and key3, they should be found */
+        ret = zsdb_fetch(db, kvrecsdel[0].k, kvrecsdel[0].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ret = zsdb_fetch(db, kvrecsdel[2].k, kvrecsdel[2].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Commit */
+        zsdb_commit(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+
+        /* After committing, key2  - should not be found
+         * key and key3 should be found.
+         */
+        ret = zsdb_fetch(db, kvrecsdel[1].k, kvrecsdel[1].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_NOTFOUND);
+
+        ret = zsdb_fetch(db, kvrecsdel[0].k, kvrecsdel[0].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ret = zsdb_fetch(db, kvrecsdel[2].k, kvrecsdel[2].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+
+        /* Close and reopen DB */
+        ret = zsdb_close(db);
+        ck_assert_int_eq(ret, ZS_OK);
+        zsdb_final(&db);
+
+        ret = zsdb_init(&db, NULL, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ret = zsdb_open(db, basedir, MODE_RDWR);
+        ck_assert_int_eq(ret, ZS_OK);
+
+
+        /* After reopening, key2  - should not be found
+         * key and key3 should be found.
+         */
+        ret = zsdb_fetch(db, kvrecsdel[1].k, kvrecsdel[1].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_NOTFOUND);
+
+        ret = zsdb_fetch(db, kvrecsdel[0].k, kvrecsdel[0].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ret = zsdb_fetch(db, kvrecsdel[2].k, kvrecsdel[2].klen,
+                         &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+
+
 }
 END_TEST
 
@@ -251,17 +366,20 @@ END_TEST
 Suite *zsdb_suite(void)
 {
         Suite *s;
-        TCase *tc_abort;
+        TCase *tc_core;
         TCase *tc_many;
 
         s = suite_create("zeroskip");
 
-        /* abort */
-        tc_abort = tcase_create("abort");
-        tcase_add_checked_fixture(tc_abort, setup, teardown);
+        /* core */
+        tc_core = tcase_create("core");
+        tcase_add_checked_fixture(tc_core, setup, teardown);
 
-        tcase_add_test(tc_abort, test_abort_transaction);
-        suite_add_tcase(s, tc_abort);
+        tcase_add_test(tc_core, test_abort_transaction);
+        tcase_add_test(tc_core, test_delete);
+        suite_add_tcase(s, tc_core);
+
+        /* delete */
 
         /* many records */
         tc_many = tcase_create("many");
