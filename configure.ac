@@ -166,6 +166,25 @@ else
    AC_MSG_ERROR("You need libzlib to be able to build libzeroskip")
 fi
 
+dnl CRC32 optimisations
+
+dnl if the compiler has support for SSE4.2 then we can compile a hardware
+dnl implementation of CRC32C
+AC_MSG_CHECKING(for compiler support for SSE4.2 instruction)
+AC_CACHE_VAL(zs_cv_sse42, AC_TRY_COMPILE([
+    #include <stdint.h>
+],[
+    uint64_t a = 0, b = 1;
+    __asm__("crc32q\t" "(%1), %0"
+            : "=r"(b)
+            : "r"(b), "0"(a));
+    return b;
+], zs_cv_sse42=yes, zs_cv_sse42=no))
+if test "$zs_cv_sse42" = "yes" ; then
+    AC_DEFINE([HAVE_SSE42], [1],["SSE4.2 extensions"])
+    AC_SUBST(SSE42)
+fi
+
 AC_SUBST([DEPENDENCIES])
 
 

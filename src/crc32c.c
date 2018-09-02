@@ -63,6 +63,8 @@
 
  /* This implementation is imported as is from cyrus-imapd project */
 
+#include <config.h>
+
 #include "crc32c.h"
 #include <stdint.h>
 #include <string.h>
