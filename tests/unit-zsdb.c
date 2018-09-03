@@ -58,6 +58,12 @@ static struct kvrecs kvrecsdel[] = {
         { (const unsigned char *)"bathes", 6, (const unsigned char *)"flax corm naipaul enable herrera fating", 39 },
 };
 
+static struct kvrecs kvmultiopen[] = {
+        { (const unsigned char *)"mustache", 8, (const unsigned char *)"blog lomo", 9 },
+        { (const unsigned char *)"cred", 4, (const unsigned char *)"beard ethical", 13 },
+        { (const unsigned char *)"leggings", 8, (const unsigned char *)"tumblr salvia", 13 },
+};
+
 struct zsdb *db = NULL;
 static char *basedir = NULL;
 
@@ -213,7 +219,6 @@ START_TEST(test_delete)
         size_t vallen = 0;
 
         txn = NULL;
-        record_count = 0;
 
         /** ADD RECORDS **/
         /* Begin transaction */
@@ -316,6 +321,90 @@ START_TEST(test_delete)
 }
 END_TEST
 
+START_TEST(test_multiopen)
+{
+        struct zsdb_txn *txn = NULL;
+        struct zsdb *db2 = NULL;
+        int ret;
+
+        /** ADD RECORD in tranaction 1 **/
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        ret = zsdb_add(db, kvmultiopen[0].k, kvmultiopen[0].klen,
+                       kvmultiopen[0].v, kvmultiopen[0].vlen, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Commit the add record transaction */
+        zsdb_commit(db, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+        /** Open the DB again, this is the second instance of the DB **/
+        ret = zsdb_init(&db2, NULL, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ret = zsdb_open(db2, basedir, MODE_RDWR);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /** ADD RECORD - second open instance **/
+
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db2, 0);
+
+        ret = zsdb_add(db2, kvmultiopen[1].k, kvmultiopen[1].klen,
+                       kvmultiopen[1].v, kvmultiopen[1].vlen, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Commit the add record transaction */
+        zsdb_commit(db2, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db2);
+
+        /** CLOSE Second instance of the DB **/
+        ret = zsdb_close(db2);
+        ck_assert_int_eq(ret, ZS_OK);
+        zsdb_final(&db2);
+
+        /** ADD a record to first open instance **/
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        ret = zsdb_add(db, kvmultiopen[2].k, kvmultiopen[2].klen,
+                       kvmultiopen[2].v, kvmultiopen[2].vlen, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Commit the add record transaction */
+        zsdb_commit(db, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+        /** CLOSE first instance of the DB **/
+        ret = zsdb_close(db);
+        ck_assert_int_eq(ret, ZS_OK);
+        zsdb_final(&db);
+
+        /** REOPEN DB **/
+        ret = zsdb_init(&db, NULL, NULL);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ret = zsdb_open(db, basedir, MODE_RDWR);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /** COUNT RECORDS **/
+        record_count = 0;
+        ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+        ck_assert_int_eq(record_count, ARRAY_SIZE(kvmultiopen));
+}
+END_TEST
+
 START_TEST(test_many_records)
 {
         struct zsdb_txn *txn;
@@ -377,9 +466,9 @@ Suite *zsdb_suite(void)
 
         tcase_add_test(tc_core, test_abort_transaction);
         tcase_add_test(tc_core, test_delete);
+        tcase_add_test(tc_core, test_multiopen);
         suite_add_tcase(s, tc_core);
 
-        /* delete */
 
         /* many records */
         tc_many = tcase_create("many");
