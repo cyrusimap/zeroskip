@@ -1817,6 +1817,8 @@ int zsdb_foreach(struct zsdb *db, const unsigned char *prefix, size_t prefixlen,
          } while (zs_iterator_next(tempiter, data));
 
         zs_iterator_end(&tempiter);
+        tempiter = NULL;
+        (*txn)->iter = NULL;
 
         if (newtxn) {
                 (*txn)->iter = NULL;
