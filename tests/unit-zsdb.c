@@ -21,6 +21,11 @@
 #include <unistd.h>
 #include <check.h>
 
+#if CHECK_MINOR_VERSION < 11
+#include <assert.h>
+#define ck_assert_mem_eq(a,b,c) assert(0 == memcmp(a,b,c))
+#endif
+
 Suite *zsdb_suite(void);
 
 struct kvrecs {
@@ -30,7 +35,7 @@ struct kvrecs {
         size_t vlen;
 };
 
-static struct kvrecs kvrecs1[] = {
+static struct kvrecs kvrecsgen[] = {
         { (const unsigned char *)"123", 3, (const unsigned char *)"456", 3 },
         { (const unsigned char *)"foo", 3, (const unsigned char *)"bar", 3 },
         { (const unsigned char *)"abc", 3, (const unsigned char *)"def", 3 },
@@ -62,6 +67,30 @@ static struct kvrecs kvmultiopen[] = {
         { (const unsigned char *)"mustache", 8, (const unsigned char *)"blog lomo", 9 },
         { (const unsigned char *)"cred", 4, (const unsigned char *)"beard ethical", 13 },
         { (const unsigned char *)"leggings", 8, (const unsigned char *)"tumblr salvia", 13 },
+};
+
+#define K0 "affect"
+#define K0U "bother"
+#define K1 "carib"
+#define K2 "cubist"
+#define K3 "eulogy"
+#define K4 "kidding"
+#define K4A "llama"
+#define K5 "monkey"
+#define K6 "notice"
+#define K7 "octopus"
+#define K7D "opossum"
+#define K7A "possum"
+#define K7B "quine"
+#define K8 "rooster"
+
+static struct kvrecs kvforeachchanges[] = {
+        { (const unsigned char *)K1, 5, (const unsigned char *)"delays maj bullish packard ronald", 33 },
+        { (const unsigned char *)K2, 6, (const unsigned char *)"bobby tswana cu albumin created", 31 },
+        { (const unsigned char *)K3, 6, (const unsigned char *)"aleut stoic muscovy adonis moe docent", 37 },
+        { (const unsigned char *)K4, 7, (const unsigned char *)"curry deterrent drove raising hiring", 36 },
+        { (const unsigned char *)K5, 6, (const unsigned char *)"joining keeper angle burden buffer", 34 },
+        { (const unsigned char *)K6, 6, (const unsigned char *)"annoying push security plenty ending", 36 },
 };
 
 struct zsdb *db = NULL;
@@ -139,9 +168,9 @@ START_TEST(test_abort_transaction)
         /* Acquire write lock */
         zsdb_write_lock_acquire(db, 0);
 
-        for (i = 0; i < ARRAY_SIZE(kvrecs1); i++) {
-                ret = zsdb_add(db, kvrecs1[i].k, kvrecs1[i].klen,
-                               kvrecs1[i].v, kvrecs1[i].vlen, &txn);
+        for (i = 0; i < ARRAY_SIZE(kvrecsgen); i++) {
+                ret = zsdb_add(db, kvrecsgen[i].k, kvrecsgen[i].klen,
+                               kvrecsgen[i].v, kvrecsgen[i].vlen, &txn);
                 ck_assert_int_eq(ret, ZS_OK);
         }
 
@@ -157,7 +186,7 @@ START_TEST(test_abort_transaction)
         /* Count records */
         ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
-        ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecs1));
+        ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecsgen));
 
         /* Add more records, but don't commit  */
         /* Begin transaction */
@@ -183,14 +212,14 @@ START_TEST(test_abort_transaction)
         record_count = 0;
         ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
-        ck_assert_int_eq(record_count, (ARRAY_SIZE(kvrecs1) + ARRAY_SIZE(kvrecs2)));
+        ck_assert_int_eq(record_count, (ARRAY_SIZE(kvrecsgen) + ARRAY_SIZE(kvrecs2)));
 
         /* Abort transaction */
         ret = zsdb_abort(db, &txn);
         ck_assert_int_eq(ret, ZS_OK);
 
         /* Now close the DB and open again, and the db should contain only
-         * records from `kvrecs1`.
+         * records from `kvrecsgen`.
          */
         ret = zsdb_close(db);
         ck_assert_int_eq(ret, ZS_OK);
@@ -206,7 +235,7 @@ START_TEST(test_abort_transaction)
         record_count = 0;
         ret = zsdb_foreach(db, NULL, 0, count_fe_p, NULL, NULL, &txn);
         ck_assert_int_eq(ret, ZS_OK);
-        ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecs1));
+        ck_assert_int_eq(record_count, ARRAY_SIZE(kvrecsgen));
 }
 END_TEST
 
@@ -452,11 +481,190 @@ START_TEST(test_many_records)
 }
 END_TEST
 
+struct ffrock {
+        struct zsdb *db;
+        struct zsdb_txn **tid;
+        int state;
+};
+
+static int fe_cb_foreach_changes(void *data,
+                                 const unsigned char *key, size_t keylen,
+                                 const unsigned char *val _unused_,
+                                 size_t vallen _unused_)
+{
+        struct ffrock *fr = (struct ffrock *)data;
+        int r;
+
+        switch (fr->state) {
+        case 0:
+                ck_assert_mem_eq(key, K1, keylen);
+                fr->state = 1;
+                break;
+        case 1:
+                ck_assert_mem_eq(key, K2, keylen);
+                zsdb_write_lock_acquire(fr->db, 0);
+                r = zsdb_add(fr->db, (const unsigned char *)K0, strlen(K0),
+                             (const unsigned char *)"", 0, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+                zsdb_write_lock_release(fr->db);
+                fr->state = 2;
+                break;
+        case 2:
+                ck_assert_mem_eq(key, K3, keylen);
+                r = zsdb_fetch(fr->db, (const unsigned char *)K0U, strlen(K0U),
+                               NULL, NULL, fr->tid);
+                ck_assert_int_eq(r, ZS_NOTFOUND);
+                fr->state = 3;
+                break;
+        case 3:
+                ck_assert_mem_eq(key, K4, keylen);
+                zsdb_write_lock_acquire(fr->db, 0);
+                r = zsdb_add(fr->db, (const unsigned char *)K4A, strlen(K4A),
+                             (const unsigned char *)"", 0, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+                zsdb_write_lock_release(fr->db);
+                fr->state = 4;
+                break;
+        case 4:
+                ck_assert_mem_eq(key, K4A, keylen);
+                zsdb_write_lock_acquire(fr->db, 0);
+                r = zsdb_add(fr->db, (const unsigned char *)K4A, strlen(K4A),
+                             (const unsigned char *)"another", 7, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+                zsdb_write_lock_release(fr->db);
+                fr->state = 5;
+                break;
+        case 5:
+                ck_assert_mem_eq(key, K5, keylen);
+                zsdb_write_lock_acquire(fr->db, 0);
+                r = zsdb_remove(fr->db, (const unsigned char *)K5,
+                                strlen(K5), fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+                zsdb_write_lock_release(fr->db);
+                fr->state = 6;
+                break;
+        case 6:
+                ck_assert_mem_eq(key, K6, keylen);
+                fr->state = 7;
+                break;
+        case 7:
+                ck_assert_mem_eq(key, K7, keylen);
+                zsdb_write_lock_acquire(fr->db, 0);
+                r = zsdb_add(fr->db, (const unsigned char *)K7, strlen(K7),
+                             (const unsigned char *)"newval", 6, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+
+                r = zsdb_add(fr->db, (const unsigned char *)K7D, strlen(K7D),
+                             (const unsigned char *)"val", 3, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+
+                r = zsdb_add(fr->db, (const unsigned char *)K7B, strlen(K7B),
+                             (const unsigned char *)"bval", 4, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+
+                r = zsdb_add(fr->db, (const unsigned char *)K7A, strlen(K7A),
+                             (const unsigned char *)"aval", 4, fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+
+
+                r = zsdb_remove(fr->db, (const unsigned char *)K7D,
+                                strlen(K7D), fr->tid);
+                ck_assert_int_eq(r, ZS_OK);
+
+                zsdb_write_lock_release(fr->db);
+                fr->state = 8;
+                break;
+        case 8:
+                ck_assert_mem_eq(key, K7A, keylen);
+                fr->state = 9;
+                break;
+        case 9:
+                ck_assert_mem_eq(key, K7B, keylen);
+                fr->state = 10;
+                break;
+        case 10:
+                ck_assert_mem_eq(key, K7B, keylen);
+                fr->state = 11;
+                break;
+        default:
+                assert(0);
+                break;
+        }
+
+        return 0;
+}
+
+START_TEST(test_foreach_changes)
+{
+        struct zsdb_txn *txn;
+        size_t i;
+        int ret;
+        struct ffrock rock;
+
+        /** ADD RECORDS **/
+        /* Begin transaction */
+        ret = zsdb_transaction_begin(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        for (i = 0; i < ARRAY_SIZE(kvforeachchanges); i++) {
+                ret = zsdb_add(db, kvforeachchanges[i].k, kvforeachchanges[i].klen,
+                               kvforeachchanges[i].v, kvforeachchanges[i].vlen, &txn);
+                ck_assert_int_eq(ret, ZS_OK);
+        }
+
+        /* Commit the add records transaction */
+        zsdb_commit(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+        zsdb_transaction_end(&txn);
+
+        txn = NULL;
+
+        /** Process Records **/
+        rock.db = db;
+        rock.state = 0;
+        rock.tid = &txn;
+
+        ret = zsdb_foreach(db, NULL, 0, NULL, fe_cb_foreach_changes,
+                           &rock, rock.tid);
+        ck_assert_int_eq(ret, ZS_OK);
+        ck_assert_int_eq(rock.state, 7);
+
+        /* Commit the transaction */
+        zsdb_write_lock_acquire(db, 0);
+
+        zsdb_commit(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        zsdb_write_lock_release(db);
+        zsdb_transaction_end(&txn);
+
+        txn = NULL;
+}
+END_TEST
+
+START_TEST(test_foreach_count)
+{
+}
+END_TEST
+
+START_TEST(test_foreach_heirarchy)
+{
+}
+END_TEST
+
 Suite *zsdb_suite(void)
 {
         Suite *s;
         TCase *tc_core;
         TCase *tc_many;
+        TCase *tc_foreach;
 
         s = suite_create("zeroskip");
 
@@ -469,6 +677,14 @@ Suite *zsdb_suite(void)
         tcase_add_test(tc_core, test_multiopen);
         suite_add_tcase(s, tc_core);
 
+        /* foreach */
+        tc_foreach = tcase_create("foreach");
+        tcase_add_checked_fixture(tc_foreach, setup, teardown);
+
+        tcase_add_test(tc_foreach, test_foreach_changes);
+        tcase_add_test(tc_foreach, test_foreach_count);
+        tcase_add_test(tc_foreach, test_foreach_heirarchy);
+        suite_add_tcase(s, tc_foreach);
 
         /* many records */
         tc_many = tcase_create("many");
