@@ -56,6 +56,13 @@ AC_ARG_ENABLE([examples],
 	[], [enable_examples=yes])
 AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$enable_examples" = "xyes"])
 
+# benchmark
+AC_ARG_ENABLE([benchmark],
+	[AS_HELP_STRING([--enable-benchmark=@<:@yes/no@:>@],
+		[Build the benchmark tool @<:@default=yes@:>@])],
+	[], [enable_benchmark=yes])
+AM_CONDITIONAL([ENABLE_BENCH], [test "x$enable_benchmark" = "xyes"])
+
 # tests
 AC_ARG_ENABLE([tests],
 	[AS_HELP_STRING([--enable-tests=@<:@yes/no@:>@],
@@ -244,5 +251,6 @@ AC_CONFIG_FILES([
    tool/Makefile
    examples/Makefile
    tests/Makefile
+   benchmark/Makefile
 ])
 AC_OUTPUT

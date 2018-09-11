@@ -12,6 +12,10 @@ if ENABLE_TESTS
 SUBDIRS += tests
 endif
 
+if ENABLE_BENCH
+SUBDIRS += benchmark
+endif
+
 if ENABLE_DOC
 SUBDIRS += doc
 endif
