@@ -759,12 +759,56 @@ START_TEST(test_foreach_heirarchy)
 }
 END_TEST
 
+START_TEST(test_fetchnext_simple)
+{
+        struct zsdb_txn *txn;
+        size_t i;
+        int ret;
+        const unsigned char *found, *value;
+        size_t foundlen = 0, vallen = 0;
+
+        /** ADD RECORDS **/
+        /* Begin transaction */
+        ret = zsdb_transaction_begin(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Acquire write lock */
+        zsdb_write_lock_acquire(db, 0);
+
+        for (i = 0; i < ARRAY_SIZE(kvrecsgen); i++) {
+                ret = zsdb_add(db, kvrecsgen[i].k, kvrecsgen[i].klen,
+                               kvrecsgen[i].v, kvrecsgen[i].vlen, &txn);
+                ck_assert_int_eq(ret, ZS_OK);
+        }
+
+        /* Commit the add records transaction */
+        zsdb_commit(db, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        /* Release write lock */
+        zsdb_write_lock_release(db);
+
+        zsdb_transaction_end(&txn);
+
+        txn = NULL;
+
+        ret = zsdb_fetchnext(db, (const unsigned char *)"key",
+                             strlen("key"), &found, &foundlen,
+                             &value, &vallen, &txn);
+        ck_assert_int_eq(ret, ZS_OK);
+
+        ck_assert_mem_eq(found, "nokia", foundlen);
+        ck_assert_mem_eq(value, "meego", vallen);
+}
+END_TEST
+
 Suite *zsdb_suite(void)
 {
         Suite *s;
         TCase *tc_core;
         TCase *tc_many;
         TCase *tc_foreach;
+        TCase *tc_fetch;
 
         s = suite_create("zeroskip");
 
@@ -785,6 +829,13 @@ Suite *zsdb_suite(void)
         tcase_add_test(tc_foreach, test_foreach_count);
         tcase_add_test(tc_foreach, test_foreach_heirarchy);
         suite_add_tcase(s, tc_foreach);
+
+        /* fetch */
+        tc_fetch = tcase_create("fetch");
+        tcase_add_checked_fixture(tc_fetch, setup, teardown);
+
+        tcase_add_test(tc_fetch, test_fetchnext_simple);
+        suite_add_tcase(s, tc_fetch);
 
         /* many records */
         tc_many = tcase_create("many");
