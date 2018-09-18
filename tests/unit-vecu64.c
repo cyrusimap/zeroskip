@@ -21,7 +21,7 @@
 Suite *vecu64_suite(void);
 
 static int count;
-struct vecu64 *arr;
+static struct vecu64 *arr;
 
 static void setup(void)
 {
@@ -35,8 +35,8 @@ static void teardown(void)
 
 START_TEST(test_vecu64_create)
 {
-    ck_assert_int_eq(arr->alloc, 0);
-    ck_assert_int_eq(arr->count, 0);
+        ck_assert_int_eq(arr->alloc, 0);
+        ck_assert_int_eq(arr->count, 0);
 }
 END_TEST                        /* test_vecu64_create */
 
