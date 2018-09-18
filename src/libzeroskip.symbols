@@ -88,3 +88,11 @@ vecu64_remove
 vecu64_find
 vecu64_size
 vecu64_foreach
+
+str_array_init
+str_array_clear
+str_array_add
+str_array_addv
+str_array_remove
+str_array_from_strsplit
+str_array_detach

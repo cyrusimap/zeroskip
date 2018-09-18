@@ -76,28 +76,31 @@ void str_array_remove(struct str_array *arr)
  * Creates an str_array by splitting a string by some delimiter.
  */
 void str_array_from_strsplit(struct str_array *arr, const char *str,
-                             size_t slen, char delim)
+                             char delim)
 {
-        size_t len = slen;
-        const char *p = str;
-
         str_array_clear(arr);
 
-        while (len) {
-                int tlen = len;
-                const char *end = memchr(str, delim, len);
-                char *s;
-                if (end)
-                        tlen = end - str + 1;
+        while (*str == delim)
+                str++;
 
-                s = xmalloc(sizeof(char) * tlen);
-                memset(s, 0, tlen);
-                memcpy(s, p, tlen - 1);
+        for (;;) {
+                const char *p = str;
+                char *s = NULL;
+
+                if (!*p)
+                        break;
+
+                while (*p && (*p != delim))
+                        p++;
+
+                s = strndup(str, p - str);
                 str_array_add(arr, s);
-                xfree(s);
+                free(s);
 
-                p += tlen;
-                len -= tlen;
+                while (*p && (*p == delim))
+                        p++;
+
+                str = p;
         }
 }
 

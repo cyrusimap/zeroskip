@@ -22,6 +22,7 @@ int main(int argc, char **argv)
         sr = srunner_create(zsdb_suite());
         srunner_add_suite(sr, vecu64_suite());
         srunner_add_suite(sr, memtree_suite());
+        srunner_add_suite(sr, strarr_suite());
 
         /* Log to stdout by default, change this eventually and make
          * it an option */

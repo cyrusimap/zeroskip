@@ -13,6 +13,7 @@
 extern Suite *memtree_suite(void);
 extern Suite *vecu64_suite(void);
 extern Suite *zsdb_suite(void);
+extern Suite *strarr_suite(void);
 
 #endif  /* _UNIT_H_ */
 

@@ -18,6 +18,7 @@ unit_SOURCES = \
 	unit.h \
 	unit.c \
 	unit-memtree.c \
+	unit-strarr.c \
 	unit-vecu64.c \
 	unit-zsdb.c \
 	$(top_builddir)/include/zeroskip.h

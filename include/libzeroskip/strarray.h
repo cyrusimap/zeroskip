@@ -33,7 +33,7 @@ void str_array_addv(struct str_array *arr, const char **argv);
 void str_array_remove(struct str_array *arr);
 
 void str_array_from_strsplit(struct str_array *arr, const char *str,
-                             size_t slen, char delim);
+                             char delim);
 
 char **str_array_detach(struct str_array *arr);
 
