@@ -10,7 +10,7 @@
  * cstring - String handling library based of git's strbuf implementation.
  */
 
-#include "cstring.h"
+#include <libzeroskip/cstring.h>
 #include <libzeroskip/util.h>
 
 #include <ctype.h>

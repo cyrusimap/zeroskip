@@ -1,6 +1,7 @@
 libzeroskipdir = $(includedir)/libzeroskip
 libzeroskip_HEADERS = \
 	btree.h \
+	cstring.h \
 	log.h \
 	macros.h \
 	mfile.h \

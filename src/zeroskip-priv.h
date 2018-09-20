@@ -11,13 +11,13 @@
 #ifndef _ZEROSKIP_PRIV_H_
 #define _ZEROSKIP_PRIV_H_
 
-#include "cstring.h"
 #include "file-lock.h"
 #include "htable.h"
 #include "list.h"
 #include "pqueue.h"
 
 #include <libzeroskip/btree.h>
+#include <libzeroskip/cstring.h>
 #include <libzeroskip/macros.h>
 #include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>

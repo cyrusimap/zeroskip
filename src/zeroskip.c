@@ -11,10 +11,10 @@
 #endif
 #endif
 
-#include "cstring.h"
 #include "htable.h"
 #include "pqueue.h"
 #include <libzeroskip/btree.h>
+#include <libzeroskip/cstring.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/macros.h>
 #include <libzeroskip/util.h>

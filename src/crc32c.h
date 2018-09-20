@@ -7,7 +7,7 @@
 #ifndef CRC32C_H
 #define CRC32C_H
 
-#include "cstring.h"
+#include <libzeroskip/cstring.h>
 
 #include <sys/uio.h>
 #include <stdint.h>

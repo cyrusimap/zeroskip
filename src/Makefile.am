@@ -45,7 +45,7 @@ libzeroskip_la_LDFLAGS = \
 libzeroskip_la_SOURCES = \
 	btree.c \
 	crc32c.h crc32c.c \
-	cstring.h cstring.c \
+	cstring.c \
 	file-lock.h file-lock.c \
 	htable.h htable.c \
 	list.h \

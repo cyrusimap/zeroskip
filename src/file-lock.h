@@ -11,7 +11,7 @@
 #ifndef _ZS_FILE_LOCK_H_
 #define _ZS_FILE_LOCK_H_
 
-#include "cstring.h"
+#include <libzeroskip/cstring.h>
 
 #include <signal.h>
 
