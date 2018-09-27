@@ -33,8 +33,11 @@ static void usage(const char *progname)
 {
         printf("Usage: %s [OPTION]... [DB]...\n", progname);
 
-        printf("  -b, --benchmarks     list of benchmarks to run\n");
-        printf("                       writeseq,writerandom,\n");
+        printf("  -b, --benchmarks     comma separated list of benchmarks to run\n");
+        printf("                       Available benchmarks:\n");
+        printf("                       * writeseq    - write values in sequential key order\n");
+        printf("                       * writerandom - write values in random key order\n");
+        printf("\n");
         printf("  -d, --db             the db to run the benchmarks on\n");
         printf("  -n, --numrecs        number of records to write[default: 1000]\n");
         printf("  -h, --help           display this help and exit\n");
