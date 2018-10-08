@@ -33,6 +33,8 @@ xrename
 xmkdir
 xunlink
 xstrdup
+xmalloc
+xcalloc
 
 get_filenames_with_matching_prefix
 recursive_rm
