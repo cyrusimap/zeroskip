@@ -41,6 +41,7 @@ static void usage(const char *progname)
         printf("  -b, --benchmarks     comma separated list of benchmarks to run\n");
         printf("                       Available benchmarks:\n");
         printf("                       * writeseq    - write values in sequential key order\n");
+        printf("                       * writeseqtxn - write values in sequential key order in separate transactions\n");
         printf("                       * writerandom - write values in random key order\n");
         printf("\n");
         printf("  -d, --db             the db to run the benchmarks on\n");
@@ -139,8 +140,6 @@ static char *random_string(size_t length)
 static void cleanup_db_dir(void)
 {
         recursive_rm(DBNAME);
-        free(DBNAME);
-        DBNAME = NULL;
 }
 
 static uint64_t get_time_now(void)
@@ -266,6 +265,56 @@ static size_t do_write_seq(void)
         return bytes;
 }
 
+static size_t do_write_seq_txn(void)
+{
+        int i;
+        int ret;
+        struct zsdb *db = NULL;
+        size_t bytes = 0;
+        struct zsdb_txn *txn = NULL;
+
+        /* Open Zeroskip DB */
+        ret = zsdb_init(&db, NULL, NULL);
+        assert(ret == ZS_OK);
+        ret = zsdb_open(db, DBNAME, new_db ? MODE_CREATE : MODE_RDWR);
+        assert(ret == ZS_OK);
+
+        zsdb_write_lock_acquire(db, 0);
+
+        for (i = 0; i < NUMRECS; i++) {
+                char key[100];
+                size_t keylen, vallen;
+                char *val;
+
+                snprintf(key, sizeof(key), "%016d", i);
+                keylen = strlen(key);
+                vallen = keylen * 2;
+                val = random_string(vallen);
+
+                ret = zsdb_transaction_begin(db, &txn);
+                assert(ret == ZS_OK);
+
+                ret = zsdb_add(db, (unsigned char *)key, keylen,
+                               (unsigned char *)val, vallen, &txn);
+
+                assert(ret == ZS_OK);
+                bytes += (keylen + vallen);
+
+                ret = zsdb_commit(db, &txn);
+                assert(ret == ZS_OK);
+        }
+
+        zsdb_write_lock_release(db);
+
+        /* Close Zeroskip DB */
+        ret = zsdb_close(db);
+        assert(ret == ZS_OK);
+        zsdb_final(&db);
+
+
+        return bytes;
+}
+
 static void do_write_random(void)
 {
         printf("do_write_random\n");
@@ -316,13 +365,24 @@ static int run_benchmarks(void)
                         bytes = do_write_seq();
                         finish = get_time_now();
 
-                        fprintf(stderr, "writeseq: %zu bytes written in %" PRIu64 " μs.\n",
+                        fprintf(stderr, "writeseq    : %zu bytes written in %" PRIu64 " μs.\n",
+                                bytes, (finish - start));
+                } else if (strcmp(benchmarks.datav[i], "writeseqtxn") == 0) {
+                        start = get_time_now();
+                        bytes = do_write_seq_txn();
+                        finish = get_time_now();
+
+                        fprintf(stderr, "writeseqtxn : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
                 } else if (strcmp(benchmarks.datav[i], "writerandom") == 0) {
                         do_write_random();
                 } else {
                         fprintf(stderr, "Unknown benchmark '%s'\n",
                                 benchmarks.datav[i]);
+                }
+
+                if (new_db) {
+                        cleanup_db_dir();
                 }
         }
 
@@ -365,9 +425,9 @@ int main(int argc, char **argv)
         ret = run_benchmarks();
 
         if (new_db) {
-                cleanup_db_dir();
+                free(DBNAME);
+                DBNAME = NULL;
         }
-
 done:
         exit(ret);
 }
