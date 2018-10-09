@@ -25,6 +25,7 @@ static char *DBNAME;
 static const char *BENCHMARKS;
 static int NUMRECS = 1000;
 static int new_db = 0;          /* set to 1 if we created a new db */
+static size_t VALLEN = 0;
 
 enum {
         BATCHED,
@@ -51,13 +52,14 @@ static void usage(const char *progname)
         printf("                       * writeseqtxn    - write values in sequential key order in separate transactions\n");
         printf("                       * writerandom    - write values in random key order\n");
         printf("                       * writerandomtxn - write values in random key order in separate transactions\n");
+        printf("                       * write100k      - write values 100K long in random key order\n");
         printf("\n");
         printf("  -d, --db             the db to run the benchmarks on\n");
         printf("  -n, --numrecs        number of records to write[default: 1000]\n");
         printf("  -h, --help           display this help and exit\n");
 }
 
-#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn"
+#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn,write100k"
 
 static char *create_tmp_dir_name(void)
 {
@@ -256,7 +258,7 @@ static size_t do_write(int txnmode, int insmode)
 
                 snprintf(key, sizeof(key), "%016d", k);
                 keylen = strlen(key);
-                vallen = keylen * 2;
+                vallen = VALLEN ? VALLEN : keylen * 2;
                 val = random_string(vallen);
 
                 if (txnmode == BATCHED) {
@@ -358,6 +360,15 @@ static int run_benchmarks(void)
 
                         fprintf(stderr, "writerandomtxn  : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
+                } else if (strcmp(benchmarks.datav[i], "write100k") == 0) {
+                        VALLEN = 100 * 1000;
+                        start = get_time_now();
+                        bytes = do_write(NOTBATCHED, RANDOM);
+                        finish = get_time_now();
+
+                        fprintf(stderr, "write100k     : %zu bytes written in %" PRIu64 " μs.\n",
+                                bytes, (finish - start));
+                        VALLEN = 0;
                 } else {
                         fprintf(stderr, "Unknown benchmark '%s'\n",
                                 benchmarks.datav[i]);
