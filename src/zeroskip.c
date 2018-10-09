@@ -230,8 +230,8 @@ done:
 }
 
 enum {
-        DB_REL_PATH = 0,
-        DB_ABS_PATH = 1,
+        DB_ABS_PATH = 0,
+        DB_REL_PATH = 1,
 };
 
 #define MAX_BUF_PATH (2 * PATH_MAX)
