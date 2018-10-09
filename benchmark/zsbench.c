@@ -22,7 +22,7 @@
 
 /* Globals */
 static char *DBNAME;
-static char *BENCHMARKS;
+static const char *BENCHMARKS;
 static int NUMRECS = 1000;
 static int new_db = 0;          /* set to 1 if we created a new db */
 
@@ -56,6 +56,8 @@ static void usage(const char *progname)
         printf("  -n, --numrecs        number of records to write[default: 1000]\n");
         printf("  -h, --help           display this help and exit\n");
 }
+
+#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn"
 
 static char *create_tmp_dir_name(void)
 {
@@ -387,10 +389,8 @@ int main(int argc, char **argv)
         ret = parse_options(argc, argv, long_options);
 
         if (BENCHMARKS == NULL) {
-                fprintf(stderr, "No benchmarks specified.\n");
-                ret = EXIT_FAILURE;
-                usage(basename(argv[0]));
-                goto done;
+                fprintf(stderr, "Running all benchmarks\n");
+                BENCHMARKS = ALLBENCHMARKS;
         }
 
         if (DBNAME == NULL) {
