@@ -26,6 +26,13 @@ static char *BENCHMARKS;
 static int NUMRECS = 1000;
 static int new_db = 0;          /* set to 1 if we created a new db */
 
+enum {
+        BATCHED,
+        NOTBATCHED,
+        SEQUENTIAL,
+        RANDOM,
+};
+
 static struct option long_options[] = {
         {"benchmarks", required_argument, NULL, 'b'},
         {"db", required_argument, NULL, 'd'},
@@ -40,9 +47,10 @@ static void usage(const char *progname)
 
         printf("  -b, --benchmarks     comma separated list of benchmarks to run\n");
         printf("                       Available benchmarks:\n");
-        printf("                       * writeseq    - write values in sequential key order\n");
-        printf("                       * writeseqtxn - write values in sequential key order in separate transactions\n");
-        printf("                       * writerandom - write values in random key order\n");
+        printf("                       * writeseq       - write values in sequential key order\n");
+        printf("                       * writeseqtxn    - write values in sequential key order in separate transactions\n");
+        printf("                       * writerandom    - write values in random key order\n");
+        printf("                       * writerandomtxn - write values in random key order in separate transactions\n");
         printf("\n");
         printf("  -d, --db             the db to run the benchmarks on\n");
         printf("  -n, --numrecs        number of records to write[default: 1000]\n");
@@ -220,7 +228,7 @@ static void print_header(void)
         fprintf(stdout, "------------------------------------------------\n");
 }
 
-static size_t do_write_seq(int batched)
+static size_t do_write(int txnmode, int insmode)
 {
         int i;
         int ret;
@@ -240,13 +248,16 @@ static size_t do_write_seq(int batched)
                 char key[100];
                 size_t keylen, vallen;
                 char *val;
+                int k;
 
-                snprintf(key, sizeof(key), "%016d", i);
+                k = (insmode == SEQUENTIAL) ? i : ((time(NULL) *  i) % NUMRECS);
+
+                snprintf(key, sizeof(key), "%016d", k);
                 keylen = strlen(key);
                 vallen = keylen * 2;
                 val = random_string(vallen);
 
-                if (batched) {
+                if (txnmode == BATCHED) {
                         ret = zsdb_transaction_begin(db, &txn);
                         assert(ret == ZS_OK);
                 }
@@ -257,7 +268,7 @@ static size_t do_write_seq(int batched)
                 assert(ret == ZS_OK);
                 bytes += (keylen + vallen);
 
-                if (batched) {
+                if (txnmode == BATCHED) {
                         ret = zsdb_commit(db, &txn);
                         assert(ret == ZS_OK);
                 }
@@ -265,7 +276,7 @@ static size_t do_write_seq(int batched)
 
         zsdb_write_lock_release(db);
 
-        if (!batched)
+        if (txnmode == NOTBATCHED)
                 zsdb_commit(db, NULL);
 
         /* Close Zeroskip DB */
@@ -275,11 +286,6 @@ static size_t do_write_seq(int batched)
 
 
         return bytes;
-}
-
-static void do_write_random(void)
-{
-        printf("do_write_random\n");
 }
 
 static int parse_options(int argc, char **argv, const struct option *options)
@@ -324,20 +330,32 @@ static int run_benchmarks(void)
         for (i = 0; i < benchmarks.count; i++) {
                 if (strcmp(benchmarks.datav[i], "writeseq") == 0) {
                         start = get_time_now();
-                        bytes = do_write_seq(0);
+                        bytes = do_write(NOTBATCHED, SEQUENTIAL);
                         finish = get_time_now();
 
-                        fprintf(stderr, "writeseq    : %zu bytes written in %" PRIu64 " μs.\n",
+                        fprintf(stderr, "writeseq        : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
                 } else if (strcmp(benchmarks.datav[i], "writeseqtxn") == 0) {
                         start = get_time_now();
-                        bytes = do_write_seq(1);
+                        bytes = do_write(BATCHED, SEQUENTIAL);
                         finish = get_time_now();
 
-                        fprintf(stderr, "writeseqtxn : %zu bytes written in %" PRIu64 " μs.\n",
+                        fprintf(stderr, "writeseqtxn     : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
                 } else if (strcmp(benchmarks.datav[i], "writerandom") == 0) {
-                        do_write_random();
+                        start = get_time_now();
+                        bytes = do_write(NOTBATCHED, RANDOM);
+                        finish = get_time_now();
+
+                        fprintf(stderr, "writerandom     : %zu bytes written in %" PRIu64 " μs.\n",
+                                bytes, (finish - start));
+                } else if (strcmp(benchmarks.datav[i], "writerandomtxn") == 0) {
+                        start = get_time_now();
+                        bytes = do_write(BATCHED, RANDOM);
+                        finish = get_time_now();
+
+                        fprintf(stderr, "writerandomtxn  : %zu bytes written in %" PRIu64 " μs.\n",
+                                bytes, (finish - start));
                 } else {
                         fprintf(stderr, "Unknown benchmark '%s'\n",
                                 benchmarks.datav[i]);
