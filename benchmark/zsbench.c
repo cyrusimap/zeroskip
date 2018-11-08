@@ -366,7 +366,7 @@ static int run_benchmarks(void)
                         bytes = do_write(NOTBATCHED, RANDOM);
                         finish = get_time_now();
 
-                        fprintf(stderr, "write100k     : %zu bytes written in %" PRIu64 " μs.\n",
+                        fprintf(stderr, "write100k       : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
                         VALLEN = 0;
                 } else {
