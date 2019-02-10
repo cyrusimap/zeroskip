@@ -5,7 +5,7 @@ PARAMS=""
 
 DICTFILE="/usr/share/dict/words"
 SHUF="/usr/bin/shuf"
-ZSKIP="../tool/zeroskip"
+ZSKIP="/opt/zeroskip/bin/zeroskip"
 
 if [[ $# < 2 ]]; then
     echo "Usage:"
@@ -129,9 +129,9 @@ gen_key_val()
         VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w "$vlen" | head -1)
 
         if [[ $VERBOSE == 1 ]]; then
-            ZS_LOG_LEVEL=3 ../tool/zeroskip set $dbdir "$KEY" "$VAL"
+            ZS_LOG_LEVEL=3 $ZSKIP set $dbdir "$KEY" "$VAL"
         else
-            RET=$(../tool/zeroskip set $dbdir "$KEY" "$VAL")
+            RET=$($ZSKIP set $dbdir "$KEY" "$VAL")
             pgbar ${i} ${nummsgs}
         fi
     done
