@@ -19,7 +19,7 @@
 
 /* hash table handling */
 static struct iter_htable_entry *alloc_iter_htable_entry(unsigned char *key,
-                                                         size_t keylen,
+                                                         uint64_t keylen,
                                                          void *value)
 {
         struct iter_htable_entry *e;
@@ -60,7 +60,7 @@ static void iter_htable_init(struct iter_htable *ht, const void *cmpfndata)
 }
 
 static void *iter_htable_get(struct iter_htable *ht, unsigned char *key,
-                             size_t keylen)
+                             uint64_t keylen)
 {
         struct iter_htable_entry k;
         struct iter_htable_entry *e;
@@ -77,7 +77,7 @@ static void *iter_htable_get(struct iter_htable *ht, unsigned char *key,
 }
 
 static void iter_htable_put(struct iter_htable *ht, unsigned char *key,
-                            size_t keylen, void *value)
+                            uint64_t keylen, void *value)
 {
         struct iter_htable_entry *e;
 
@@ -92,7 +92,7 @@ static void iter_htable_put(struct iter_htable *ht, unsigned char *key,
 
 static void *iter_htable_remove(struct iter_htable *ht,
                                 const unsigned char *key,
-                                size_t keylen)
+                                uint64_t keylen)
 {
         struct iter_htable_entry e = ITER_HTABLE_ENTRY_INIT;
 
@@ -119,7 +119,7 @@ static void iter_htable_free(struct iter_htable *ht)
 
 /* iter data handling */
 static struct iter_key_data *alloc_iter_key_data(unsigned char *key,
-                                                 size_t keylen)
+                                                 uint64_t keylen)
 {
         struct iter_key_data *data = NULL;
 
@@ -222,7 +222,7 @@ static void zsdb_iter_datav_clear_iter(struct zsdb_iter *iter)
 }
 
 static void zsdb_iter_data_process(struct zsdb_iter *iter,
-                                   unsigned char *key, size_t keylen,
+                                   unsigned char *key, uint64_t keylen,
                                    struct zsdb_iter_data *new_iterd);
 /* Get next entry in zsdb_iter_data */
 static int zsdb_iter_data_next(struct zsdb_iter *iter,
@@ -277,7 +277,7 @@ static int zsdb_iter_data_next(struct zsdb_iter *iter,
 
 /* Process struct zsdb_iter_data */
 static void zsdb_iter_data_process(struct zsdb_iter *iter,
-                                   unsigned char *key, size_t keylen,
+                                   unsigned char *key, uint64_t keylen,
                                    struct zsdb_iter_data *new_iterd)
 {
         struct iter_htable_entry *e;
@@ -436,7 +436,7 @@ int zs_iterator_begin(struct zsdb_iter **iter)
  */
 int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                              const unsigned char *key,
-                             size_t keylen,
+                             uint64_t keylen,
                              int *found)
 {
         struct zsdb_priv *priv;

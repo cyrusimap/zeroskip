@@ -196,8 +196,8 @@ done:
 }
 
 int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
-                                       const unsigned char *key, size_t keylen,
-                                       const unsigned char *val, size_t vallen)
+                                       const unsigned char *key, uint64_t keylen,
+                                       const unsigned char *val, uint64_t vallen)
 {
         return zs_file_write_keyval_record(&priv->dbfiles.factive,
                                            key, keylen,
@@ -211,7 +211,7 @@ int zs_active_file_write_commit_record(struct zsdb_priv *priv)
 
 int zs_active_file_write_delete_record(struct zsdb_priv *priv,
                                        const unsigned char *key,
-                                       size_t keylen)
+                                       uint64_t keylen)
 {
         return zs_file_write_delete_record(&priv->dbfiles.factive,
                                            key, keylen);

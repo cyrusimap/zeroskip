@@ -17,8 +17,8 @@
  * Private functions
  */
 
-static int zs_record_read_key(struct zsdb_file *f, size_t *offset,
-                              const unsigned char **key, size_t *keylen)
+static int zs_record_read_key(struct zsdb_file *f, uint64_t *offset,
+                              const unsigned char **key, uint64_t *keylen)
 {
         unsigned char *bptr;
         unsigned char *fptr;
@@ -44,8 +44,8 @@ static int zs_record_read_key(struct zsdb_file *f, size_t *offset,
         return ZS_OK;
 }
 
-static int zs_record_read_val(struct zsdb_file *f, size_t *offset,
-                              const unsigned char **val, size_t *vallen)
+static int zs_record_read_val(struct zsdb_file *f, uint64_t *offset,
+                              const unsigned char **val, uint64_t *vallen)
 {
         unsigned char *bptr;
         unsigned char *fptr;
@@ -70,7 +70,7 @@ static int zs_record_read_val(struct zsdb_file *f, size_t *offset,
 }
 
 static int zs_read_key_rec(const struct zsdb_file *f,
-                           size_t *offset,
+                           uint64_t *offset,
                            struct zs_key *key)
 {
         unsigned char *bptr;
@@ -102,7 +102,7 @@ static int zs_read_key_rec(const struct zsdb_file *f,
         return ZS_OK;
 }
 
-static int zs_read_val_rec(struct zsdb_file *f, size_t *offset,
+static int zs_read_val_rec(struct zsdb_file *f, uint64_t *offset,
                            struct zs_val *val)
 {
         unsigned char *bptr;
@@ -130,13 +130,13 @@ static int zs_read_val_rec(struct zsdb_file *f, size_t *offset,
         return ZS_OK;
 }
 
-static int zs_read_key_val_record_cb(struct zsdb_file *f, size_t *offset,
+static int zs_read_key_val_record_cb(struct zsdb_file *f, uint64_t *offset,
                                      zsdb_foreach_cb *cb, void *cbdata)
 {
         int ret = ZS_OK;
         struct zs_key key;
         struct zs_val val;
-        size_t keylen, vallen;
+        uint64_t keylen, vallen;
 
 
         zs_read_key_rec(f, offset, &key);
@@ -162,11 +162,11 @@ static int zs_read_key_val_record_cb(struct zsdb_file *f, size_t *offset,
         return ret;
 }
 
-static int zs_read_deleted_record(struct zsdb_file *f, size_t *offset,
+static int zs_read_deleted_record(struct zsdb_file *f, uint64_t *offset,
                                   zsdb_foreach_cb *cb, void *cbdata)
 {
         struct zs_key key;
-        size_t keylen;
+        uint64_t keylen;
 
         zs_read_key_rec(f, offset, &key);
 
@@ -183,7 +183,7 @@ static int zs_read_deleted_record(struct zsdb_file *f, size_t *offset,
 }
 
 static int zs_read_and_verify_commit_record(struct zsdb_file *f,
-                                            size_t *offset)
+                                            uint64_t *offset)
 {
         int ret = ZS_OK;
         unsigned char *bptr;
@@ -289,7 +289,7 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
  * zs_record_read_from_file():
  * Reads a record from a given struct zsdb_file
  */
-int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
+int zs_record_read_from_file(struct zsdb_file *f, uint64_t *offset,
                              zsdb_foreach_cb *cb, zsdb_foreach_cb *deleted_cb,
                              void *cbdata)
 {
@@ -345,7 +345,7 @@ int zs_record_read_from_file(struct zsdb_file *f, size_t *offset,
  * the PQ comparison packed file records.
  */
 int zs_record_read_key_from_file_offset(const struct zsdb_file *f,
-                                        size_t offset,
+                                        uint64_t offset,
                                         struct zs_key *key)
 {
         unsigned char *bptr, *fptr;
@@ -377,11 +377,11 @@ int zs_record_read_key_from_file_offset(const struct zsdb_file *f,
 }
 
 int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
-                                            size_t *offset,
+                                            uint64_t *offset,
                                             struct zs_key *key,
                                             struct zs_val *val)
 {
-        size_t vallen;
+        uint64_t vallen;
 
         zs_read_key_rec(f, offset, key);
 
@@ -400,11 +400,11 @@ int zs_read_key_val_record_from_file_offset(struct zsdb_file *f,
         return ZS_OK;
 }
 
-int zs_record_read_key_val_from_offset(struct zsdb_file *f, size_t *offset,
-                                       const unsigned char **key, size_t *keylen,
-                                       const unsigned char **val, size_t *vallen)
+int zs_record_read_key_val_from_offset(struct zsdb_file *f, uint64_t *offset,
+                                       const unsigned char **key, uint64_t *keylen,
+                                       const unsigned char **val, uint64_t *vallen)
 {
-        size_t dataoffset = *offset;
+        uint64_t dataoffset = *offset;
 
         zs_record_read_key(f, &dataoffset, key, keylen);
 

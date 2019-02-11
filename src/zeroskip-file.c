@@ -25,13 +25,13 @@ static unsigned char svalbuf[SCRATCHBUFSIZ];
  */
 /* Caller should free buf
  */
-static int zs_prepare_key_buf(const unsigned char *key, size_t keylen,
-                              unsigned char **buf, size_t *buflen,
+static int zs_prepare_key_buf(const unsigned char *key, uint64_t keylen,
+                              unsigned char **buf, uint64_t *buflen,
                               int *alloced)
 {
         int ret = ZS_OK;
         unsigned char *kbuf;
-        size_t kbuflen, finalkeylen, pos = 0;
+        uint64_t kbuflen, finalkeylen, pos = 0;
         enum record_t type;
 
         kbuflen = ZS_KEY_BASE_REC_SIZE;
@@ -91,13 +91,13 @@ static int zs_prepare_key_buf(const unsigned char *key, size_t keylen,
 
 /* Caller should free buf
  */
-static int zs_prepare_val_buf(const unsigned char *val, size_t vallen,
-                              unsigned char **buf, size_t *buflen,
+static int zs_prepare_val_buf(const unsigned char *val, uint64_t vallen,
+                              unsigned char **buf, uint64_t *buflen,
                               int *alloced)
 {
         int ret = ZS_OK;
         unsigned char *vbuf;
-        size_t vbuflen, finalvallen, pos = 0;
+        uint64_t vbuflen, finalvallen, pos = 0;
         enum record_t type;
 
         vbuflen = ZS_VAL_BASE_REC_SIZE;
@@ -151,13 +151,13 @@ static int zs_prepare_val_buf(const unsigned char *val, size_t vallen,
 
 /* Caller should free buf
  */
-static int zs_prepare_delete_key_buf(const unsigned char *key, size_t keylen,
-                                     unsigned char **buf, size_t *buflen,
+static int zs_prepare_delete_key_buf(const unsigned char *key, uint64_t keylen,
+                                     unsigned char **buf, uint64_t *buflen,
                                      int *alloced)
 {
         int ret = ZS_OK;
         unsigned char *kbuf;
-        size_t kbuflen, finalkeylen, pos = 0;
+        uint64_t kbuflen, finalkeylen, pos = 0;
         uint64_t val;
         enum record_t type = REC_TYPE_DELETED;
 
@@ -209,13 +209,13 @@ static int zs_prepare_delete_key_buf(const unsigned char *key, size_t keylen,
  * Public functions
  */
 int zs_file_write_keyval_record(struct zsdb_file *f,
-                                const unsigned char *key, size_t keylen,
-                                const unsigned char *val, size_t vallen)
+                                const unsigned char *key, uint64_t keylen,
+                                const unsigned char *val, uint64_t vallen)
 {
         int ret = ZS_OK;
-        size_t keybuflen, valbuflen;
+        uint64_t keybuflen, valbuflen;
         unsigned char *keybuf, *valbuf;
-        size_t mfsize = 0, nbytes;
+        uint64_t mfsize = 0, nbytes;
         int kalloced = 0, valloced = 0;
 
         if (!f->is_open)
@@ -280,7 +280,7 @@ done:
 int zs_file_write_commit_record(struct zsdb_file *f, int final)
 {
         int ret = ZS_OK;
-        size_t buflen, nbytes, pos = 0;
+        uint64_t buflen, nbytes, pos = 0;
         unsigned char buf[24], *ptr;
         uint32_t crc;
 
@@ -395,11 +395,11 @@ done:
 }
 
 int zs_file_write_delete_record(struct zsdb_file *f,
-                                const unsigned char *key, size_t keylen)
+                                const unsigned char *key, uint64_t keylen)
 {
         int ret = ZS_OK;
         unsigned char *dbuf;
-        size_t dbuflen, mfsize = 0, nbytes;
+        uint64_t dbuflen, mfsize = 0, nbytes;
         int alloced = 0;
 
 

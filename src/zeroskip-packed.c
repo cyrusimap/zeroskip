@@ -66,8 +66,8 @@ static int zs_packed_file_write_index(void *data, uint64_t offset)
  * section and the stored CRC.
  * Returns error otherwise.
  */
-static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
-                                  uint32_t *checksum, size_t *crc_offset,
+static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
+                                  uint32_t *checksum, uint64_t *crc_offset,
                                   uint32_t *reccrc)
 {
         unsigned char *bptr, *fptr;
@@ -152,7 +152,7 @@ static int get_offset_to_pointers(struct zsdb_file *f, size_t *offset,
         }
 }
 
-static int read_pointers(struct zsdb_file *f, size_t offset)
+static int read_pointers(struct zsdb_file *f, uint64_t offset)
 {
         uint64_t count, i;
         unsigned char *bptr, *fptr;
@@ -198,8 +198,8 @@ int zs_packed_file_write_btree_record(struct record *record, void *data)
 }
 
 int zs_packed_file_write_record(void *data,
-                                const unsigned char *key, size_t keylen,
-                                const unsigned char *value, size_t vallen)
+                                const unsigned char *key, uint64_t keylen,
+                                const unsigned char *value, uint64_t vallen)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
@@ -211,9 +211,9 @@ int zs_packed_file_write_record(void *data,
 }
 
 int zs_packed_file_write_delete_record(void *data,
-                                       const unsigned char *key, size_t keylen,
+                                       const unsigned char *key, uint64_t keylen,
                                        const unsigned char *value _unused_,
-                                       size_t vallen _unused_)
+                                       uint64_t vallen _unused_)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
@@ -243,7 +243,7 @@ int zs_packed_file_open(const char *path,
         int ret = ZS_OK;
         struct zsdb_file *f;
         size_t mf_size = 0;
-        size_t offset, temp, crc_offset = 0;
+        uint64_t offset, temp, crc_offset = 0;
         int mfile_flags = MFILE_RD;
         uint32_t crc, stored_crc = 0, reccrc = 0;
 
@@ -534,9 +534,9 @@ int zs_pq_cmp_key_frm_offset(const void *d1, const void *d2,
         return ret;
 }
 
-int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
+int zs_packed_file_bsearch_index(const unsigned char *key, const uint64_t keylen,
                                  struct zsdb_file *f, uint64_t *location,
-                                 const unsigned char **value, size_t *vallen,
+                                 const unsigned char **value, uint64_t *vallen,
                                  zsdb_cmp_fn cmpfn)
 {
         uint64_t hi, lo;
@@ -547,9 +547,9 @@ int zs_packed_file_bsearch_index(const unsigned char *key, const size_t keylen,
         while (lo < hi) {
                 uint64_t mi;
                 const unsigned char *k;
-                size_t klen = 0;
+                uint64_t klen = 0;
                 int res;
-                size_t offset = 0;
+                uint64_t offset = 0;
 
                 /* compute the mid */
                 mi = lo + (hi - lo) / 2;
@@ -662,7 +662,7 @@ int zs_packed_file_new_from_packed_files(const char *path,
                 case ZSDB_BE_PACKED:
                 {
                         struct zsdb_file *tempf = data->data.f;
-                        size_t offset = tempf->index->data[tempf->indexpos];
+                        uint64_t offset = tempf->index->data[tempf->indexpos];
                         zs_record_read_from_file(tempf, &offset,
                                                  zs_packed_file_write_record,
                                                  zs_packed_file_write_delete_record,

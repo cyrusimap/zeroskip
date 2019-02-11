@@ -214,7 +214,7 @@ typedef enum _zsdb_be_t {
 /** Iterator **/
 struct iter_key_data {
         unsigned char *key;
-        size_t len;
+        uint64_t len;
 };
 
 struct iter_htable {
@@ -224,7 +224,7 @@ struct iter_htable {
 struct iter_htable_entry {
         struct htable_entry entry;
         unsigned char *key;
-        size_t keylen;
+        uint64_t keylen;
         void *value;
 };
 #define ITER_HTABLE_ENTRY_INIT  { .entry = HTABLE_ENTRY_INIT, .key = NULL, .keylen = 0, .value = NULL };
@@ -263,7 +263,7 @@ struct zsdb_txn {
         struct zsdb *db;
         struct zsdb_iter *iter;
         unsigned char *curkey;
-        size_t curkeylen;
+        uint64_t curkeylen;
         int alloced;
 };
 
@@ -305,15 +305,16 @@ extern int zs_active_file_close(struct zsdb_priv *priv);
 extern int zs_active_file_finalise(struct zsdb_priv *priv);
 extern int zs_active_file_write_keyval_record(struct zsdb_priv *priv,
                                               const unsigned char *key,
-                                              size_t keylen,
+                                              uint64_t keylen,
                                               const unsigned char *val,
-                                              size_t vallen);
+                                              uint64_t vallen);
 extern int zs_active_file_write_commit_record(struct zsdb_priv *priv);
 extern int zs_active_file_write_delete_record(struct zsdb_priv *priv,
                                               const unsigned char *key,
-                                              size_t keylen);
+                                              uint64_t keylen);
 extern int zs_active_file_record_foreach(struct zsdb_priv *priv,
-                                         zsdb_foreach_cb *cb, zsdb_foreach_cb *deleted_cb,
+                                         zsdb_foreach_cb *cb,
+                                         zsdb_foreach_cb *deleted_cb,
                                          void *cbdata);
 extern int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx);
 
@@ -330,11 +331,11 @@ extern int zs_dotzsdb_update_end(struct zsdb_priv *priv);
 
 /* zeroskip-file.c */
 extern int zs_file_write_keyval_record(struct zsdb_file *f,
-                                       const unsigned char *key, size_t keylen,
-                                       const unsigned char *val, size_t vallen);
+                                       const unsigned char *key, uint64_t keylen,
+                                       const unsigned char *val, uint64_t vallen);
 extern int zs_file_write_commit_record(struct zsdb_file *f, int final);
 extern int zs_file_write_delete_record(struct zsdb_file *f,
-                                       const unsigned char *key, size_t keylen);
+                                       const unsigned char *key, uint64_t keylen);
 extern int zs_file_update_stat(struct zsdb_file *f);
 extern int zs_file_check_stat(struct zsdb_file *f);
 
@@ -359,7 +360,7 @@ extern int zs_iterator_new(struct zsdb *db, struct zsdb_iter **iter);
 extern int zs_iterator_begin(struct zsdb_iter **iter);
 extern int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                                     const unsigned char *key,
-                                    size_t keylen,
+                                    uint64_t keylen,
                                     int *found);
 extern int zs_iterator_begin_for_packed_files(struct zsdb_iter **iter,
                                               struct list_head *pflist);
