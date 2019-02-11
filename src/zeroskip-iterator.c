@@ -501,7 +501,7 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                 *found = 1;
         }
 
-        if (priv->fmemtree->count) {
+        if (priv->fmemtree->count && fiter->record) {
                 fiterd = zsdb_iter_data_alloc(ZSDB_BE_FINALISED, prio,
                                               priv->fmemtree, &fiter);
                 zsdb_iter_datav_add_iter(*iter, fiterd);
@@ -516,7 +516,7 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                 *found = 1;
         }
 
-        if (priv->memtree->count) {
+        if (priv->memtree->count && aiter->record) {
                 aiterd = zsdb_iter_data_alloc(ZSDB_BE_ACTIVE, prio,
                                               priv->memtree, &aiter);
                 zsdb_iter_datav_add_iter(*iter, aiterd);
