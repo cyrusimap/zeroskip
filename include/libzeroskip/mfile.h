@@ -27,10 +27,10 @@ struct mfile {
         unsigned int is_dirty:1;
         unsigned int compute_crc;
         uint32_t crc32;
-        size_t crc32_begin_offset;
-        size_t crc32_data_len;
-        size_t size;
-        size_t offset;
+        uint64_t crc32_begin_offset;
+        uint64_t crc32_data_len;
+        uint64_t size;
+        uint64_t offset;
         uint32_t flags;         /* flags passed into the mfile api */
         int mflags;             /* flags parsed into what mmap() understands */
 };
@@ -52,19 +52,19 @@ extern int mfile_map(struct mfile **mfp);
 #endif
 extern int mfile_close(struct mfile **mfp);
 extern int mfile_read(struct mfile **mfp, void *obuf,
-                           size_t obufsize, size_t *nbytes);
+                           uint64_t obufsize, uint64_t *nbytes);
 extern int mfile_write(struct mfile **mfp, void *ibuf,
-                            size_t ibufsize, size_t *nbytes);
+                            uint64_t ibufsize, uint64_t *nbytes);
 extern int mfile_write_iov(struct mfile **mfp,
                                 const struct iovec *iov,
                                 unsigned int iov_cnt,
-                                size_t *nbytes);
-extern int mfile_size(struct mfile **mfp, size_t *psize);
+                                uint64_t *nbytes);
+extern int mfile_size(struct mfile **mfp, uint64_t *psize);
 extern int mfile_stat(struct mfile **mfp, struct stat *stbuf);
-extern int mfile_truncate(struct mfile **mfp, size_t len);
+extern int mfile_truncate(struct mfile **mfp, uint64_t len);
 extern int mfile_flush(struct mfile **mfp);
-extern int mfile_seek(struct mfile **mfp, size_t offset,
-                           size_t *newoffset);
+extern int mfile_seek(struct mfile **mfp, uint64_t offset,
+                           uint64_t *newoffset);
 
 extern void crc32_begin(struct mfile **mfp);
 extern uint32_t crc32_end(struct mfile **mfp);

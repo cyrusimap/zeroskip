@@ -189,10 +189,10 @@ int mfile_close(struct mfile **mfp)
  *   Failre  : non zero
  */
 int mfile_read(struct mfile **mfp, void *obuf,
-                    size_t obufsize, size_t *nbytes)
+                    uint64_t obufsize, uint64_t *nbytes)
 {
         struct mfile *mf = *mfp;
-        size_t n = 0;
+        uint64_t n = 0;
 
         if (!mf)
             return EINVAL;
@@ -226,8 +226,8 @@ int mfile_read(struct mfile **mfp, void *obuf,
  *   Success : 0
  *   Failre  : non zero
  */
-int mfile_write(struct mfile **mfp, void *ibuf, size_t ibufsize,
-                     size_t *nbytes)
+int mfile_write(struct mfile **mfp, void *ibuf, uint64_t ibufsize,
+                     uint64_t *nbytes)
 {
         struct mfile *mf = *mfp;
 
@@ -290,11 +290,11 @@ int mfile_write(struct mfile **mfp, void *ibuf, size_t ibufsize,
  *   Failre  : non zero
  */
 int mfile_write_iov(struct mfile **mfp, const struct iovec *iov,
-                         unsigned int iov_cnt, size_t *nbytes)
+                         unsigned int iov_cnt, uint64_t *nbytes)
 {
         struct mfile *mf = *mfp;
         unsigned int i;
-        size_t total_bytes = 0;
+        uint64_t total_bytes = 0;
 
         if (!mf)
             return EINVAL;
@@ -356,7 +356,7 @@ int mfile_write_iov(struct mfile **mfp, const struct iovec *iov,
     - On Success: returns 0
     - On Failure: returns non 0
  */
-int mfile_size(struct mfile **mfp, size_t *psize)
+int mfile_size(struct mfile **mfp, uint64_t *psize)
 {
         struct mfile *mf = *mfp;
         struct stat stbuf;
@@ -376,7 +376,7 @@ int mfile_size(struct mfile **mfp, size_t *psize)
         if (fstat(mf->fd, &stbuf) != 0)
                 return errno;
 
-        if (mf->size != (size_t) stbuf.st_size) {
+        if (mf->size != (uint64_t) stbuf.st_size) {
                 if (mf->ptr)
                         err = munmap(mf->ptr, mf->size);
 
@@ -439,7 +439,7 @@ int mfile_stat(struct mfile **mfp, struct stat *stbuf)
     - On Success: returns 0
     - On Failure: returns non 0
  */
-int mfile_truncate(struct mfile **mfp, size_t len)
+int mfile_truncate(struct mfile **mfp, uint64_t len)
 {
         struct mfile *mf = *mfp;
         int err = 0;
@@ -502,7 +502,7 @@ int mfile_flush(struct mfile **mfp)
   - On Success: returns 0
   - On Failure: returns non 0
 */
-int mfile_seek(struct mfile **mfp, size_t offset, size_t *newoffset)
+int mfile_seek(struct mfile **mfp, uint64_t offset, uint64_t *newoffset)
 {
         struct mfile *mf = *mfp;
 
