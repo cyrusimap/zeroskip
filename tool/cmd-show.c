@@ -23,8 +23,8 @@ static void usage_and_die(const char *progname)
 }
 
 static int print_cb(void *data _unused_,
-                    const unsigned char *key, size_t keylen,
-                    const unsigned char *val, size_t vallen)
+                    const unsigned char *key, uint64_t keylen,
+                    const unsigned char *val, uint64_t vallen)
 {
         size_t i;
 
@@ -93,8 +93,19 @@ int cmd_show(int argc, char **argv, const char *progname)
                 goto done;
         }
 
-        if (zsdb_forone(db, (const unsigned char *)prefix,
-                        prefixlen, NULL, print_cb, NULL, &txn) != ZS_OK) {
+        if (zsdb_transaction_begin(db, &txn) != ZS_OK) {
+                fprintf(stderr, "ERROR: Could not begin transaction\n");
+                ret = EXIT_FAILURE;
+                goto done;
+        }
+
+        ret = zsdb_forone(db, (const unsigned char *)prefix,
+                          prefixlen, NULL, print_cb, NULL, &txn);
+        if (ret == ZS_NOTFOUND) {
+                fprintf(stderr, "key %s not found\n", prefix);
+                ret = EXIT_FAILURE;
+                goto fail1;
+        } else if ( ret != ZS_OK) {
                 fprintf(stderr, "ERROR: forone failed!\n");
                 ret = EXIT_FAILURE;
                 goto fail1;
