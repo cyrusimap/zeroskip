@@ -32,8 +32,10 @@ static int zs_record_read_key(struct zsdb_file *f, uint64_t *offset,
         type = data >> 56;
 
         if (type == REC_TYPE_KEY || type == REC_TYPE_DELETED) {
-                *keylen = data >> 40 & 0xFFFFFF;
+                uint16_t temp = 0;
+                temp = data >> 40 & 0xFFFFFF;
                 *offset = data & 0xFFFFFFFF;
+                *keylen = temp;
         } else if (type == REC_TYPE_LONG_KEY || type == REC_TYPE_LONG_DELETED) {
                 *keylen = read_be64(fptr + 8);
                 *offset = read_be64(fptr + 16);
@@ -59,8 +61,10 @@ static int zs_record_read_val(struct zsdb_file *f, uint64_t *offset,
         type = data >> 56;
 
         if (type == REC_TYPE_VALUE) {
-                *vallen = (data >> 32) & 0xFFFFFF;
-        } else if (type == REC_TYPE_LONG_VALUE){
+                uint32_t temp = 0;
+                temp = (data >> 32) & 0xFFFFFF;
+                *vallen = temp;
+        } else if (type == REC_TYPE_LONG_VALUE) {
                 *vallen = read_be64(fptr + 8);
         }
 
@@ -408,7 +412,10 @@ int zs_record_read_key_val_from_offset(struct zsdb_file *f, uint64_t *offset,
 
         zs_record_read_key(f, &dataoffset, key, keylen);
 
-        zs_record_read_val(f, &dataoffset, val, vallen);
+        if (val) {
+                dataoffset = *offset + dataoffset;
+                zs_record_read_val(f, &dataoffset, val, vallen);
+        }
 
         return ZS_OK;
 }

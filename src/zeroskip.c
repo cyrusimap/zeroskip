@@ -1842,7 +1842,6 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
         struct zs_key krec;
         struct zs_val vrec;
 
-
         assert(db);
         assert(db->priv);
         assert(key);
@@ -1861,10 +1860,12 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
 
         ret = zs_iterator_begin_at_key(&tempiter, key, keylen, &found);
         if (ret != ZS_OK) {
+                ret = ZS_ERROR;
                 goto fail;
         }
 
         if (!found) {
+                ret = ZS_NOTFOUND;
                 goto fail;
         } else {
                 struct zsdb_iter_data *data;
@@ -1906,7 +1907,6 @@ int zsdb_forone(struct zsdb *db, const unsigned char *key, size_t keylen,
         }
 
 fail:
-        ret = 0;
         zs_iterator_end(&tempiter);
 done:
         return ret;

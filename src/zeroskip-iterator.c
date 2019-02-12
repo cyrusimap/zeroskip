@@ -463,8 +463,8 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                 struct zsdb_iter_data *piterd;
                 struct zsdb_file *f;
                 uint64_t location = 0;
-                unsigned char *nextkey;
-                uint64_t nextkeylen;
+                unsigned char *nextkey = NULL;
+                uint64_t nextkeylen = 0;
 
                 f = list_entry(pos, struct zsdb_file, list);
                 prio = f->priority;
