@@ -1520,7 +1520,7 @@ int zsdb_repack(struct zsdb *db)
                 struct zsdb_iter *iter = NULL;
                 int i = 0;
 
-                filelist.prev = &filelist;
+                list_head_init(&filelist);
 
                 zslog(LOGDEBUG, "Repacking packed files:\n");
                 list_for_each_forward_safe(pos, p,  &priv->dbfiles.pflist) {
