@@ -672,7 +672,8 @@ void crc32c_init()
 #endif
 }
 
-static uint32_t crc32c(uint32_t crc, const void *buf, size_t len) {
+uint32_t crc32c(uint32_t crc, const void *buf, size_t len)
+{
 #ifdef HAVE_SSE42
         return have_sse42
                 ? crc32c_hw(crc, buf, len)
