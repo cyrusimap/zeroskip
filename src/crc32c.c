@@ -65,7 +65,7 @@
 
 #include <config.h>
 
-#include "crc32c.h"
+#include <libzeroskip/crc32c.h>
 #include <stdint.h>
 #include <string.h>
 
