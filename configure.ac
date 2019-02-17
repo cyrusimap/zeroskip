@@ -191,6 +191,7 @@ if test "$zs_cv_sse42" = "yes" ; then
     AC_DEFINE([HAVE_SSE42], [1],["SSE4.2 extensions"])
     AC_SUBST(SSE42)
 fi
+AC_MSG_RESULT($zs_cv_sse42)
 
 AC_SUBST([DEPENDENCIES])
 
