@@ -17,6 +17,7 @@ check_PROGRAMS = unit
 unit_SOURCES = \
 	unit.h \
 	unit.c \
+	unit-crc32c.c \
 	unit-memtree.c \
 	unit-strarr.c \
 	unit-vecu64.c \

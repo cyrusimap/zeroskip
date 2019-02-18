@@ -113,3 +113,10 @@ cstring_dup
 cstring_ltrim
 cstring_rtrim
 cstring_trim
+
+crc32c_init
+crc32c
+crc32c_map
+crc32c_buf
+crc32c_cstring
+crc32c_iovec
