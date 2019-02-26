@@ -6,12 +6,13 @@ PARAMS=""
 DICTFILE="/usr/share/dict/words"
 SHUF="/usr/bin/shuf"
 ZSKIP="/opt/zeroskip/bin/zeroskip"
+PRGNAME=`basename $0`
 
 if [[ $# < 2 ]]; then
     echo "Usage:"
-    echo "  $0 - A tool for inserting random key value pairs into Zeroskip DB."
+    echo "  $PRGNAME - A tool for inserting random key value pairs into Zeroskip DB."
     echo "       The keys are picked randomly from /usr/share/dict/words"
-    echo "  $0 -d [dbdir] -n [num-messages]"
+    echo "  $PRGNAME -d [dbdir] -n [num-messages]"
     echo "  Other options:"
     echo "   -V | --verbose : Enable verbose mode"
     exit 1
@@ -131,7 +132,7 @@ gen_key_val()
         if [[ $VERBOSE == 1 ]]; then
             ZS_LOG_LEVEL=3 $ZSKIP set $dbdir "$KEY" "$VAL"
         else
-            RET=$($ZSKIP set $dbdir "$KEY" "$VAL")
+            RET=$($ZSKIP set $dbdir "$KEY" "$VAL"  2> /dev/null)
             pgbar ${i} ${nummsgs}
         fi
     done
