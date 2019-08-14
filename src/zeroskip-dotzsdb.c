@@ -327,6 +327,9 @@ int zs_dotzsdb_check_stat(struct zsdb_priv *priv)
                 status |= ZSDB_FILE_CTIM_CHANGED;
 #endif
 
+        if (status) {
+                priv->dotzsdb_st = st;
+        }
 done:
         cstring_release(&dotzsdbfname);
         return status;
