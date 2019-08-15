@@ -16,10 +16,6 @@
 
 #include <zlib.h>
 
-/* static buffers for preparing records, this saves a lot malloc()'s */
-#define SCRATCHBUFSIZ 65536
-static unsigned char skeybuf[SCRATCHBUFSIZ];
-static unsigned char svalbuf[SCRATCHBUFSIZ];
 /**
  * Private functions
  */
@@ -44,14 +40,8 @@ static int zs_prepare_key_buf(const unsigned char *key, uint64_t keylen,
         finalkeylen = roundup64bits(keylen);
         kbuflen += finalkeylen;
 
-        if (kbuflen <= SCRATCHBUFSIZ) {
-                memset(skeybuf, 0, SCRATCHBUFSIZ);
-                kbuf = skeybuf;
-                *alloced = 0;
-        } else {
-                kbuf = xcalloc(1, kbuflen);
-                *alloced = 1;
-        }
+        kbuf = xcalloc(1, kbuflen);
+        *alloced = 1;
 
         if (type == REC_TYPE_KEY) {
                 /* If it is a short key, the first 3 fields make up 64 bits */
@@ -111,14 +101,8 @@ static int zs_prepare_val_buf(const unsigned char *val, uint64_t vallen,
 
         vbuflen += finalvallen;
 
-        if (vbuflen <= SCRATCHBUFSIZ) {
-                memset(svalbuf, 0, SCRATCHBUFSIZ);
-                vbuf = svalbuf;
-                *alloced = 0;
-        } else {
-                vbuf = xcalloc(1, vbuflen);
-                *alloced = 1;
-        }
+        vbuf = xcalloc(1, vbuflen);
+        *alloced = 1;
 
         if (type == REC_TYPE_VALUE) {
                 /* The first 3 fields in a short key make up 64 bits */
@@ -167,14 +151,8 @@ static int zs_prepare_delete_key_buf(const unsigned char *key, uint64_t keylen,
         finalkeylen = roundup64bits(keylen);
         kbuflen += finalkeylen;
 
-        if (kbuflen <= SCRATCHBUFSIZ) {
-                memset(skeybuf, 0, SCRATCHBUFSIZ);
-                kbuf = skeybuf;
-                *alloced = 0;
-        } else {
-                kbuf = xcalloc(1, kbuflen);
-                *alloced = 1;
-        }
+        kbuf = xcalloc(1, kbuflen);
+        *alloced = 1;
 
         if (keylen <= MAX_SHORT_KEY_LEN) {
                 val = ((uint64_t)type << 56);     /* Type */
