@@ -115,7 +115,6 @@ int xmkdir(const char *path, mode_t mode)
 
         memset(&sb, 0, sizeof(struct stat));
 
-        return mkdir(path, mode);
         ret = stat(path, &sb);
         if (ret == -1) {        /* The directory doesn't exist, create */
                 return mkdir(path, mode);
