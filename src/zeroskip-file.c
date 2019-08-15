@@ -495,5 +495,9 @@ int zs_file_check_stat(struct zsdb_file *f)
         if (st.st_ctim.tv_nsec != f->st.st_ctim.tv_nsec)
                 status |= ZSDB_FILE_CTIM_CHANGED;
 #endif
+        if (status) {
+                f->st = st;
+        }
+
         return status;
 }
