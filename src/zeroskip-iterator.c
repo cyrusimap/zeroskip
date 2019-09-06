@@ -161,7 +161,7 @@ static int iter_pq_cmp(const void *d1, const void *d2, void *cbdata)
 /* struct zsdb_iter_data handling */
 static struct zsdb_iter_data *zsdb_iter_data_alloc(zsdb_be_t type, int prio,
                                                    void *data,
-                                                   btree_iter_t *iter)
+                                                   memtree_iter_t *iter)
 {
         struct zsdb_iter_data *d;
 
@@ -175,17 +175,17 @@ static struct zsdb_iter_data *zsdb_iter_data_alloc(zsdb_be_t type, int prio,
                 /* data is in files */
                 d->data.f = data;
         } else {
-                /* data is an in-memory btree for finalised and active */
-                struct btree *tree = data;
+                /* data is an in-memory memtree for finalised and active */
+                struct memtree *tree = data;
                 if (!iter) {
-                        btree_begin(tree, d->data.iter);
+                        memtree_begin(tree, d->data.iter);
                 } else {
                         d->data.iter->tree = (*iter)->tree;
                         d->data.iter->node = (*iter)->node;
                         d->data.iter->pos  = (*iter)->pos;
                         d->data.iter->record = (*iter)->record;
                 }
-                btree_next(d->data.iter);
+                memtree_next(d->data.iter);
         }
 
         return d;
@@ -241,7 +241,7 @@ static int zsdb_iter_data_next(struct zsdb_iter *iter,
         switch (iterdata->type) {
         case ZSDB_BE_ACTIVE:
         case ZSDB_BE_FINALISED:
-                if (btree_next(iterdata->data.iter)) {
+                if (memtree_next(iterdata->data.iter)) {
                         key = iterdata->data.iter->record->key;
                         keylen = iterdata->data.iter->record->keylen;
                         iterdata->deleted = iterdata->data.iter->record->deleted;
@@ -442,7 +442,7 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
         struct zsdb_priv *priv;
         struct list_head *pos;
         int prio = 0;
-        btree_iter_t aiter, fiter;
+        memtree_iter_t aiter, fiter;
         struct zsdb_iter_data *fiterd, *aiterd;
 
         if (!iter || !*iter) {
@@ -496,7 +496,7 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
 
         /* Look for the key in the finalised records and add the iterator */
         prio++;
-        if (btree_find(priv->fmemtree, key, keylen, fiter)) {
+        if (memtree_find(priv->fmemtree, key, keylen, fiter)) {
                 /* We found the key in finalised records */
                 *found = 1;
         }
@@ -509,9 +509,9 @@ int zs_iterator_begin_at_key(struct zsdb_iter **iter,
                                        fiterd->data.iter->record->keylen, fiterd);
         }
 
-        /* Look for the key in the active in-memory btree and add the iterator */
+        /* Look for the key in the active in-memory memtree and add the iterator */
         prio++;
-        if (btree_find(priv->memtree, key, keylen, aiter)) {
+        if (memtree_find(priv->memtree, key, keylen, aiter)) {
                 /* We found the key in active records */
                 *found = 1;
         }

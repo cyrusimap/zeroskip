@@ -13,7 +13,7 @@
 
 #include "htable.h"
 #include "pqueue.h"
-#include <libzeroskip/btree.h>
+#include <libzeroskip/memtree.h>
 #include <libzeroskip/cstring.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/macros.h>
@@ -69,28 +69,28 @@ static int dbfname_cmp(const void *d1, const void *d2, void *cbdata _unused_)
         return natural_strcasecmp(f1->fname.buf, f2->fname.buf);
 }
 
-static int load_btree_record_cb(void *data,
+static int load_memtree_record_cb(void *data,
                                 const unsigned char *key, size_t keylen,
                                 const unsigned char *value, size_t vallen)
 {
-        struct btree *memtree = (struct btree *)data;
+        struct memtree *memtree = (struct memtree *)data;
         struct record *rec;
 
         rec = record_new(key, keylen, value, vallen, 0);
-        btree_replace(memtree, rec);
+        memtree_replace(memtree, rec);
 
         return 0;
 }
 
-static int load_deleted_btree_record_cb(void *data,
+static int load_deleted_memtree_record_cb(void *data,
                                         const unsigned char *key, size_t keylen,
                                         const unsigned char *value, size_t vallen)
 {
-        struct btree *memtree = (struct btree *)data;
+        struct memtree *memtree = (struct memtree *)data;
         struct record *rec;
 
         rec = record_new(key, keylen, value, vallen, 1);
-        btree_replace(memtree, rec);
+        memtree_replace(memtree, rec);
 
         return 0;
 }
@@ -459,18 +459,18 @@ static int zsdb_reload(struct zsdb_priv *priv)
         }
 
         if (priv->memtree) {
-                btree_free(priv->memtree);
+                memtree_free(priv->memtree);
                 priv->memtree = NULL;
         }
 
         if (priv->fmemtree) {
-                btree_free(priv->fmemtree);
+                memtree_free(priv->fmemtree);
                 priv->fmemtree = NULL;
         }
 
         /* Allocate In-memory tree */
-        priv->memtree = btree_new(NULL, priv->btcompare);
-        priv->fmemtree = btree_new(NULL, priv->btcompare);
+        priv->memtree = memtree_new(NULL, priv->btcompare);
+        priv->fmemtree = memtree_new(NULL, priv->btcompare);
 
         /** Reopen/Reload all files */
         ret = for_each_db_file_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH,
@@ -479,8 +479,8 @@ static int zsdb_reload(struct zsdb_priv *priv)
                 goto done;
 
         /* Load records from active file to in-memory tree */
-        ret = zs_active_file_record_foreach(priv, load_btree_record_cb,
-                                            load_deleted_btree_record_cb,
+        ret = zs_active_file_record_foreach(priv, load_memtree_record_cb,
+                                            load_deleted_memtree_record_cb,
                                             priv->memtree);
         if (ret != ZS_OK)
                 goto done;
@@ -501,8 +501,8 @@ static int zsdb_reload(struct zsdb_priv *priv)
                         f = list_entry(pos, struct zsdb_file, list);
                         zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
                         zs_finalised_file_record_foreach(f,
-                                                         load_btree_record_cb,
-                                                         load_deleted_btree_record_cb,
+                                                         load_memtree_record_cb,
+                                                         load_deleted_memtree_record_cb,
                                                          priv->fmemtree);
                         f->priority = ++priority;
                 }
@@ -541,7 +541,7 @@ done:
  * Public functions
  */
 int zsdb_init(struct zsdb **pdb, zsdb_cmp_fn dbcmpfn,
-              btree_search_cb_t btcmpfn)
+              memtree_search_cb_t btcmpfn)
 {
         struct zsdb *db;
         struct zsdb_priv *priv;
@@ -704,8 +704,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
         }
 
         /* In-memory tree */
-        priv->memtree = btree_new(NULL, priv->btcompare);
-        priv->fmemtree = btree_new(NULL, priv->btcompare);
+        priv->memtree = memtree_new(NULL, priv->btcompare);
+        priv->fmemtree = memtree_new(NULL, priv->btcompare);
 
         if (newdb) {
                 if (zsdb_write_lock_acquire(db, 0 /*timeout*/) < 0) {
@@ -740,8 +740,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                         goto done;
 
                 /* Load records from active file to in-memory tree */
-                ret = zs_active_file_record_foreach(priv, load_btree_record_cb,
-                                                    load_deleted_btree_record_cb,
+                ret = zs_active_file_record_foreach(priv, load_memtree_record_cb,
+                                                    load_deleted_memtree_record_cb,
                                                     priv->memtree);
                 if (ret != ZS_OK)
                         goto done;
@@ -762,8 +762,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                                 f = list_entry(pos, struct zsdb_file, list);
                                 zslog(LOGDEBUG, "Loading %s\n", f->fname.buf);
                                 zs_finalised_file_record_foreach(f,
-                                                                 load_btree_record_cb,
-                                                                 load_deleted_btree_record_cb,
+                                                                 load_memtree_record_cb,
+                                                                 load_deleted_memtree_record_cb,
                                                                  priv->fmemtree);
                                 f->priority = ++priority;
                         }
@@ -849,10 +849,10 @@ int zsdb_close(struct zsdb *db)
         }
 
         if (priv->memtree)
-                btree_free(priv->memtree);
+                memtree_free(priv->memtree);
 
         if (priv->fmemtree)
-                btree_free(priv->fmemtree);
+                memtree_free(priv->fmemtree);
 
         if (db->iter || db->numtrans)
                 ret = zsdb_break(ZS_INTERNAL);
@@ -949,7 +949,7 @@ int zsdb_add(struct zsdb *db,
         priv->dbdirty = 1;
 
         rec = record_new(key, keylen, value, vallen, 0);
-        btree_replace(priv->memtree, rec);
+        memtree_replace(priv->memtree, rec);
 
         zslog(LOGDEBUG, "Inserted record into the DB. %s\n",
                 priv->dbfiles.factive.fname.buf);
@@ -1003,7 +1003,7 @@ int zsdb_remove(struct zsdb *db,
 
         /* Add the entry to the in-memory tree */
         rec = record_new(key, keylen, NULL, 0, 1);
-        btree_replace(priv->memtree, rec);
+        memtree_replace(priv->memtree, rec);
 
         zslog(LOGDEBUG, "Removed key from DB `%s`\n", priv->dbdir.buf);
 done:
@@ -1055,7 +1055,7 @@ int zsdb_fetch(struct zsdb *db,
 {
         int ret = ZS_NOTFOUND;
         struct zsdb_priv *priv;
-        btree_iter_t iter;
+        memtree_iter_t iter;
         struct list_head *pos;
 
         assert(db);
@@ -1081,9 +1081,9 @@ int zsdb_fetch(struct zsdb *db,
                 zslog(LOGDEBUG, "zsdb_fetch: has transaction\n");
         }
 
-        /* Look for the key in the active in-memory btree */
+        /* Look for the key in the active in-memory memtree */
         zslog(LOGDEBUG, "Looking in active records\n");
-        if (btree_find(priv->memtree, key, keylen, iter)) {
+        if (memtree_find(priv->memtree, key, keylen, iter)) {
                 /* We found the key in active records */
                 if (iter->record && !iter->record->deleted) {
                         *vallen = iter->record->vallen;
@@ -1095,7 +1095,7 @@ int zsdb_fetch(struct zsdb *db,
 
         /* Look for the key in the finalised records */
         zslog(LOGDEBUG, "Looking in finalised file(s)\n");
-        if (btree_find(priv->fmemtree, key, keylen, iter)) {
+        if (memtree_find(priv->fmemtree, key, keylen, iter)) {
                 /* We found the key in finalised records */
                 if (iter->record) {
                         *vallen = iter->record->vallen;
@@ -1260,7 +1260,7 @@ done:
         return ret;
 }
 
-static int print_btree_rec(struct record *record, void *data _unused_)
+static int print_memtree_rec(struct record *record, void *data _unused_)
 {
         size_t i;
 
@@ -1316,7 +1316,7 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
                                 switch (idata->type) {
                                 case ZSDB_BE_ACTIVE:
                                 case ZSDB_BE_FINALISED:
-                                        print_btree_rec(idata->data.iter->record, NULL);
+                                        print_memtree_rec(idata->data.iter->record, NULL);
                                         break;
                                 case ZSDB_BE_PACKED:
                                 {
@@ -1337,7 +1337,7 @@ int zsdb_dump(struct zsdb *db, DBDumpLevel level)
                         zs_iterator_end(&iter);
                 } else {
                         /* Dump active records only */
-                        btree_walk_forward(priv->memtree, print_btree_rec, NULL);
+                        memtree_walk_forward(priv->memtree, print_memtree_rec, NULL);
                         count = priv->memtree->count;
                 }
         } else {

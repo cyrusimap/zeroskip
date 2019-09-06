@@ -10,7 +10,7 @@
 
 #include "pqueue.h"
 
-#include <libzeroskip/btree.h>
+#include <libzeroskip/memtree.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/macros.h>
 #include <libzeroskip/mfile.h>
@@ -182,7 +182,7 @@ static int read_pointers(struct zsdb_file *f, uint64_t offset)
  * Public functions
  */
 
-int zs_packed_file_write_btree_record(struct record *record, void *data)
+int zs_packed_file_write_memtree_record(struct record *record, void *data)
 {
         struct zsdb_file *f = (struct zsdb_file *)data;
         int ret = ZS_OK;
@@ -406,8 +406,8 @@ int zs_packed_file_new_from_memtree(const char *path,
         mfile_seek(&f->mf, ZS_HDR_SIZE, NULL);
 
         /* Write records into packed files */
-        btree_walk_forward(priv->fmemtree,
-                           zs_packed_file_write_btree_record,
+        memtree_walk_forward(priv->fmemtree,
+                           zs_packed_file_write_memtree_record,
                            (void *)f);
 
         ret = mfile_flush(&f->mf);

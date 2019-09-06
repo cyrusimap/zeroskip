@@ -50,22 +50,22 @@ natural_strcasecmp
 
 zslog
 
-btree_new
-btree_free
-btree_insert_opt
-btree_insert_at
-btree_remove_at
-btree_deref
-btree_lookup
-btree_find
-btree_walk_forward
-btree_begin
-btree_next
-btree_prev
-btree_memcmp_natural
-btree_memcmp_raw
-btree_destroy
-btree_print_node_data
+memtree_new
+memtree_free
+memtree_insert_opt
+memtree_insert_at
+memtree_remove_at
+memtree_deref
+memtree_lookup
+memtree_find
+memtree_walk_forward
+memtree_begin
+memtree_next
+memtree_prev
+memtree_memcmp_natural
+memtree_memcmp_raw
+memtree_destroy
+memtree_print_node_data
 record_new
 record_free
 

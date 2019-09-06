@@ -1,7 +1,7 @@
 /*
- * zs-btree.h
+ * memtree.h
  *
- * Btree implementation for zeroskip - holds the in-memory data.
+ * Memtree implementation for zeroskip - holds the in-memory data.
  *
  * This file is part of zeroskip.
  *
@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef _BTREE_H_
-#define _BTREE_H_
+#ifndef _MEMTREE_H_
+#define _MEMTREE_H_
 
 #include <stdio.h>
 #include <stdint.h>
@@ -20,8 +20,8 @@
 
 CPP_GUARD_START
 
-#define BTREE_MAX_ELEMENTS 10
-#define BTREE_MIN_ELEMENTS (BTREE_MAX_ELEMENTS >> 1)
+#define MEMTREE_MAX_ELEMENTS 10
+#define MEMTREE_MIN_ELEMENTS (MEMTREE_MAX_ELEMENTS >> 1)
 
 enum NodeType {
         LEAF_NODE,
@@ -30,11 +30,11 @@ enum NodeType {
 
 /* Return codes */
 enum {
-        BTREE_OK             =  0,
-        BTREE_ERROR          = -1,
-        BTREE_INVALID        = -2,
-        BTREE_DUPLICATE      = -3,
-        BTREE_NOT_FOUND      = -4,
+        MEMTREE_OK             =  0,
+        MEMTREE_ERROR          = -1,
+        MEMTREE_INVALID        = -2,
+        MEMTREE_DUPLICATE      = -3,
+        MEMTREE_NOT_FOUND      = -4,
 };
 
 struct record {
@@ -45,123 +45,123 @@ struct record {
         int deleted;
 };
 
-struct btree_node {
-        struct btree_node *parent;
+struct memtree_node {
+        struct memtree_node *parent;
 
         uint32_t count;
         uint32_t depth;
 
         uint32_t pos;
 
-        struct record *recs[BTREE_MAX_ELEMENTS];
+        struct record *recs[MEMTREE_MAX_ELEMENTS];
 
-        struct btree_node *branches[];
+        struct memtree_node *branches[];
 };
 
-struct btree_iter {
-        struct btree *tree;
-        struct btree_node *node;
+struct memtree_iter {
+        struct memtree *tree;
+        struct memtree_node *node;
 
         uint32_t pos;
 
         struct record *record;
 };
 
-typedef struct btree_iter btree_iter_t[1];
+typedef struct memtree_iter memtree_iter_t[1];
 
 /** Callbacks **/
-/* btree_action_cb_t should return 1 for success, for the loop to continue */
-typedef int (*btree_action_cb_t)(struct record *record, void *data);
-typedef unsigned int (*btree_search_cb_t)(const unsigned char *key,
+/* memtree_action_cb_t should return 1 for success, for the loop to continue */
+typedef int (*memtree_action_cb_t)(struct record *record, void *data);
+typedef unsigned int (*memtree_search_cb_t)(const unsigned char *key,
                                           size_t keylen,
                                           struct record **recs,
                                           unsigned int count,
                                           int *found);
 
-struct btree {
-        struct btree_node *root;
+struct memtree {
+        struct memtree_node *root;
         size_t count;
 
-        btree_action_cb_t destroy;
+        memtree_action_cb_t destroy;
         void *destroy_data;
 
-        btree_search_cb_t search;
+        memtree_search_cb_t search;
 };
 
-/* btree_new():
- * Creates a new btree. Takes two arguments for callbacks.
+/* memtree_new():
+ * Creates a new memtree. Takes two arguments for callbacks.
  * They can be NULL, in which case, it defaults to using the default delete
  * and search functions, which operate on `unsigned char`.
  */
-struct btree *btree_new(btree_action_cb_t destroy, btree_search_cb_t search);
+struct memtree *memtree_new(memtree_action_cb_t destroy, memtree_search_cb_t search);
 
-void btree_free(struct btree *tree);
+void memtree_free(struct memtree *tree);
 
-/* btree_insert_opt():
+/* memtree_insert_opt():
  * if `replace` is 1, replaces the value, otherwise, inserts another entry
  * with the same key/value.
  * Returns:
- *   On Success - returns BTREE_OK
+ *   On Success - returns MEMTREE_OK
  *   On Failure - returns non 0
  */
-int btree_insert_opt(struct btree *tree, struct record *record, int replace);
+int memtree_insert_opt(struct memtree *tree, struct record *record, int replace);
 
-/* btree_insert():
+/* memtree_insert():
  * insert a record into the tree, duplicates allowed.
  */
-static inline int btree_insert(struct btree *tree, struct record *record)
+static inline int memtree_insert(struct memtree *tree, struct record *record)
 {
-        return btree_insert_opt(tree, record, 0);
+        return memtree_insert_opt(tree, record, 0);
 }
 
-/* btree_replace():
+/* memtree_replace():
  * insert a record into the tree, replace the existing record, if the record
  * exists.
  */
-static inline int btree_replace(struct btree *tree, struct record *record)
+static inline int memtree_replace(struct memtree *tree, struct record *record)
 {
-        return btree_insert_opt(tree, record, 1);
+        return memtree_insert_opt(tree, record, 1);
 }
 
 
-/* btree_insert_at():
+/* memtree_insert_at():
  * Insert a record before the one pointed to by iter
  */
-void btree_insert_at(btree_iter_t iter, struct record *record);
+void memtree_insert_at(memtree_iter_t iter, struct record *record);
 
-/* btree_remove():
+/* memtree_remove():
  * Returns:
- *   On Success - returns BTREE_OK
+ *   On Success - returns MEMTREE_OK
  *   On Failure - returns non 0
  */
-int btree_remove(struct btree *tree, unsigned char *key, size_t keylen);
+int memtree_remove(struct memtree *tree, unsigned char *key, size_t keylen);
 
-/* btree_remove_at():
+/* memtree_remove_at():
  * Removes the record pointed to by the iter. This function invalidates the
  * iter.
  */
-int btree_remove_at(btree_iter_t iter);
+int memtree_remove_at(memtree_iter_t iter);
 
-/* btree_deref():
+/* memtree_deref():
  */
-int btree_deref(btree_iter_t iter);
+int memtree_deref(memtree_iter_t iter);
 
 /* Lookup/Find functions */
-int btree_lookup(struct btree *tree, const void *key);
+int memtree_lookup(struct memtree *tree, const void *key);
 
-/* btree_find():
+/* memtree_find():
  * Return value:
  *  On Success: returns 1 with iter->element containing the match
  *  On Failure: returns 0
  */
-int btree_find(struct btree *tree, const unsigned char *key, size_t keylen,
-               btree_iter_t iter);
+int memtree_find(struct memtree *tree, const unsigned char *key, size_t keylen,
+               memtree_iter_t iter);
 
-int btree_walk_forward(struct btree *btree, btree_action_cb_t action,
+int memtree_walk_forward(struct memtree *memtree, memtree_action_cb_t action,
                        void *data);
-int btree_begin(struct btree *btree, btree_iter_t iter);
-int btree_prev(btree_iter_t iter);
-int btree_next(btree_iter_t iter);
+int memtree_begin(struct memtree *memtree, memtree_iter_t iter);
+int memtree_prev(memtree_iter_t iter);
+int memtree_next(memtree_iter_t iter);
 
 /* These are the default callbacks that are used in the absence of
  * callbacks from the user.
@@ -170,25 +170,25 @@ int btree_next(btree_iter_t iter);
 /* The B-Tree requires a binary search function for comparison.
  */
 
-/* btree_memcmp_natural():
+/* memtree_memcmp_natural():
    Sorts on natural order
  */
-unsigned int btree_memcmp_natural(const unsigned char *key, size_t keylen,
+unsigned int memtree_memcmp_natural(const unsigned char *key, size_t keylen,
                                   struct record **recs,
                                   unsigned int count, int *found);
-/* btree_memcmp_raw():
+/* memtree_memcmp_raw():
    Sorts raw - data with common prefixes are grouped together.
  */
-unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
+unsigned int memtree_memcmp_raw(const unsigned char *key, size_t keylen,
                               struct record **recs,
                               unsigned int count, int *found);
 
-#define btree_memcmp_fn(_name, _minlen, _cmpfn)                        \
-        unsigned int btree_memcmp_##_name(const unsigned char *key,     \
-                                          size_t keylen,                \
-                                          struct record **recs,         \
-                                          unsigned int count,           \
-                                          int *found)                   \
+#define memtree_memcmp_fn(_name, _minlen, _cmpfn)                       \
+        unsigned int memtree_memcmp_##_name(const unsigned char *key,   \
+                                            size_t keylen,              \
+                                            struct record **recs,       \
+                                            unsigned int count,         \
+                                            int *found)                 \
         {                                                               \
                 unsigned int start = 0;                                 \
                 const unsigned char *k = key;                           \
@@ -228,9 +228,9 @@ unsigned int btree_memcmp_raw(const unsigned char *key, size_t keylen,
                  return start;                                          \
         }
 
-int btree_destroy(struct record *record, void *data);
+int memtree_destroy(struct record *record, void *data);
 
-int btree_print_node_data(struct btree *btree, void *data);
+int memtree_print_node_data(struct memtree *memtree, void *data);
 
 /* Record handlers */
 struct record * record_new(const unsigned char *key, size_t keylen,
@@ -240,4 +240,4 @@ void record_free(struct record *record);
 
 CPP_GUARD_END
 
-#endif  /* _BTREE_H_ */
+#endif  /* _MEMTREE_H_ */

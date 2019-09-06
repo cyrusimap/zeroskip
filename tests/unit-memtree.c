@@ -8,7 +8,7 @@
  */
 #include <libzeroskip/macros.h>
 #include <libzeroskip/util.h>
-#include <libzeroskip/btree.h>
+#include <libzeroskip/memtree.h>
 
 #include <check.h>
 
@@ -16,16 +16,16 @@
 
 Suite *memtree_suite(void);
 
-static struct btree *tree = NULL;
+static struct memtree *tree = NULL;
 
 static void setup(void)
 {
-        tree = btree_new(NULL, NULL);
+        tree = memtree_new(NULL, NULL);
 }
 
 static void teardown(void)
 {
-        btree_free(tree);
+        memtree_free(tree);
 }
 
 START_TEST(test_memtree_create)
@@ -48,8 +48,8 @@ START_TEST(test_memtree_insert_records)
                 recs[i] = record_new((const unsigned char *)key, strlen(key),
                                      (const unsigned char *)val, strlen(val),
                                      0);
-                ret = btree_insert(tree, recs[i]);
-                ck_assert_int_eq(ret, BTREE_OK);
+                ret = memtree_insert(tree, recs[i]);
+                ck_assert_int_eq(ret, MEMTREE_OK);
         }
 
         ck_assert_int_eq(tree->count, NUMRECS);
@@ -61,7 +61,7 @@ START_TEST(test_memtree_insert_duplicate_record)
         struct record *recs[NUMRECS];
         struct record *trec;
         int i, ret;
-        btree_iter_t iter;
+        memtree_iter_t iter;
 
         for (i = 0; i < NUMRECS; i++) {
                 char key[10], val[10];
@@ -72,8 +72,8 @@ START_TEST(test_memtree_insert_duplicate_record)
                 recs[i] = record_new((const unsigned char *)key, strlen(key),
                                      (const unsigned char *)val, strlen(val),
                                      0);
-                ret = btree_insert(tree, recs[i]);
-                ck_assert_int_eq(ret, BTREE_OK);
+                ret = memtree_insert(tree, recs[i]);
+                ck_assert_int_eq(ret, MEMTREE_OK);
         }
 
         ck_assert_int_eq(tree->count, NUMRECS);
@@ -85,18 +85,18 @@ START_TEST(test_memtree_insert_duplicate_record)
                           strlen("newval2"),
                           0);
 
-        ret = btree_insert(tree, trec);
-        ck_assert_int_eq(ret, BTREE_DUPLICATE);
+        ret = memtree_insert(tree, trec);
+        ck_assert_int_eq(ret, MEMTREE_DUPLICATE);
 
         /* Replace the record */
-        ret = btree_replace(tree, trec);
-        ck_assert_int_eq(ret, BTREE_OK);
+        ret = memtree_replace(tree, trec);
+        ck_assert_int_eq(ret, MEMTREE_OK);
 
         ck_assert_int_eq(tree->count, NUMRECS);
 
         /* Ensure value is is the new value */
-        memset(&iter, 0, sizeof(btree_iter_t));
-        ret = btree_find(tree, (const unsigned char *)"key2",
+        memset(&iter, 0, sizeof(memtree_iter_t));
+        ret = memtree_find(tree, (const unsigned char *)"key2",
                          strlen("key2"), iter);
         ck_assert_int_eq(ret, 1);
 
@@ -149,21 +149,21 @@ START_TEST(test_memtree_mbox_name)
 {
         size_t i;
         int ret;
-        btree_iter_t iter;
+        memtree_iter_t iter;
 
         /* Add records */
         for (i = 0; i < ARRAY_SIZE(mbkv); i++) {
                 struct record *trec = record_new(mbkv[i].k, mbkv[i].klen,
                                                  mbkv[i].v, mbkv[i].vlen, 0);
-                ret = btree_insert(tree, trec);
-                ck_assert_int_eq(ret, BTREE_OK);
+                ret = memtree_insert(tree, trec);
+                ck_assert_int_eq(ret, MEMTREE_OK);
         }
 
         ck_assert_int_eq(tree->count, ARRAY_SIZE(mbkv));
 
         i = 0;
-        memset(&iter, 0, sizeof(btree_iter_t));
-        for (btree_begin(tree, iter); btree_next(iter);) {
+        memset(&iter, 0, sizeof(memtree_iter_t));
+        for (memtree_begin(tree, iter); memtree_next(iter);) {
 
                 if (i == 0)
                         ck_assert_mem_eq(iter->record->key, MBK5, MBK5L);
@@ -185,7 +185,7 @@ START_TEST(test_memtree_iter)
 {
         struct record *recs[NUMRECS];
         int i, ret, count = 0;
-        btree_iter_t iter;
+        memtree_iter_t iter;
 
         for (i = 0; i < NUMRECS; i++) {
                 char key[10], val[10];
@@ -196,14 +196,14 @@ START_TEST(test_memtree_iter)
                 recs[i] = record_new((const unsigned char *)key, strlen(key),
                                      (const unsigned char *)val, strlen(val),
                                      0);
-                ret = btree_insert(tree, recs[i]);
-                ck_assert_int_eq(ret, BTREE_OK);
+                ret = memtree_insert(tree, recs[i]);
+                ck_assert_int_eq(ret, MEMTREE_OK);
         }
 
         ck_assert_int_eq(tree->count, NUMRECS);
 
-        memset(&iter, 0, sizeof(btree_iter_t));
-        for (btree_begin(tree, iter); btree_next(iter);) {
+        memset(&iter, 0, sizeof(memtree_iter_t));
+        for (memtree_begin(tree, iter); memtree_next(iter);) {
                 count++;
         }
         ck_assert_int_eq(count, NUMRECS);

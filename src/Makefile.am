@@ -43,7 +43,7 @@ libzeroskip_la_LDFLAGS = \
 	-export-symbols libzeroskip.exp
 
 libzeroskip_la_SOURCES = \
-	btree.c \
+	memtree.c \
 	crc32c.h crc32c.c \
 	cstring.c \
 	file-lock.h file-lock.c \

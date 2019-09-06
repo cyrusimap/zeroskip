@@ -16,7 +16,7 @@
 #include "list.h"
 #include "pqueue.h"
 
-#include <libzeroskip/btree.h>
+#include <libzeroskip/memtree.h>
 #include <libzeroskip/cstring.h>
 #include <libzeroskip/macros.h>
 #include <libzeroskip/mfile.h>
@@ -235,7 +235,7 @@ struct zsdb_iter_data {
         int done;
         int deleted;
         union {
-                btree_iter_t iter;
+                memtree_iter_t iter;
                 struct zsdb_file *f;
         } data;
 };
@@ -284,11 +284,11 @@ struct zsdb_priv {
         struct file_lock wlk;       /* Lock when writing */
         struct file_lock plk;       /* Lock when packing */
 
-        struct btree *memtree;      /* in-memory B-Tree */
-        struct btree *fmemtree;     /* in-memory B-Tree of finalised records */
+        struct memtree *memtree;      /* in-memory B-Tree */
+        struct memtree *fmemtree;     /* in-memory B-Tree of finalised records */
 
         zsdb_cmp_fn dbcompare;       /* The db comparator */
-        btree_search_cb_t btcompare; /* Th btree comparator */
+        memtree_search_cb_t btcompare; /* Th memtree comparator */
 
         int open;                    /* is the db open */
         int flags;                   /* The flags passed during call to open */
@@ -384,7 +384,7 @@ extern int zs_packed_file_new_from_packed_files(const char *path,
                                                 struct list_head *flist,
                                                 struct zsdb_iter **iter,
                                                 struct zsdb_file **fptr);
-extern int zs_packed_file_write_btree_record(struct record *record, void *data);
+extern int zs_packed_file_write_memtree_record(struct record *record, void *data);
 extern int zs_packed_file_write_record(void *data,
                                        const unsigned char *key, uint64_t keylen,
                                        const unsigned char *value, uint64_t vallen);
