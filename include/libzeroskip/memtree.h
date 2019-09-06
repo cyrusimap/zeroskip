@@ -73,10 +73,10 @@ typedef struct memtree_iter memtree_iter_t[1];
 /* memtree_action_cb_t should return 1 for success, for the loop to continue */
 typedef int (*memtree_action_cb_t)(struct record *record, void *data);
 typedef unsigned int (*memtree_search_cb_t)(const unsigned char *key,
-                                          size_t keylen,
-                                          struct record **recs,
-                                          unsigned int count,
-                                          int *found);
+                                            size_t keylen,
+                                            struct record **recs,
+                                            unsigned int count,
+                                            int *found);
 
 struct memtree {
         struct memtree_node *root;
@@ -155,10 +155,10 @@ int memtree_lookup(struct memtree *tree, const void *key);
  *  On Failure: returns 0
  */
 int memtree_find(struct memtree *tree, const unsigned char *key, size_t keylen,
-               memtree_iter_t iter);
+                 memtree_iter_t iter);
 
 int memtree_walk_forward(struct memtree *memtree, memtree_action_cb_t action,
-                       void *data);
+                         void *data);
 int memtree_begin(struct memtree *memtree, memtree_iter_t iter);
 int memtree_prev(memtree_iter_t iter);
 int memtree_next(memtree_iter_t iter);
@@ -174,14 +174,14 @@ int memtree_next(memtree_iter_t iter);
    Sorts on natural order
  */
 unsigned int memtree_memcmp_natural(const unsigned char *key, size_t keylen,
-                                  struct record **recs,
-                                  unsigned int count, int *found);
+                                    struct record **recs,
+                                    unsigned int count, int *found);
 /* memtree_memcmp_raw():
    Sorts raw - data with common prefixes are grouped together.
  */
 unsigned int memtree_memcmp_raw(const unsigned char *key, size_t keylen,
-                              struct record **recs,
-                              unsigned int count, int *found);
+                                struct record **recs,
+                                unsigned int count, int *found);
 
 #define memtree_memcmp_fn(_name, _minlen, _cmpfn)                       \
         unsigned int memtree_memcmp_##_name(const unsigned char *key,   \

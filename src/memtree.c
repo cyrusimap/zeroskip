@@ -528,8 +528,8 @@ int memtree_lookup(struct memtree *memtree _unused_,
 }
 
 unsigned int memtree_memcmp_natural(const unsigned char *key, size_t keylen,
-                                  struct record **recs,
-                                  unsigned int count, int *found)
+                                    struct record **recs,
+                                    unsigned int count, int *found)
 {
         unsigned int start = 0;
         const unsigned char *k = key;
@@ -583,7 +583,7 @@ int memtree_destroy(struct record *record,
 }
 
 int memtree_find(struct memtree *memtree, const unsigned char *key, size_t keylen,
-               memtree_iter_t iter)
+                 memtree_iter_t iter)
 {
         struct memtree_node *node = memtree->root;
         uint32_t depth;
