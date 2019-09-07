@@ -237,9 +237,9 @@ enum {
 #define MAX_BUF_PATH (2 * PATH_MAX)
 
 #if defined(LINUX) || defined(DARWIN) || defined(BSD)
-static int for_each_db_file_in_dbdir(char *const path[],
-                                     int full_path,
-                                     void *data)
+static int process_files_in_dbdir(char *const path[],
+                                  int full_path,
+                                  void *data)
 {
         FTS *ftsp = NULL;
         FTSENT *fp = NULL;
@@ -315,9 +315,9 @@ static int for_each_db_file_in_dbdir(char *const path[],
         return err;
 }
 #else  /* SOLARIS */
-static int for_each_db_file_in_dbdir(char *const path[],
-                                     int full_path,
-                                     void *data)
+static int process_files_in_dbdir(char *const path[],
+                                  int full_path,
+                                  void *data)
 {
         char buf[PATH_MAX];
         int err = 0;
@@ -473,8 +473,8 @@ static int zsdb_reload(struct zsdb_priv *priv)
         priv->fmemtree = memtree_new(NULL, priv->btcompare);
 
         /** Reopen/Reload all files */
-        ret = for_each_db_file_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH,
-                                        priv);
+        ret = process_files_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH,
+                                     priv);
         if (ret != ZS_OK)
                 goto done;
 
@@ -734,8 +734,8 @@ int zsdb_open(struct zsdb *db, const char *dbdir, int mode)
                 struct list_head *pos;
                 uint64_t priority;
 
-                ret = for_each_db_file_in_dbdir(&priv->dbdir.buf,
-                                                DB_ABS_PATH, priv);
+                ret = process_files_in_dbdir(&priv->dbdir.buf,
+                                             DB_ABS_PATH, priv);
                 if (ret != ZS_OK)
                         goto done;
 

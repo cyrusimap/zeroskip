@@ -14,12 +14,12 @@
 
 static void usage_and_die(const char *progname)
 {
-         fprintf(stderr, "Usage: %s %s\n", progname, cmd_damage_usage);
+         fprintf(stderr, "Usage: %s %s\n", progname, cmd_recover_usage);
 
         exit(EXIT_FAILURE);
 }
 
-int cmd_damage(int argc, char **argv, const char *progname)
+int cmd_recover(int argc, char **argv, const char *progname)
 {
         static struct option long_options[] = {
                 {"config", required_argument, NULL, 'c'},

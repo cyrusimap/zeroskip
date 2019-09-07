@@ -102,6 +102,7 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                 *crc_offset = *offset + 4;
                 *offset = *offset - len;
 
+                zslog(LOGDEBUG, "Found a final commit record.\n");
                 return ZS_OK;
         } else if (rectype == REC_TYPE_2ND_HALF_COMMIT) {
                 uint32_t val;
@@ -120,6 +121,8 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                 *checksum = data & 0xFFFFFFFF;
                 *offset = *offset - (ZS_LONG_COMMIT_REC_SIZE -
                                      ZS_SHORT_COMMIT_REC_SIZE);
+
+                zslog(LOGDEBUG, "Found a 2nd half commit record.\n");
                 return get_offset_to_pointers(f, offset, checksum, crc_offset, reccrc);
         } else if (rectype == REC_TYPE_LONG_FINAL) {
                 uint64_t len;
@@ -144,7 +147,7 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                 #else
                 *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
                 #endif
-
+                zslog(LOGDEBUG, "Found a long commit record.\n");
                 return ZS_OK;
         } else {
                 zslog(LOGDEBUG, "Not a valid final commit record\n");
@@ -283,7 +286,7 @@ int zs_packed_file_open(const char *path,
          *  Seek to the end of file
          *   - go back 8 bytes, and check if there is a commit record,
          *     if there is one, then it is a short commit
-         *   - if not a short commit go back 24 bytes from the end of file
+         *   - if it is not a short commit, go back 24 bytes from the end of file
          *     and check if there is a commit record, if there is one,
          *     then it is a long commit
          *   - else fail

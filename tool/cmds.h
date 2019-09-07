@@ -20,9 +20,6 @@ extern int cmd_bindump(int argc, char **argv, const char *progname);
 extern int cmd_consistent(int argc, char **argv, const char *progname);
 #define cmd_consistent_usage "consistent "
 
-extern int cmd_damage(int argc, char **argv, const char *progname);
-#define cmd_damage_usage "damage "
-
 extern int cmd_delete(int argc, char **argv, const char *progname);
 #define cmd_delete_usage "delete [--config CONFIGFILE] DB <key>"
 
@@ -37,6 +34,9 @@ extern int cmd_get(int argc, char **argv, const char *progname);
 
 extern int cmd_info(int argc, char **argv, const char *progname);
 #define cmd_info_usage "info DB"
+
+extern int cmd_recover(int argc, char **argv, const char *progname);
+#define cmd_recover_usage "recover "
 
 extern int cmd_repack(int argc, char **argv, const char *progname);
 #define cmd_repack_usage "repack [--config CONFIGFILE] DB"

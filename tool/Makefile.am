@@ -45,13 +45,13 @@ zeroskip_SOURCES = \
 	cmd-batch.c \
 	cmd-bindump.c \
 	cmd-consistent.c \
-	cmd-damage.c \
 	cmd-delete.c \
 	cmd-dump.c \
 	cmd-finalise.c \
 	cmd-get.c \
 	cmd-info.c \
 	cmd-new.c \
+	cmd-recover.c \
 	cmd-repack.c \
 	cmd-set.c \
 	cmd-show.c \
