@@ -37,7 +37,14 @@ endif
 
 
 bin_PROGRAMS = \
-	zsbench
+	zsbench \
+	crc32bench
 
 zsbench_SOURCES = \
 	zsbench.c
+
+crc32bench_SOURCES = \
+	crc32bench.c
+
+crc32bench_CFLAGS = $(LIBZLIB_CFLAGS) $(AM_CFLAGS)
+crc32bench_LDFLAGS = $(LIBZLIB_LIBS)
