@@ -160,7 +160,7 @@ static int run_default(void)
 
         start = get_time_now();
         for (int i = 0; i < NUM_RUNS; i++) {
-                bytes += crc32c_hw(0, buf, strlen(buf));
+                bytes += crc32c(0, buf, strlen(buf));
         }
         finish = get_time_now();
 
@@ -200,6 +200,9 @@ static int parse_options_and_run(int argc, char **argv,
                 if (!header_printed && (option != 'h' || option != '?')) {
                         header_printed = 1;
                         print_header();
+                        fprintf(stderr, "String Length:  %zu\n", strlen(buf));
+                        fprintf(stderr, "Runs:           %d\n", NUM_RUNS);
+                        fprintf(stdout, "------------------------------------------------\n");
                 }
 
                 switch (option) {
