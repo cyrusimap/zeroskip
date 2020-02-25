@@ -8,6 +8,7 @@
  *
  */
 
+#include <libzeroskip/crc32c.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
@@ -15,7 +16,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <zlib.h>
 
 /* zs_header_write():
  *  Write the header to a mapped file that is open, the values
@@ -42,7 +42,7 @@ int zs_header_write(struct zsdb_file *f)
                 return ZS_ERROR;
         }
 
-        crc = crc32(0L, Z_NULL, 0);
+        crc = crc32c_hw(0, 0, 0);
 
         /* Signature */
         memcpy(sptr, &f->header.signature, sizeof(uint64_t));
@@ -67,12 +67,12 @@ int zs_header_write(struct zsdb_file *f)
         /* compute the crc32 of the the fields of the header minus the
            crc32 field */
 
-        crc = crc32(0L, Z_NULL, 0);
-        crc = crc32(crc, (void *)&f->header.signature, sizeof(uint64_t));
-        crc = crc32(crc, (void *)&f->header.version, sizeof(uint32_t));
-        crc = crc32(crc, (void *)&f->header.uuid, sizeof(uuid_t));
-        crc = crc32(crc, (void *)&f->header.startidx, sizeof(uint32_t));
-        crc = crc32(crc, (void *)&f->header.endidx, sizeof(uint32_t));
+        crc = crc32c_hw(0, 0, 0);
+        crc = crc32c_hw(crc, (void *)&f->header.signature, sizeof(uint64_t));
+        crc = crc32c_hw(crc, (void *)&f->header.version, sizeof(uint32_t));
+        crc = crc32c_hw(crc, (void *)&f->header.uuid, sizeof(uuid_t));
+        crc = crc32c_hw(crc, (void *)&f->header.startidx, sizeof(uint32_t));
+        crc = crc32c_hw(crc, (void *)&f->header.endidx, sizeof(uint32_t));
         *((uint32_t *)sptr) = hton32(crc);
         sptr += sizeof(uint32_t);
 
@@ -153,12 +153,12 @@ int zs_header_validate(struct zsdb_file *f)
         f->header.crc32 = ntoh32(phdr->crc32);
 
         /* Check CRC32 */
-        crc = crc32(0L, Z_NULL, 0);
-        crc = crc32(crc, (void *)&f->header.signature, sizeof(uint64_t));
-        crc = crc32(crc, (void *)&f->header.version, sizeof(uint32_t));
-        crc = crc32(crc, (void *)&f->header.uuid, sizeof(uuid_t));
-        crc = crc32(crc, (void *)&f->header.startidx, sizeof(uint32_t));
-        crc = crc32(crc, (void *)&f->header.endidx, sizeof(uint32_t));
+        crc = crc32c_hw(0, 0, 0);
+        crc = crc32c_hw(crc, (void *)&f->header.signature, sizeof(uint64_t));
+        crc = crc32c_hw(crc, (void *)&f->header.version, sizeof(uint32_t));
+        crc = crc32c_hw(crc, (void *)&f->header.uuid, sizeof(uuid_t));
+        crc = crc32c_hw(crc, (void *)&f->header.startidx, sizeof(uint32_t));
+        crc = crc32c_hw(crc, (void *)&f->header.endidx, sizeof(uint32_t));
 
         if (crc != f->header.crc32) {
                 zslog(LOGDEBUG, "Checksum failed for zeroskip header: %u, expected: %u.\n",

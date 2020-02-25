@@ -10,6 +10,7 @@
 
 #include "pqueue.h"
 
+#include <libzeroskip/crc32c.h>
 #include <libzeroskip/memtree.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/macros.h>
@@ -20,7 +21,6 @@
 #include "zeroskip-priv.h"
 
 #include <inttypes.h>
-#include <zlib.h>
 /**
  * Private functions
  */
@@ -91,12 +91,8 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                 len = (data >> 32) & 0xFFFFFF;
 
                 val = data & 0xFFFFFFFF00000000;
-                *reccrc = crc32(0L, Z_NULL, 0);
-                #if ZLIB_VERNUM == 0x12b0
-                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
-                #endif
+                *reccrc = crc32c_hw(0, 0, 0);
+                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
 
                 *checksum = data & 0xFFFFFFFF;
                 /* CRC begins at 4 bytes from the start of commit record */
@@ -126,36 +122,24 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                 /* reccrc - should have been initialised in the LONG_FINAL
                  * section */
 
-                #if ZLIB_VERNUM == 0x12b0
-                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
-                #endif
+                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
 
                 return ZS_OK;
         } else if (rectype == REC_TYPE_LONG_FINAL) {
                 uint64_t len;
                 uint64_t val;
 
-                *reccrc = crc32(0L, Z_NULL, 0);
+                *reccrc = crc32c_hw(0, 0, 0);
 
                 val = data;
-                #if ZLIB_VERNUM == 0x12b0
-                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
-                #endif
+                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
 
                 fptr = fptr + sizeof(uint64_t);
                 len = read_be64(fptr);
                 *offset = *offset - len;
 
                 val = len;
-                #if ZLIB_VERNUM == 0x12b0
-                *reccrc = crc32_z(*reccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                *reccrc = crc32(*reccrc, (void *)&val, sizeof(uint64_t));
-                #endif
+                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
                 *rtype = REC_TYPE_LONG_FINAL;
                 zslog(LOGDEBUG, "Found a long commit record.\n");
                 return ZS_OK;
@@ -311,7 +295,6 @@ int zs_packed_file_open(const char *path,
         f->index = vecu64_new();
 
         /* Verify CRC of the pointers section */
-        crc = crc32(0L, Z_NULL, 0);
         /* Read the commit record and get to the pointers */
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
 
@@ -330,8 +313,7 @@ int zs_packed_file_open(const char *path,
 
         end_offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
 
-        crc = crc32(crc, (void *)(f->mf->ptr + offset), (end_offset - offset));
-        crc = crc32_combine(crc, reccrc, sizeof(uint64_t));
+        crc = crc32c_hw(reccrc, (void *)(f->mf->ptr + offset), (end_offset - offset));
         if (crc != stored_crc) {
                 zslog(LOGDEBUG, "checksum failed for zeroskip packed file.\n");
                 zslog(LOGDEBUG, "stored CRC: %" PRIu32 ". computed CRC: %" PRIu32 ".\n", stored_crc, crc);

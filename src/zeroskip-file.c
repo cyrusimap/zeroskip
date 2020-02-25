@@ -9,12 +9,11 @@
 
 #include <stdio.h>
 
+#include <libzeroskip/crc32c.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
-
-#include <zlib.h>
 
 /**
  * Private functions
@@ -281,37 +280,23 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
                 /* Compute CRC32 */
                 crc = crc32_end(&f->mf);
 
-                lccrc = crc32(0L, Z_NULL, 0);
-
                 /* Create long commit */
                 val = ((uint64_t)lc.type1 << 56); /* type 1 */
                 write_be64(ptr + pos, val);
                 pos += sizeof(uint64_t);
-                #if ZLIB_VERNUM == 0x12b0
-                lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                lccrc = crc32(lccrc, (void *)&val, sizeof(uint64_t));
-                #endif
+                lccrc = crc32c_hw(crc, (void *)&val, sizeof(uint64_t));
 
                 val = lc.length;
                 write_be64(ptr + pos, val); /* length */
                 pos += sizeof(uint64_t);
-                #if ZLIB_VERNUM == 0x12b0
-                lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                lccrc = crc32(lccrc, (void *)&val, sizeof(uint64_t));
-                #endif
+                lccrc = crc32c_hw(lccrc, (void *)&val, sizeof(uint64_t));
 
                 val = 0;
                 val = ((uint64_t)lc.type2 << 56); /* type 2 */
 
                 /* The final CRC  */
-                #if ZLIB_VERNUM == 0x12b0
-                lccrc = crc32_z(lccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                lccrc = crc32(lccrc, (void *)&val, sizeof(uint64_t));
-                #endif
-                lc.crc32 = crc32_combine(crc, lccrc, 3 * sizeof(uint64_t));
+                lccrc = crc32c_hw(lccrc, (void *)&val, sizeof(uint64_t));
+                lc.crc32 = lccrc;
 
                 val |= (uint64_t)lc.crc32;        /* crc */
 
@@ -330,17 +315,13 @@ int zs_file_write_commit_record(struct zsdb_file *f, int final)
 
                 /* Compute CRC32 */
                 crc = crc32_end(&f->mf);
-                sccrc = crc32(0L, Z_NULL, 0);
 
                 val = ((uint64_t)sc.type << 56);               /* type */
                 val |= ((uint64_t)sc.length << 32);            /* length */
                 /* The final CRC  */
-                #if ZLIB_VERNUM == 0x12b0
-                sccrc = crc32_z(sccrc, (void *)&val, sizeof(uint64_t));
-                #else
-                sccrc = crc32(sccrc, (void *)&val, sizeof(uint64_t));
-                #endif
-                sc.crc32 = crc32_combine(crc, sccrc, sizeof(uint64_t));
+                sccrc = crc32c_hw(crc, (void *)&val, sizeof(uint64_t));
+
+                sc.crc32 = sccrc;
 
                 val |= (uint64_t)sc.crc32;                     /* crc */
 

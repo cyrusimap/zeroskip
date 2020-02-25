@@ -6,12 +6,11 @@
  *
  */
 
+#include <libzeroskip/crc32c.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/util.h>
 #include <libzeroskip/zeroskip.h>
 #include "zeroskip-priv.h"
-
-#include <zlib.h>
 
 /*
  * Private functions
@@ -210,7 +209,7 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
                 /* offset is the end of the short commit record */
                 *offset = *offset + ZS_SHORT_COMMIT_REC_SIZE;
 
-                crc = crc32(0L, Z_NULL, 0);
+                crc = crc32c_hw(0, 0, 0);
 
                 sc.type = rectype;
                 sc.length = (data >> 32) & 0xFFFFFF;
@@ -222,13 +221,8 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
                 /* The commit record without the CRC */
                 val = data & 0xFFFFFFFF00000000;
 
-                #if ZLIB_VERNUM == 0x12b0
-                crc = crc32_z(crc, (void *)rptr, sc.length);
-                crc = crc32_z(crc, (void *)&val, sizeof(uint64_t));
-                #else
-                crc = crc32(crc, (void *)rptr, sc.length);
-                crc = crc32(crc, (void *)&val, sizeof(uint64_t));
-                #endif
+                crc = crc32c_hw(crc, (void *)rptr, sc.length);
+                crc = crc32c_hw(crc, (void *)&val, sizeof(uint64_t));
 
                 if (sc.crc32 != crc) {
                         zslog(LOGWARNING, "Checksum failed for record at offset: %zu\n",
@@ -246,7 +240,7 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
                 *offset = *offset + ZS_LONG_COMMIT_REC_SIZE;
 
                 /* Begin computing */
-                crc = crc32(0L, Z_NULL, 0);
+                crc = crc32c_hw(0, 0, 0);
 
                 lc.type1 = rectype;
                 lc.length = read_be64(fptr + sizeof(uint64_t));
@@ -259,17 +253,10 @@ static int zs_read_and_verify_commit_record(struct zsdb_file *f,
                 rptr = fptr - lc.length;
 
                 val = 0;        /* 0 used to compute CRC */
-                #if ZLIB_VERNUM == 0x12b0
-                crc = crc32_z(crc, (void *)rptr, lc.length);
-                crc = crc32_z(crc, (void *)&data, sizeof(uint64_t));
-                crc = crc32_z(crc, (void *)lc.length, sizeof(uint64_t));
-                crc = crc32_z(crc, (void *)&val, sizeof(uint64_t));
-                #else
-                crc = crc32(crc, (void *)rptr, lc.length);
-                crc = crc32(crc, (void *)&data, sizeof(uint64_t));
-                crc = crc32(crc, (void *)lc.length, sizeof(uint64_t));
-                crc = crc32(crc, (void *)&val, sizeof(uint64_t));
-                #endif
+                crc = crc32c_hw(crc, (void *)rptr, lc.length);
+                crc = crc32c_hw(crc, (void *)&data, sizeof(uint64_t));
+                crc = crc32c_hw(crc, (void *)lc.length, sizeof(uint64_t));
+                crc = crc32c_hw(crc, (void *)&val, sizeof(uint64_t));
 
                 if (lc.crc32 != crc) {
                         zslog(LOGWARNING, "Checksum failed for record at offset: %zu\n",

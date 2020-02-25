@@ -8,6 +8,7 @@
  *
  */
 
+#include <libzeroskip/crc32c.h>
 #include <libzeroskip/log.h>
 #include <libzeroskip/mfile.h>
 #include <libzeroskip/zeroskip.h>
@@ -18,7 +19,6 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <unistd.h>
-#include <zlib.h>
 
 typedef void (*sigfunc)(int);
 
@@ -103,15 +103,19 @@ int zs_dotzsdb_create(struct zsdb_priv *priv)
         sptr += sizeof(uint32_t);
 
         /* CRC */
-        priv->dotzsdb.crc = crc32(0L, Z_NULL, 0);
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.signature,
-                                  sizeof(uint64_t));
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.offset,
-                                  sizeof(uint64_t));
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.uuidstr,
-                                  UUID_STRLEN);
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.curidx,
-                                  sizeof(uint32_t));
+        priv->dotzsdb.crc = crc32c_hw(0, 0, 0);
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.signature,
+                                      sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.offset,
+                                      sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.uuidstr,
+                                      UUID_STRLEN);
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.curidx,
+                                      sizeof(uint32_t));
         *((uint32_t *)sptr) = hton32(priv->dotzsdb.crc);
         sptr += sizeof(uint32_t);
 
@@ -198,15 +202,15 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
                 priv->dotzsdb.curidx = ntoh32(dothdr->curidx);
 
                 /* Verify CRC */
-                crc = crc32(0L, Z_NULL, 0);
-                crc = crc32(crc, (void *)&priv->dotzsdb.signature,
-                            sizeof(uint64_t));
-                crc = crc32(crc, (void *)&priv->dotzsdb.offset,
-                            sizeof(uint64_t));
-                crc = crc32(crc, (void *)&priv->dotzsdb.uuidstr,
-                            UUID_STRLEN);
-                crc = crc32(crc, (void *)&priv->dotzsdb.curidx,
-                            sizeof(uint32_t));
+                crc = crc32c_hw(0, 0, 0);
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.signature,
+                                sizeof(uint64_t));
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.offset,
+                                sizeof(uint64_t));
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.uuidstr,
+                                UUID_STRLEN);
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.curidx,
+                                sizeof(uint32_t));
 
                 if (crc != ntoh32(dothdr->crc)) {
                         zslog(LOGWARNING, "Invalid zeroskip DB %s. CRC failed\n",
@@ -393,15 +397,15 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
                 priv->dotzsdb.curidx = ntoh32(dothdr->curidx);
 
                 /* Verify CRC */
-                crc = crc32(0L, Z_NULL, 0);
-                crc = crc32(crc, (void *)&priv->dotzsdb.signature,
-                            sizeof(uint64_t));
-                crc = crc32(crc, (void *)&priv->dotzsdb.offset,
-                            sizeof(uint64_t));
-                crc = crc32(crc, (void *)&priv->dotzsdb.uuidstr,
-                            UUID_STRLEN);
-                crc = crc32(crc, (void *)&priv->dotzsdb.curidx,
-                            sizeof(uint32_t));
+                crc = crc32c_hw(0, 0, 0);
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.signature,
+                                sizeof(uint64_t));
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.offset,
+                                sizeof(uint64_t));
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.uuidstr,
+                                UUID_STRLEN);
+                crc = crc32c_hw(crc, (void *)&priv->dotzsdb.curidx,
+                                sizeof(uint32_t));
 
                 if (crc != ntoh32(dothdr->crc)) {
                         zslog(LOGWARNING, "Invalid zeroskip DB %s. CRC failed\n",
@@ -478,15 +482,19 @@ int zs_dotzsdb_update_end(struct zsdb_priv *priv)
         sptr += sizeof(uint32_t);
 
         /* CRC */
-        priv->dotzsdb.crc = crc32(0L, Z_NULL, 0);
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.signature,
-                                  sizeof(uint64_t));
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.offset,
-                                  sizeof(uint64_t));
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.uuidstr,
-                                  UUID_STRLEN);
-        priv->dotzsdb.crc = crc32(priv->dotzsdb.crc, (void *)&priv->dotzsdb.curidx,
-                                  sizeof(uint32_t));
+        priv->dotzsdb.crc = crc32c_hw(0, 0, 0);
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.signature,
+                                      sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.offset,
+                                      sizeof(uint64_t));
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.uuidstr,
+                                      UUID_STRLEN);
+        priv->dotzsdb.crc = crc32c_hw(priv->dotzsdb.crc,
+                                      (void *)&priv->dotzsdb.curidx,
+                                      sizeof(uint32_t));
 
         *((uint32_t *)sptr) = hton32(priv->dotzsdb.crc);
         sptr += sizeof(uint32_t);

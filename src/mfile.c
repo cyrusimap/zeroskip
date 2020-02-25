@@ -19,8 +19,8 @@
 #include <sys/types.h>
 
 #include <unistd.h>
-#include <zlib.h>
 
+#include <libzeroskip/crc32c.h>
 #include <libzeroskip/mfile.h>
 #include <libzeroskip/util.h>
 
@@ -525,7 +525,7 @@ int mfile_seek(struct mfile **mfp, uint64_t offset, uint64_t *newoffset)
 
 void crc32_begin(struct mfile **mfp)
 {
-        (*mfp)->crc32 = crc32(0L, Z_NULL, 0);
+        (*mfp)->crc32 = crc32c(0, 0, 0);
         (*mfp)->compute_crc = 1;
         (*mfp)->crc32_begin_offset = (*mfp)->offset;
         (*mfp)->crc32_data_len = 0;
@@ -535,9 +535,9 @@ uint32_t crc32_end(struct mfile **mfp)
 {
         if ((*mfp)->compute_crc) {
                 (*mfp)->crc32_data_len = (*mfp)->offset - (*mfp)->crc32_begin_offset;
-                (*mfp)->crc32 = crc32((*mfp)->crc32,
-                                      ((*mfp)->ptr + (*mfp)->crc32_begin_offset),
-                                      (*mfp)->crc32_data_len);
+                (*mfp)->crc32 = crc32c_hw((*mfp)->crc32,
+                                          ((*mfp)->ptr + (*mfp)->crc32_begin_offset),
+                                          (*mfp)->crc32_data_len);
                 (*mfp)->compute_crc = 0;
                 (*mfp)->crc32_data_len = 0;
         }
