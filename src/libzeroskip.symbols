@@ -116,6 +116,8 @@ cstring_trim
 
 crc32c_init
 crc32c
+crc32c_sw
+crc32c_hw
 crc32c_map
 crc32c_buf
 crc32c_cstring

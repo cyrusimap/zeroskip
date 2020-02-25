@@ -367,7 +367,7 @@ static inline uint32_t crc32c_shift(const uint32_t zeros[][256], uint32_t crc)
 }
 
 /* Compute CRC-32C using the Intel hardware instruction. */
-static uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
+uint32_t crc32c_hw(uint32_t crc, const void *buf, size_t len)
 {
         const unsigned char *next = buf;
         const unsigned char *end;
@@ -610,7 +610,7 @@ static uint32_t swap(uint32_t x)
 }
 #endif
 
-static uint32_t crc32c_sw(uint32_t crc, const void *buf, size_t len) {
+uint32_t crc32c_sw(uint32_t crc, const void *buf, size_t len) {
         const uint32_t *cur = (const uint32_t *) buf;
         const uint8_t *curc;
         uint32_t crc0, crc1;
