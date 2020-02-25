@@ -700,12 +700,12 @@ uint32_t crc32c_iovec(struct iovec *iov, int iovcnt)
         return crc;
 }
 
-uint32_t crc32c_buf(const cstring *buf)
+uint32_t crc32c_cstring(const cstring *buf)
 {
         return crc32c_map(buf->buf, buf->len);
 }
 
-uint32_t crc32c_cstring(const char *buf)
+uint32_t crc32c_buf(const char *buf)
 {
         return crc32c_map(buf, strlen(buf));
 }
