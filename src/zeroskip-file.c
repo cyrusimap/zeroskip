@@ -209,11 +209,7 @@ int zs_file_write_keyval_record(struct zsdb_file *f,
         }
 
         /* Get the current mfile size */
-        ret = mfile_size(&f->mf, &mfsize);
-        if (ret) {
-                zslog(LOGDEBUG, "Could not get mfile size: %s\n", f->fname.buf);
-                goto done;
-        }
+        mfsize = f->mf->size;
 
         /* write key buffer */
         ret = mfile_write(&f->mf, (void *)keybuf,
@@ -371,11 +367,7 @@ int zs_file_write_delete_record(struct zsdb_file *f,
         }
 
         /* Get the current mfile size */
-        ret = mfile_size(&f->mf, &mfsize);
-        if (ret) {
-                zslog(LOGDEBUG, "delete: Could not get mfile size\n");
-                goto done;
-        }
+        mfsize = f->mf->size;
 
         /* write delete buffer */
         ret = mfile_write(&f->mf, (void *)dbuf,

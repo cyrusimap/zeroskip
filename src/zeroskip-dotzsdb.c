@@ -176,7 +176,7 @@ int zs_dotzsdb_validate(struct zsdb_priv *priv)
          */
         stat(priv->dotzsdbfname.buf, &priv->dotzsdb_st);
 
-        mfile_size(&mf, &mfsize);
+        mfsize = mf->size;
         if (mfsize < DOTZSDB_SIZE) {
                 zslog(LOGDEBUG, "File too small to be zeroskip DB: %zu.\n",
                         mfsize);
@@ -369,7 +369,7 @@ int zs_dotzsdb_update_begin(struct zsdb_priv *priv)
         }
 
         /* Read .dotzsdb file and update priv->dotzsdb */
-        mfile_size(&zsdbfile, &mfsize);
+        mfsize = zsdbfile->size;
         if (mfsize < DOTZSDB_SIZE) {
                 /* XXX: This should *never* happen here, since the db must have
                  * been successfully opened by the time we've got here.

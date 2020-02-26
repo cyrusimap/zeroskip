@@ -54,7 +54,7 @@ int zs_active_file_open(struct zsdb_priv *priv, uint32_t idx, int create)
 
         priv->dbfiles.factive.is_open = 1;
 
-        mfile_size(&priv->dbfiles.factive.mf, &mf_size);
+        mf_size = priv->dbfiles.factive.mf->size;
         /* The filesize is zero, it is a new file. */
         if (mf_size == 0) {
                 ret = zs_header_write(&priv->dbfiles.factive);
@@ -169,7 +169,7 @@ int zs_active_file_new(struct zsdb_priv *priv, uint32_t idx)
 
         priv->dbfiles.factive.is_open = 1;
 
-        mfile_size(&priv->dbfiles.factive.mf, &mfsize);
+        mfsize = priv->dbfiles.factive.mf->size;
         /* The filesize is zero, it is a new file. */
         if (mfsize == 0) {
                 ret = zs_header_write(&priv->dbfiles.factive);

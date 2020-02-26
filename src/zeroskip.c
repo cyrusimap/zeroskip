@@ -911,14 +911,7 @@ int zsdb_add(struct zsdb *db,
                 zslog(LOGDEBUG, "zsdb_add: Reloaded DB!\n");
         }
 
-        /* check file size and finalise if necessary */
-        if (mfile_size(&priv->dbfiles.factive.mf, &mfsize) != 0) {
-                zslog(LOGWARNING, "Failed getting size for %s\n",
-                        priv->dbfiles.factive.fname.buf);
-                ret = ZS_ERROR;
-                goto done;
-        }
-
+        mfsize = priv->dbfiles.factive.mf->size;
         if (mfsize >= TWOMB) {
                 zslog(LOGDEBUG, "File %s is > 2MB, finalising.\n",
                         priv->dbfiles.factive.fname.buf);

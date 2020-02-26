@@ -262,7 +262,7 @@ int zs_packed_file_open(const char *path,
 
         f->is_open = 1;
 
-        mfile_size(&f->mf, &mf_size);
+        mf_size = f->mf->size;
         if (mf_size <= ZS_HDR_SIZE) {
                 ret = ZS_INVALID_FILE;
                 zslog(LOGDEBUG, "%s is not a valid packed file.\n",

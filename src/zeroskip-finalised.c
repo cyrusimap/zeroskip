@@ -40,9 +40,7 @@ int zs_finalised_file_open(const char *path, struct zsdb_file **fptr)
 
         f->is_open = 1;
 
-        /* XXX: No need to check for size here, since zs_header_valid()
-           will do it */
-        mfile_size(&f->mf, &mf_size);
+        mf_size = f->mf->size;
         if (mf_size <= ZS_HDR_SIZE) {
                 ret = ZS_INVALID_FILE;
                 zslog(LOGDEBUG, "%s is not a valid finalised file.\n",
