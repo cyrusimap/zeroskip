@@ -262,6 +262,9 @@ int zs_dotzsdb_update_index_and_offset(struct zsdb_priv *priv,
                 goto done;
         }
 
+        /* Update the stat structure, so that we don't reload */
+        zs_dotzsdb_update_stat(priv);
+
 done:
         return ret;
 }
@@ -286,6 +289,33 @@ ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv)
         cstring_release(&dotzsdbfname);
 
         return sb.st_ino;
+}
+
+int zs_dotzsdb_update_stat(struct zsdb_priv *priv)
+{
+        cstring dotzsdbfname = CSTRING_INIT;
+        struct stat st;
+        int status = 0;
+
+        memset(&st, 0, sizeof(struct stat));
+
+        /* The filename */
+        cstring_dup(&priv->dbdir, &dotzsdbfname);
+        cstring_addch(&dotzsdbfname, '/');
+        cstring_addstr(&dotzsdbfname, DOTZSDB_FNAME);
+
+        /* stat() the .zsdb file. The .zsdb file is
+         * used for synchronisation among various processes.
+         */
+        if (stat(dotzsdbfname.buf, &st) != 0) {
+                status = -1;
+                goto done;
+        }
+
+        priv->dotzsdb_st = st;
+done:
+        cstring_release(&dotzsdbfname);
+        return status;
 }
 
 int zs_dotzsdb_check_stat(struct zsdb_priv *priv)

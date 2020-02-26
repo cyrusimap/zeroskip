@@ -325,6 +325,7 @@ extern int zs_dotzsdb_update_index_and_offset(struct zsdb_priv *priv,
                                               uint32_t idx,
                                               uint64_t offset);
 extern ino_t zs_dotzsdb_get_ino(struct zsdb_priv *priv);
+extern int zs_dotzsdb_update_stat(struct zsdb_priv *priv);
 extern int zs_dotzsdb_check_stat(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_begin(struct zsdb_priv *priv);
 extern int zs_dotzsdb_update_end(struct zsdb_priv *priv);
