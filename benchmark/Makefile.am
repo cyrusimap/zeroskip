@@ -41,10 +41,14 @@ bin_PROGRAMS = \
 	crc32bench
 
 zsbench_SOURCES = \
-	zsbench.c
+	zsbench.c \
+	bench-common.c \
+	bench-common.h
 
 crc32bench_SOURCES = \
-	crc32bench.c
+	crc32bench.c \
+	bench-common.c \
+	bench-common.h
 
 crc32bench_CFLAGS = $(LIBZLIB_CFLAGS) $(AM_CFLAGS)
 crc32bench_LDFLAGS = $(LIBZLIB_LIBS)
