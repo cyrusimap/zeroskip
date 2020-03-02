@@ -69,7 +69,7 @@ static int zs_packed_file_write_index(void *data, uint64_t offset)
  */
 static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                                   uint32_t *checksum, uint64_t *crc_offset,
-                                  uint32_t *reccrc, enum record_t *rtype)
+                                  enum record_t *rtype)
 {
         unsigned char *bptr, *fptr;
         uint64_t data;
@@ -86,27 +86,20 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
 
         if (rectype == REC_TYPE_FINAL) {
                 uint32_t len;
-                uint64_t val;
 
                 len = (data >> 32) & 0xFFFFFF;
 
-                val = data & 0xFFFFFFFF00000000;
-                *reccrc = crc32c_hw(0, 0, 0);
-                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
-
-                *checksum = data & 0xFFFFFFFF;
                 /* CRC begins at 4 bytes from the start of commit record */
-                *crc_offset = *offset + 4;
+                *checksum = data & 0xFFFFFFFF;
+
+                *crc_offset = *offset;
                 *offset = *offset - len;
 
                 zslog(LOGDEBUG, "Found a short commit record.\n");
                 *rtype = REC_TYPE_FINAL;
+
                 return ZS_OK;
         } else if (rectype == REC_TYPE_2ND_HALF_COMMIT) {
-                uint64_t val;
-
-                val = data & 0xFFFFFFFF00000000;
-
                 /* This is a long commit, all we need is the CRC.
                  * CRC begins at 4 bytes from the start of commit record */
                 *crc_offset = *offset + 4;
@@ -117,29 +110,17 @@ static int get_offset_to_pointers(struct zsdb_file *f, uint64_t *offset,
                 zslog(LOGDEBUG, "Found a 2nd half commit record.\n");
                 zslog(LOGDEBUG, "Found CRC: %" PRIu32 ".\n", *checksum);
 
-                get_offset_to_pointers(f, offset, checksum, crc_offset, reccrc, rtype);
-
-                /* reccrc - should have been initialised in the LONG_FINAL
-                 * section */
-
-                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
+                get_offset_to_pointers(f, offset, checksum, crc_offset, rtype);
 
                 return ZS_OK;
         } else if (rectype == REC_TYPE_LONG_FINAL) {
                 uint64_t len;
-                uint64_t val;
 
-                *reccrc = crc32c_hw(0, 0, 0);
-
-                val = data;
-                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
-
+                *crc_offset = *offset;
                 fptr = fptr + sizeof(uint64_t);
                 len = read_be64(fptr);
                 *offset = *offset - len;
 
-                val = len;
-                *reccrc = crc32c_hw(*reccrc, (void *)&val, sizeof(uint64_t));
                 *rtype = REC_TYPE_LONG_FINAL;
                 zslog(LOGDEBUG, "Found a long commit record.\n");
                 return ZS_OK;
@@ -242,7 +223,7 @@ int zs_packed_file_open(const char *path,
         size_t mf_size = 0;
         uint64_t offset, end_offset, crc_offset = 0;
         int mfile_flags = MFILE_RD;
-        uint32_t crc, stored_crc = 0, reccrc = 0;
+        uint32_t crc, stored_crc = 0;
         enum record_t commit_rec_type;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
@@ -299,21 +280,53 @@ int zs_packed_file_open(const char *path,
         offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
 
         ret = get_offset_to_pointers(f, &offset, &stored_crc,
-                                     &crc_offset, &reccrc, &commit_rec_type);
+                                     &crc_offset, &commit_rec_type);
         if (ret != ZS_OK) {
                 zslog(LOGDEBUG, "Could not get pointer block.\n");
                 goto fail;
         }
 
-        /* if (commit_rec_type == REC_TYPE_LONG_FINAL) { */
-        /*         end_offset = mf_size - ZS_LONG_COMMIT_REC_SIZE; */
-        /* } else if (commit_rec_type == REC_TYPE_FINAL) { */
-        /*         end_offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE; */
-        /* } */
+        if (commit_rec_type == REC_TYPE_LONG_FINAL) {
+                unsigned char *dataptr;
+                uint64_t t_data;
 
-        end_offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
+                dataptr = f->mf->ptr + crc_offset;
+                end_offset = mf_size - ZS_LONG_COMMIT_REC_SIZE;
 
-        crc = crc32c_hw(reccrc, (void *)(f->mf->ptr + offset), (end_offset - offset));
+                /* compute the crc */
+                /* data */
+                crc = crc32c_hw(0, (void *)(f->mf->ptr + offset), (end_offset - offset));
+
+                /* type1 */
+                t_data = read_be64(dataptr);
+                crc = crc32c_hw(crc, (void *)&t_data, sizeof(uint64_t));
+                dataptr = dataptr + sizeof(uint64_t);
+
+                /* len */
+                t_data = read_be64(dataptr);
+                crc = crc32c_hw(crc, (void *)&t_data, sizeof(uint64_t));
+                dataptr = dataptr + sizeof(uint64_t);
+
+                /* type 2 */
+                t_data = read_be64(dataptr) & 0xFF00000000000000;
+                crc = crc32c_hw(crc, (void *)&t_data, sizeof(uint64_t));
+
+        } else if (commit_rec_type == REC_TYPE_FINAL) {
+                unsigned char *dataptr;
+                uint64_t t_data;
+
+                dataptr = f->mf->ptr + crc_offset;
+                end_offset = mf_size - ZS_SHORT_COMMIT_REC_SIZE;
+
+                /* compute the crc */
+                /* data */
+                crc = crc32c_hw(0, (void *)(f->mf->ptr + offset), (end_offset - offset));
+
+                /* type & len */
+                t_data = read_be64(dataptr) & 0xFFFFFFFF00000000;
+                crc = crc32c_hw(crc, (void *)&t_data, sizeof(uint64_t));
+        }
+
         if (crc != stored_crc) {
                 zslog(LOGDEBUG, "checksum failed for zeroskip packed file.\n");
                 zslog(LOGDEBUG, "stored CRC: %" PRIu32 ". computed CRC: %" PRIu32 ".\n", stored_crc, crc);
