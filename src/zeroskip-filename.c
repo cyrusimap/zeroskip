@@ -18,9 +18,12 @@
 void zs_filename_generate_active(struct zsdb_priv *priv, cstring *fname)
 {
         char index[11];
+        size_t siz;
 
-        memset(index, 0, sizeof(index));
-        snprintf(index, 20, "%d", priv->dotzsdb.curidx);
+        siz = sizeof(index);
+        memset(index, 0, siz);
+
+        snprintf(index, siz, "%d", priv->dotzsdb.curidx);
 
         cstring_release(fname);
 
@@ -40,12 +43,16 @@ void zs_filename_generate_packed(struct zsdb_priv *priv, cstring *fname,
 {
         char sidx[11];
         char eidx[11];
+        size_t siz_sidx, siz_eidx;
 
-        memset(sidx, 0, sizeof(sidx));
-        memset(eidx, 0, sizeof(eidx));
+        siz_sidx = sizeof(sidx);
+        siz_eidx = sizeof(eidx);
 
-        snprintf(sidx, 20, "%d", startidx);
-        snprintf(eidx, 20, "%d", endidx);
+        memset(sidx, 0, siz_sidx);
+        memset(eidx, 0, siz_eidx);
+
+        snprintf(sidx, siz_sidx, "%d", startidx);
+        snprintf(eidx, siz_eidx, "%d", endidx);
 
         cstring_release(fname);
 

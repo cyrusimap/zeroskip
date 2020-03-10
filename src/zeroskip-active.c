@@ -107,8 +107,11 @@ int zs_active_file_finalise(struct zsdb_priv *priv)
         int ret = ZS_OK;
         cstring newfname = CSTRING_INIT;
         char index[11];
+        size_t siz;
 
-        memset(index, 0, sizeof(index));
+        siz = sizeof(index);
+
+        memset(index, 0, siz);
 
         if (!file_lock_is_locked(&priv->wlk)) {
                 zslog(LOGDEBUG, "Need a write lock to finalise.\n");
@@ -127,7 +130,7 @@ int zs_active_file_finalise(struct zsdb_priv *priv)
         /* Rename the current active db file */
         cstring_dup(&priv->dbfiles.factive.fname, &newfname);
         cstring_addch(&newfname, '-');
-        snprintf(index, 10, "%d", priv->dotzsdb.curidx);
+        snprintf(index, siz, "%d", priv->dotzsdb.curidx);
         cstring_addstr(&newfname, index);
         if (rename(priv->dbfiles.factive.fname.buf, newfname.buf) < 0) {
                 ret = ZS_INTERNAL;
