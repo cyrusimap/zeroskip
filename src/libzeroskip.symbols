@@ -104,11 +104,7 @@ cstring_release
 cstring_detach
 cstring_attach
 cstring_grow
-cstring_available
-cstring_setlen
-cstring_addch
 cstring_add
-cstring_addstr
 cstring_dup
 cstring_ltrim
 cstring_rtrim
