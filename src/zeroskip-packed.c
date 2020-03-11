@@ -223,7 +223,7 @@ int zs_packed_file_open(const char *path,
         size_t mf_size = 0;
         uint64_t offset, end_offset, crc_offset = 0;
         int mfile_flags = MFILE_RD;
-        uint32_t crc, stored_crc = 0;
+        uint32_t crc = 0, stored_crc = 0;
         enum record_t commit_rec_type;
 
         f = xcalloc(sizeof(struct zsdb_file), 1);
@@ -325,6 +325,9 @@ int zs_packed_file_open(const char *path,
                 /* type & len */
                 t_data = read_be64(dataptr) & 0xFFFFFFFF00000000;
                 crc = crc32c_hw(crc, (void *)&t_data, sizeof(uint64_t));
+        } else {
+                /* Should not reach here */
+                abort();
         }
 
         if (crc != stored_crc) {
