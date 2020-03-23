@@ -51,6 +51,7 @@ static void usage(const char *progname)
         printf("                       * writeseqtxn    - write values in sequential key order in separate transactions\n");
         printf("                       * writerandom    - write values in random key order\n");
         printf("                       * writerandomtxn - write values in random key order in separate transactions\n");
+        printf("                       * overwriterandom- overwrite values in random key order in separate transactions\n");
         printf("                       * write100k      - write values 100K long in random key order\n");
         printf("\n");
         printf("                       * open           - cost of opening a DB\n");
@@ -60,7 +61,7 @@ static void usage(const char *progname)
         printf("  -h, --help           display this help and exit\n");
 }
 
-#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn,write100k,open"
+#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn,overwriterandom,write100k,open"
 
 static char *create_tmp_dir_name(void)
 {
@@ -215,6 +216,23 @@ static size_t do_write(int txnmode, int insmode)
         return bytes;
 }
 
+static void do_open(int num_iters)
+{
+        struct zsdb *db = NULL;
+        int ret, j;
+
+        for (j = 0; j < num_iters; j++) {
+                ret = zsdb_init(&db, NULL, NULL);
+                assert(ret == ZS_OK);
+                ret = zsdb_open(db, DBNAME, new_db ? MODE_CREATE : MODE_RDWR);
+                assert(ret == ZS_OK);
+                ret = zsdb_close(db);
+                assert(ret == ZS_OK);
+                zsdb_final(&db);
+                db = NULL;
+        }
+}
+
 static int parse_options(int argc, char **argv, const struct option *options)
 {
         int option;
@@ -285,6 +303,16 @@ static int run_benchmarks(void)
 
                         fprintf(stderr, "writerandomtxn  : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
+                } else if (strcmp(benchmarks.datav[i], "overwriterandom") == 0) {
+                        start = get_time_now();
+                        bytes = do_write(NOTBATCHED, SEQUENTIAL);
+                        new_db = 0;
+                        bytes += do_write(NOTBATCHED, RANDOM);
+                        new_db = 1;
+                        finish = get_time_now();
+
+                        fprintf(stderr, "overwriterandom : %zu bytes written in %" PRIu64 " μs.\n",
+                                bytes, (finish - start));
                 } else if (strcmp(benchmarks.datav[i], "write100k") == 0) {
                         VALLEN = 100 * 1000;
                         start = get_time_now();
@@ -295,23 +323,10 @@ static int run_benchmarks(void)
                                 bytes, (finish - start));
                         VALLEN = 0;
                 } else if (strcmp(benchmarks.datav[i], "open") == 0) {
-                        struct zsdb *db = NULL;
-                        int ret, j;
                         int NUM = 1000;
 
                         start = get_time_now();
-
-                        for (j = 0; j < NUM; j++) {
-                                ret = zsdb_init(&db, NULL, NULL);
-                                assert(ret == ZS_OK);
-                                ret = zsdb_open(db, DBNAME, new_db ? MODE_CREATE : MODE_RDWR);
-                                assert(ret == ZS_OK);
-                                ret = zsdb_close(db);
-                                assert(ret == ZS_OK);
-                                zsdb_final(&db);
-                                db = NULL;
-                        }
-
+                        do_open(NUM);
                         finish = get_time_now();
 
                         fprintf(stderr, "open            : DB opened %d times in %" PRIu64 " μs.(avg: %" PRIu64 " μs).\n",
