@@ -53,12 +53,14 @@ static void usage(const char *progname)
         printf("                       * writerandomtxn - write values in random key order in separate transactions\n");
         printf("                       * write100k      - write values 100K long in random key order\n");
         printf("\n");
+        printf("                       * open           - cost of opening a DB\n");
+        printf("\n");
         printf("  -d, --db             the db to run the benchmarks on\n");
         printf("  -n, --numrecs        number of records to write[default: 1000]\n");
         printf("  -h, --help           display this help and exit\n");
 }
 
-#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn,write100k"
+#define ALLBENCHMARKS "writeseq,writeseqtxn,writerandom,writerandomtxn,write100k,open"
 
 static char *create_tmp_dir_name(void)
 {
@@ -292,6 +294,30 @@ static int run_benchmarks(void)
                         fprintf(stderr, "write100k       : %zu bytes written in %" PRIu64 " μs.\n",
                                 bytes, (finish - start));
                         VALLEN = 0;
+                } else if (strcmp(benchmarks.datav[i], "open") == 0) {
+                        struct zsdb *db = NULL;
+                        int ret, j;
+                        int NUM = 1000;
+
+                        start = get_time_now();
+
+                        for (j = 0; j < NUM; j++) {
+                                ret = zsdb_init(&db, NULL, NULL);
+                                assert(ret == ZS_OK);
+                                ret = zsdb_open(db, DBNAME, new_db ? MODE_CREATE : MODE_RDWR);
+                                assert(ret == ZS_OK);
+                                ret = zsdb_close(db);
+                                assert(ret == ZS_OK);
+                                zsdb_final(&db);
+                                db = NULL;
+                        }
+
+                        finish = get_time_now();
+
+                        fprintf(stderr, "open            : DB opened %d times in %" PRIu64 " μs.(avg: %" PRIu64 " μs).\n",
+                                NUM, (finish - start), (finish - start)/NUM);
+                        VALLEN = 0;
+
                 } else {
                         fprintf(stderr, "Unknown benchmark '%s'\n",
                                 benchmarks.datav[i]);
