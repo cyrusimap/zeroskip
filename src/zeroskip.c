@@ -468,15 +468,15 @@ static int zsdb_reload(struct zsdb_priv *priv)
                 priv->fmemtree = NULL;
         }
 
-        /* Allocate In-memory tree */
-        priv->memtree = memtree_new(NULL, priv->btcompare);
-        priv->fmemtree = memtree_new(NULL, priv->btcompare);
-
         /** Reopen/Reload all files */
         ret = process_files_in_dbdir(&priv->dbdir.buf, DB_ABS_PATH,
                                      priv);
         if (ret != ZS_OK)
                 goto done;
+
+        /* Allocate In-memory tree */
+        priv->memtree = memtree_new(NULL, priv->btcompare);
+        priv->fmemtree = memtree_new(NULL, priv->btcompare);
 
         /* Load records from active file to in-memory tree */
         ret = zs_active_file_record_foreach(priv, load_memtree_record_cb,
