@@ -251,7 +251,6 @@ static int parse_options(int argc, char **argv, const struct option *options)
                         NUMRECS = atoi(optarg);
                         break;
                 case 'h':
-                        _fallthrough_;
                 case '?':
                         usage(basename(argv[0]));
                         exit(option == 'h');

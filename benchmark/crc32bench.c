@@ -142,7 +142,6 @@ static int parse_options_and_run(int argc, char **argv,
                         run_zlib();
                         break;
                 case 'h':
-                        _fallthrough_;
                 case '?':
                         usage(basename(argv[0]));
                         exit(option == 'h');
